@@ -241,3 +241,129 @@
 
   border-radius: 6px;
 }
+/* =========================================================
+   DARK MODE
+   ThemeContext adds class "dark" to <html>.
+   Keep the whole AG Grid dark, including the empty body area.
+   ========================================================= */
+
+.dark .vcc-ag-grid {
+  --ag-background-color: #111827;
+  --ag-header-background-color: #182235;
+  --ag-header-foreground-color: #e5e7eb;
+  --ag-foreground-color: #d0d5dd;
+  --ag-secondary-foreground-color: #a7b0c0;
+  --ag-data-color: #d0d5dd;
+
+  --ag-border-color: #344054;
+  --ag-row-border-color: #293548;
+  --ag-header-column-separator-color: #344054;
+
+  --ag-odd-row-background-color: #0f172a;
+  --ag-row-hover-color: #1b2b45;
+  --ag-selected-row-background-color: #173a63;
+
+  --ag-control-panel-background-color: #111827;
+  --ag-menu-background-color: #111827;
+  --ag-subheader-background-color: #182235;
+  --ag-input-border-color: #475467;
+  --ag-input-disabled-background-color: #101828;
+  --ag-disabled-foreground-color: #667085;
+
+  background-color: #111827;
+  color-scheme: dark;
+}
+
+/* AG Grid has several nested viewports. If only rows are styled,
+   the unused part under the last row remains white. */
+.dark .vcc-ag-grid .ag-root-wrapper,
+.dark .vcc-ag-grid .ag-root,
+.dark .vcc-ag-grid .ag-body,
+.dark .vcc-ag-grid .ag-body-viewport,
+.dark .vcc-ag-grid .ag-center-cols-clipper,
+.dark .vcc-ag-grid .ag-center-cols-viewport,
+.dark .vcc-ag-grid .ag-center-cols-container,
+.dark .vcc-ag-grid .ag-body-vertical-scroll,
+.dark .vcc-ag-grid .ag-body-vertical-scroll-viewport,
+.dark .vcc-ag-grid .ag-body-horizontal-scroll,
+.dark .vcc-ag-grid .ag-body-horizontal-scroll-viewport,
+.dark .vcc-ag-grid .ag-sticky-top,
+.dark .vcc-ag-grid .ag-sticky-bottom {
+  background-color: #111827 !important;
+}
+
+.dark .vcc-ag-grid .ag-root-wrapper {
+  border-color: #344054 !important;
+}
+
+.dark .vcc-ag-grid .ag-header {
+  background: #182235 !important;
+  border-bottom-color: #344054 !important;
+}
+
+.dark .vcc-ag-grid .ag-header-cell {
+  border-right-color: #344054 !important;
+}
+
+.dark .vcc-ag-grid .ag-header-cell-text {
+  color: #e5e7eb !important;
+}
+
+.dark .vcc-ag-grid .ag-header-cell:hover {
+  background-color: #20304a !important;
+}
+
+.dark .vcc-ag-grid .ag-row {
+  border-bottom-color: #293548 !important;
+}
+
+.dark .vcc-ag-grid .ag-row-even {
+  background-color: #111827 !important;
+}
+
+.dark .vcc-ag-grid .ag-row-odd {
+  background-color: #0f172a !important;
+}
+
+.dark .vcc-ag-grid .ag-row-hover {
+  background-color: #1b2b45 !important;
+}
+
+.dark .vcc-ag-grid .ag-row-selected {
+  background-color: #173a63 !important;
+}
+
+.dark .vcc-ag-grid .ag-cell {
+  color: #d0d5dd !important;
+  border-right-color: #293548 !important;
+}
+
+.dark .vcc-ag-grid .ag-icon {
+  color: #98a2b3 !important;
+}
+
+.dark .vcc-ag-grid .ag-paging-panel {
+  color: #d0d5dd !important;
+  background-color: #111827 !important;
+  border-top-color: #293548 !important;
+}
+
+.dark .vcc-ag-grid .ag-paging-panel .ag-disabled .ag-icon {
+  color: #667085 !important;
+}
+
+.dark .vcc-ag-grid .ag-overlay-wrapper {
+  background-color: transparent !important;
+}
+
+.dark .vcc-ag-grid .ag-overlay-no-rows-center,
+.dark .vcc-ag-grid .ag-overlay-loading-center {
+  color: #a7b0c0 !important;
+  background-color: transparent !important;
+  border-color: #344054 !important;
+}
+
+.dark .vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb,
+.dark .vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb {
+  background: #475467;
+}

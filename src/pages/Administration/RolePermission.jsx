@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Stack, Switch, TextField, Tooltip, Typography, } from "@mui/material";
+import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Stack, Switch, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography, createTheme, } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -13,11 +13,14 @@ import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
+import VpnKeyOutlinedIcon from "@mui/icons-material/VpnKeyOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { API_CONFIG } from "../../config/config";
 import { getAccessToken, getCurrentUser } from "../../auth/auth";
 import AgGridTable from "../../components/tables/BasicTables/BasicTableOne";
+import { useTheme as useAppTheme } from "../../context/ThemeContext";
 const EMPTY_ROLE_FORM = {
   role_code: "",
   role_name: "",
@@ -58,9 +61,138 @@ const MODULE_ORDER = [
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const MAIN_PANEL_HEIGHT = 380;
 const PANEL_HEADER_HEIGHT = 30;
-const MAIN_TABLE_PANEL_HEIGHT = 445;
+const MAIN_TABLE_PANEL_HEIGHT = 490;
 const PANEL_FOOTER_HEIGHT = 32;
+
+function createRolePermissionMuiTheme(mode) {
+  const isDark = mode === "dark";
+
+  return createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: "#005BAB",
+      },
+      background: {
+        default: isDark ? "#0B1220" : "#F8FAFC",
+        paper: isDark ? "#111827" : "#FFFFFF",
+      },
+      text: {
+        primary: isDark ? "#F3F4F6" : "#172033",
+        secondary: isDark ? "#A7B0C0" : "#667085",
+        disabled: isDark ? "#667085" : "#98A2B3",
+      },
+      divider: isDark ? "#344054" : "#D0D5DD",
+    },
+    typography: {
+      fontFamily: '"Bai Jamjuree", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+    },
+    components: {
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: "none",
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            backgroundColor: isDark ? "#0F172A" : "#FFFFFF",
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            backgroundImage: "none",
+          },
+        },
+      },
+    },
+  });
+}
+
+function rolePermissionPageSx(isDark) {
+  if (!isDark) return {};
+
+  return {
+    color: "text.primary",
+
+    "& .vcc-ag-grid": {
+      "--ag-background-color": "#111827",
+      "--ag-header-background-color": "#182235",
+      "--ag-header-foreground-color": "#E5E7EB",
+      "--ag-foreground-color": "#D0D5DD",
+      "--ag-border-color": "#344054",
+      "--ag-row-border-color": "#293548",
+      "--ag-odd-row-background-color": "#0F172A",
+      "--ag-row-hover-color": "#1B2B45",
+      "--ag-selected-row-background-color": "#173A63",
+    },
+
+    "& .vcc-ag-grid .ag-root-wrapper": {
+      borderColor: "#344054 !important",
+      backgroundColor: "#111827 !important",
+    },
+    "& .vcc-ag-grid .ag-header": {
+      background: "#182235 !important",
+      borderBottomColor: "#344054 !important",
+    },
+    "& .vcc-ag-grid .ag-header-cell": {
+      borderRightColor: "#344054 !important",
+    },
+    "& .vcc-ag-grid .ag-header-cell-text": {
+      color: "#E5E7EB !important",
+    },
+    "& .vcc-ag-grid .ag-row": {
+      borderBottomColor: "#293548 !important",
+    },
+    "& .vcc-ag-grid .ag-row-even": {
+      backgroundColor: "#111827 !important",
+    },
+    "& .vcc-ag-grid .ag-row-odd": {
+      backgroundColor: "#0F172A !important",
+    },
+    "& .vcc-ag-grid .ag-row-hover": {
+      backgroundColor: "#1B2B45 !important",
+    },
+    "& .vcc-ag-grid .ag-row-selected": {
+      backgroundColor: "#173A63 !important",
+    },
+    "& .vcc-ag-grid .ag-cell": {
+      color: "#D0D5DD !important",
+      borderRightColor: "#293548 !important",
+    },
+    "& .vcc-ag-grid .ag-icon": {
+      color: "#98A2B3 !important",
+    },
+    "& .vcc-ag-grid .ag-header-cell:hover": {
+      backgroundColor: "#20304A !important",
+    },
+    "& .vcc-ag-grid .ag-paging-panel": {
+      color: "#D0D5DD !important",
+      borderTopColor: "#293548 !important",
+      backgroundColor: "#111827 !important",
+    },
+    "& .vcc-ag-grid .ag-paging-panel .ag-disabled .ag-icon": {
+      color: "#667085 !important",
+    },
+    "& .vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb, & .vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb": {
+      background: "#475467",
+    },
+    "& .vcc-ag-grid .ag-overlay-loading-center": {
+      color: "#E5E7EB",
+      backgroundColor: "#182235",
+      borderColor: "#344054",
+    },
+  };
+}
+
 export default function RolePermission() {
+  const { theme: appTheme } = useAppTheme();
+  const isDark = appTheme === "dark";
+  const muiTheme = useMemo(() => createRolePermissionMuiTheme(appTheme), [appTheme]);
   const currentUser = getCurrentUser();
   const actor = currentUser?.employee_code || "SYSTEM";
   const [roles, setRoles] = useState([]);
@@ -135,21 +267,48 @@ export default function RolePermission() {
     return users.filter((user) => (user.roles || []).includes(selectedRole.role_code));
   }, [users, selectedRole]);
   const statistics = useMemo(() => {
+    const totalRoles = roles.length;
     const totalPermissions = permissions.length;
     const activeRoles = roles.filter((role) => isActive(role.is_active)).length;
-    const inactiveRoles = roles.length - activeRoles;
+    const inactiveRoles = totalRoles - activeRoles;
     const assignedUserCount = users.filter((user) => (user.roles || []).length > 0).length;
-    const fullAccessRoles = roles.filter((role) => totalPermissions > 0 &&
-      toNumber(role.permission_count) === totalPermissions).length;
+
+    // With the current API, "Highly Privileged" is defined as an ACTIVE role
+    // that owns at least 80% of all system permissions.
+    const highlyPrivilegedRoles = roles.filter((role) => {
+      if (!isActive(role.is_active) || totalPermissions <= 0)
+        return false;
+      return toNumber(role.permission_count) / totalPermissions >= 0.8;
+    }).length;
+
+    const activeRolePercent = totalRoles > 0
+      ? ((activeRoles / totalRoles) * 100).toFixed(1)
+      : "0.0";
+
+    const permissionResourceCount = buildPermissionMatrixRows(permissions, "").length;
+
+    const now = new Date();
+    const newRolesThisMonth = roles.filter((role) => {
+      if (!role?.created_at)
+        return false;
+      const createdAt = new Date(role.created_at);
+      return !Number.isNaN(createdAt.getTime()) &&
+        createdAt.getFullYear() === now.getFullYear() &&
+        createdAt.getMonth() === now.getMonth();
+    }).length;
+
     return {
-      totalRoles: roles.length,
+      totalRoles,
       activeRoles,
-      inactiveRoles,
       totalPermissions,
       assignedUserCount,
-      fullAccessRoles,
+      highlyPrivilegedRoles,
+      inactiveRoles,
+      activeRolePercent,
+      permissionResourceCount,
+      newRolesThisMonth,
     };
-  }, [roles, permissions.length, users]);
+  }, [roles, permissions, users]);
   async function requestJson(path, options) {
     const token = getAccessToken();
     const response = await fetch(`${API_BASE}${path}`, {
@@ -417,12 +576,14 @@ export default function RolePermission() {
     link.remove();
     URL.revokeObjectURL(url);
   }
-  return (<>
+  return (
+    <MuiThemeProvider theme={muiTheme}>
+      <Box sx={rolePermissionPageSx(isDark)}>
     <PageMeta title="Role & Permission | VCC Plastics" description="Manage roles and system permissions for VCC Plastics" />
 
     <PageBreadcrumb pageTitle="Role & Permission" />
 
-    <Stack spacing={2.5} sx={{ pb: 2.5 }}>
+    <Stack spacing={3} sx={{ pb: 2.5 }}>
       <Box
         sx={{
           display: "grid",
@@ -456,15 +617,51 @@ export default function RolePermission() {
         },
         gap: 1.5,
       }}>
-        <KpiCard label="Total Roles" value={statistics.totalRoles} note="All roles" color="#2563eb" symbol="R" />
-        <KpiCard label="Active Roles" value={statistics.activeRoles} note="Currently in use" color="#059669" symbol="A" />
-        <KpiCard label="Total Permissions" value={statistics.totalPermissions} note="System-defined permissions" color="#d97706" symbol="P" />
-        <KpiCard label="Users with Roles" value={statistics.assignedUserCount} note="In the MES user list" color="#7c3aed" symbol="U" />
-        <KpiCard label="Full Access Roles" value={statistics.fullAccessRoles} note="All permissions assigned" color="#0284c7" symbol="F" />
-        <KpiCard label="Inactive Roles" value={statistics.inactiveRoles} note="Deactivated" color="#dc2626" symbol="I" />
+        <KpiCard
+          label="Total Roles"
+          value={statistics.totalRoles}
+          note={`+ ${statistics.newRolesThisMonth} new this month`}
+          gradient="linear-gradient(135deg, #4338CA 0%, #6D28D9 100%)"
+          icon={<BadgeOutlinedIcon />}
+        />
+        <KpiCard
+          label="Active Roles"
+          value={statistics.activeRoles}
+          note={`${statistics.activeRolePercent}% of total`}
+          gradient="linear-gradient(135deg, #059669 0%, #10B981 100%)"
+          icon={<ShieldOutlinedIcon />}
+        />
+        <KpiCard
+          label="Total Permissions"
+          value={statistics.totalPermissions}
+          note={`Across ${statistics.permissionResourceCount} menus`}
+          gradient="linear-gradient(135deg, #F59E0B 0%, #F97316 100%)"
+          icon={<VpnKeyOutlinedIcon />}
+        />
+        <KpiCard
+          label="Users Assigned"
+          value={statistics.assignedUserCount}
+          note="Across all roles"
+          gradient="linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)"
+          icon={<GroupOutlinedIcon />}
+        />
+        <KpiCard
+          label="Highly Privileged Roles"
+          value={statistics.highlyPrivilegedRoles}
+          note="Require attention"
+          gradient="linear-gradient(135deg, #0E7490 0%, #0369A1 100%)"
+          icon={<LockOutlinedIcon />}
+        />
+        <KpiCard
+          label="Inactive Roles"
+          value={statistics.inactiveRoles}
+          note="Deactivated roles"
+          gradient="linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
+          icon={<LockOutlinedIcon />}
+        />
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, my: 0.25 }}>
+      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
         <Box sx={{
           display: "grid",
           gridTemplateColumns: {
@@ -516,7 +713,6 @@ export default function RolePermission() {
         },
         gap: 2,
         alignItems: "stretch",
-        mt: 0.25,
       }}>
         <RoleListPanel
           loading={loading}
@@ -555,47 +751,89 @@ export default function RolePermission() {
     </Stack>
 
     <RoleModal open={roleModalOpen} editingRole={editingRole} form={roleForm} saving={savingRole} onChange={setRoleForm} onClose={closeRoleModal} onSave={() => void saveRole()} />
-  </>);
+      </Box>
+    </MuiThemeProvider>
+  );
 }
-function KpiCard({ label, value, note, color, symbol }) {
-  return (<Paper elevation={0} sx={{
-    position: "relative",
-    overflow: "hidden",
-    minHeight: 88,
-    p: 1.5,
-    borderRadius: 2,
-    bgcolor: color,
-    color: "common.white",
-  }}>
-    <Stack spacing={0.25}>
-      <Typography variant="caption" sx={{ color: "rgba(255,255,255,.82)" }}>
-        {label}
-      </Typography>
-      <Typography variant="h5" fontWeight={700} lineHeight={1.15}>
-        {value}
-      </Typography>
-      <Typography variant="caption" noWrap sx={{ color: "rgba(255,255,255,.74)", pr: 4 }}>
-        {note}
-      </Typography>
-    </Stack>
+function KpiCard({ label, value, note, gradient, icon }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        position: "relative",
+        overflow: "hidden",
+        minHeight: 92,
+        p: 1.5,
+        pr: 5.75,
+        borderRadius: 2,
+        background: gradient,
+        color: "common.white",
+        boxShadow: "0 6px 16px rgba(15,23,42,.10)",
+        transition: "transform .18s ease, box-shadow .18s ease",
+        "&:hover": {
+          transform: "translateY(-1px)",
+          boxShadow: "0 9px 22px rgba(15,23,42,.15)",
+        },
+      }}
+    >
+      <Stack spacing={0.25}>
+        <Typography
+          variant="caption"
+          noWrap
+          sx={{
+            color: "rgba(255,255,255,.92)",
+            fontWeight: 700,
+            lineHeight: 1.25,
+          }}
+        >
+          {label}
+        </Typography>
 
-    <Box sx={{
-      position: "absolute",
-      right: 10,
-      top: 10,
-      width: 30,
-      height: 30,
-      borderRadius: 1.25,
-      border: "1px solid rgba(255,255,255,.28)",
-      bgcolor: "rgba(255,255,255,.10)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: 700,
-    }}>
-      {symbol}
-    </Box>
-  </Paper>);
+        <Typography
+          variant="h5"
+          fontWeight={800}
+          lineHeight={1.1}
+          sx={{ letterSpacing: "-0.02em" }}
+        >
+          {value}
+        </Typography>
+
+        <Typography
+          variant="caption"
+          noWrap
+          sx={{
+            color: "rgba(255,255,255,.78)",
+            fontSize: "0.68rem",
+            lineHeight: 1.25,
+          }}
+        >
+          {note}
+        </Typography>
+      </Stack>
+
+      <Box
+        sx={{
+          position: "absolute",
+          right: 12,
+          top: 12,
+          width: 34,
+          height: 34,
+          borderRadius: 1.4,
+          border: "1px solid rgba(255,255,255,.30)",
+          bgcolor: "rgba(255,255,255,.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "common.white",
+          "& .MuiSvgIcon-root": {
+            fontSize: 21,
+          },
+        }}
+      >
+        {icon}
+      </Box>
+    </Paper>
+  );
 }
 
 function SectionHeader({ icon, title, action = null }) {
@@ -605,9 +843,9 @@ function SectionHeader({ icon, title, action = null }) {
         height: PANEL_HEADER_HEIGHT,
         minHeight: PANEL_HEADER_HEIGHT,
         px: 1.25,
-        bgcolor: "#DDEBFF",
+        bgcolor: (theme) => theme.palette.mode === "dark" ? "#182235" : "#DDEBFF",
         borderBottom: 1,
-        borderColor: "#AFC7EE",
+        borderColor: (theme) => theme.palette.mode === "dark" ? "#344054" : "#AFC7EE",
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
@@ -1133,27 +1371,92 @@ function StatusBadge({ active, compact = false, }) {
   }} />);
 }
 function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave, }) {
-  return (<Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 2.5 } }}>
-    <DialogTitle sx={{ pb: 1 }}>
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
-        <Box>
-          <Typography variant="h6" fontWeight={700}>
-            {editingRole ? "Update Role" : "Create New Role"}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Permissions can be configured in the matrix after the role is saved.
-          </Typography>
-        </Box>
+  return (<Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" PaperProps={{
+    sx: {
+      borderRadius: 2.5,
+      overflow: "hidden",
+      boxShadow: (theme) => theme.palette.mode === "dark"
+        ? "0 18px 48px rgba(0,0,0,.48)"
+        : "0 18px 48px rgba(15,23,42,.18)",
+    },
+  }}>
+    <DialogTitle
+      sx={{
+        position: "relative",
+        pb: 1.25,
+        pl: 2.5,
+        pr: 7,
+        pt: 2,
+        bgcolor: (theme) => theme.palette.mode === "dark" ? "#182235" : "#EEF4FF",
+        borderBottom: 1,
+        borderColor: "divider",
+      }}
+    >
+      <Stack direction="row" alignItems="flex-start" spacing={2}>
+        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 1.5,
+              bgcolor: "primary.main",
+              color: "common.white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: "0 8px 20px rgba(0,91,171,.22)",
+            }}
+          >
+            <ShieldOutlinedIcon fontSize="small" />
+          </Box>
 
-        <IconButton size="small" onClick={onClose} disabled={saving}>
-          <CloseIcon />
-        </IconButton>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.15 }}>
+              {editingRole ? "Update Role" : "Create New Role"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
+              Permissions can be configured in the matrix after the role is saved.
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Tooltip title="Close" arrow>
+          <span
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+            }}
+          >
+            <IconButton
+              size="small"
+              onClick={onClose}
+              disabled={saving}
+              sx={{
+                width: 34,
+                height: 34,
+                border: 1,
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                color: "text.secondary",
+                boxShadow: (theme) => theme.palette.mode === "dark"
+                  ? "0 4px 12px rgba(0,0,0,.28)"
+                  : "0 4px 12px rgba(15,23,42,.08)",
+                "&:hover": {
+                  bgcolor: (theme) => theme.palette.mode === "dark" ? "#1F2A3D" : "#E6EEF9",
+                  color: "text.primary",
+                },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
       </Stack>
     </DialogTitle>
 
-    <Divider />
-
-    <DialogContent>
+    <DialogContent sx={{ pt: 2 }}>
       <Stack spacing={2} sx={{ pt: 1 }}>
         <TextField fullWidth required size="small" label="Role Code" value={form.role_code} disabled={Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder="e.g. PRODUCTION_MANAGER" helperText={editingRole ? "The role code cannot be changed after creation." : undefined} />
 
@@ -1173,9 +1476,6 @@ function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave,
     </DialogContent>
 
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button variant="outlined" onClick={onClose} disabled={saving} sx={{ textTransform: "none" }}>
-        Cancel
-      </Button>
       <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={saving} sx={{ textTransform: "none" }}>
         {saving ? "Saving..." : "Save Role"}
       </Button>

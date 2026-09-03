@@ -2,6 +2,7 @@ import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import "./BasicTableOne.css";
+import { useTheme } from "../../../context/ThemeContext";
 
 export default function AgGridTable({
   rowData,
@@ -19,10 +20,14 @@ export default function AgGridTable({
   headerHeight = 30,
 }) {
   const isAutoHeight = height === "auto";
+  const { theme } = useTheme();
+  const agThemeClass =
+    theme === "dark" ? "ag-theme-quartz-dark" : "ag-theme-quartz";
 
   return (
     <div
-      className={`ag-theme-quartz vcc-ag-grid w-full ${className}`}
+      className={`${agThemeClass} vcc-ag-grid w-full ${className}`}
+      data-vcc-theme={theme}
       style={
         isAutoHeight
           ? {
@@ -38,6 +43,12 @@ export default function AgGridTable({
       }
     >
       <AgGridReact
+        /*
+         * AG Grid 33+ defaults to the new Theming API.
+         * This project still imports the legacy CSS themes above, so force
+         * legacy mode to prevent the new theme from injecting a white body.
+         */
+        theme="legacy"
         rowData={rowData}
         columnDefs={columnDefs}
         loading={loading}

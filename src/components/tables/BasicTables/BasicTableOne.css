@@ -1,0 +1,243 @@
+/* =========================================================
+   VCC PLASTICS - AG GRID
+   ========================================================= */
+
+.vcc-ag-grid {
+  --ag-font-family:
+    "Bai Jamjuree",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  --ag-font-size: 12px;
+
+  --ag-background-color: #ffffff;
+
+  --ag-header-background-color: #edf4ff;
+  --ag-header-foreground-color: #172033;
+
+  --ag-foreground-color: #263043;
+
+  --ag-border-color: #cbd8e8;
+  --ag-row-border-color: #dce4ee;
+
+  --ag-odd-row-background-color: #f8fafc;
+
+  --ag-row-hover-color: #eef5ff;
+
+  --ag-selected-row-background-color: #e7f0ff;
+
+  --ag-header-column-separator-display: block;
+  --ag-header-column-separator-color: #cbd8e8;
+  --ag-header-column-separator-height: 100%;
+
+  --ag-wrapper-border-radius: 7px;
+
+  width: 100%;
+}
+
+
+/* =========================================================
+   KHUNG NGOÀI
+   ========================================================= */
+
+.vcc-ag-grid .ag-root-wrapper {
+  border: 1px solid #b9cbe0 !important;
+  border-radius: 7px !important;
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.vcc-ag-grid .ag-header {
+  background: #edf4ff !important;
+  border-bottom: 1px solid #b9cbe0 !important;
+}
+
+.vcc-ag-grid .ag-header-cell {
+  border-right: 1px solid #cbd8e8 !important;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.vcc-ag-grid .ag-header-cell:last-child {
+  border-right: none !important;
+}
+
+.vcc-ag-grid .ag-header-cell-text {
+  font-family:
+    "Bai Jamjuree",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  color: #172033;
+
+  white-space: nowrap;
+}
+
+
+/* căn giữa toàn bộ HEADER */
+
+.vcc-ag-grid .ag-header-center .ag-header-cell-label {
+  justify-content: center;
+}
+
+
+/* =========================================================
+   ROW
+   ========================================================= */
+
+.vcc-ag-grid .ag-row {
+  border-bottom: 1px solid #dce4ee !important;
+
+  font-family:
+    "Bai Jamjuree",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+
+  font-size: 12px;
+}
+
+
+/* dòng chẵn */
+
+.vcc-ag-grid .ag-row-even {
+  background-color: #ffffff;
+}
+
+
+/* dòng lẻ */
+
+.vcc-ag-grid .ag-row-odd {
+  background-color: #f8fafc;
+}
+
+
+/* hover */
+
+.vcc-ag-grid .ag-row-hover {
+  background-color: #eef5ff !important;
+}
+
+
+/* selected */
+
+.vcc-ag-grid .ag-row-selected {
+  background-color: #e5efff !important;
+}
+
+
+/* =========================================================
+   CELL
+   ========================================================= */
+
+.vcc-ag-grid .ag-cell {
+  border-right: 1px solid #dce4ee !important;
+
+  display: flex;
+  align-items: center;
+
+  padding-left: 8px;
+  padding-right: 8px;
+
+  color: #263043;
+}
+
+.vcc-ag-grid .ag-cell:last-child {
+  border-right: none !important;
+}
+
+
+/* =========================================================
+   CÁC CLASS CĂN DỮ LIỆU
+   ========================================================= */
+
+.vcc-ag-grid .ag-cell-center {
+  justify-content: center;
+  text-align: center;
+}
+
+.vcc-ag-grid .ag-cell-left {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.vcc-ag-grid .ag-cell-right {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+
+/* =========================================================
+   FILTER ICON / SORT ICON
+   ========================================================= */
+
+.vcc-ag-grid .ag-icon {
+  color: #718096;
+}
+
+.vcc-ag-grid .ag-header-cell:hover {
+  background-color: #e5effd;
+}
+
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+
+.vcc-ag-grid .ag-paging-panel {
+  min-height: 38px;
+
+  border-top: 1px solid #dce4ee;
+
+  font-family:
+    "Bai Jamjuree",
+    Inter,
+    sans-serif;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar,
+.vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb,
+.vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb {
+  background: #c1cbd8;
+  border-radius: 10px;
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.vcc-ag-grid .ag-overlay-loading-center {
+  font-family:
+    "Bai Jamjuree",
+    Inter,
+    sans-serif;
+
+  font-size: 12px;
+
+  border-radius: 6px;
+}

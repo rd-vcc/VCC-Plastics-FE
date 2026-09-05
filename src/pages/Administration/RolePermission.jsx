@@ -20,6 +20,8 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { API_CONFIG } from "../../config/config";
 import { getAccessToken, getCurrentUser } from "../../auth/auth";
 import AgGridTable from "../../components/tables/BasicTables/BasicTableOne";
+import { buttonSystem } from "../../components/button/ButtonSystem";
+import { KpiCard, KpiCardGroup } from "../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../context/ThemeContext";
 const EMPTY_ROLE_FORM = {
   role_code: "",
@@ -63,6 +65,20 @@ const MAIN_PANEL_HEIGHT = 380;
 const PANEL_HEADER_HEIGHT = 30;
 const MAIN_TABLE_PANEL_HEIGHT = 490;
 const PANEL_FOOTER_HEIGHT = 32;
+
+function buttonSx(type, overrides = {}) {
+  const styles = buttonSystem[type];
+
+  return {
+    ...styles.base,
+    ...(styles["& .MuiSvgIcon-root"]
+      ? { "& .MuiSvgIcon-root": styles["& .MuiSvgIcon-root"] }
+      : {}),
+    ...(styles.hover ? { "&:hover": styles.hover } : {}),
+    ...(styles.active ? { "&:active": styles.active } : {}),
+    ...overrides,
+  };
+}
 
 function createRolePermissionMuiTheme(mode) {
   const isDark = mode === "dark";
@@ -608,58 +624,50 @@ export default function RolePermission() {
       {error ? <Alert severity="error">{error}</Alert> : null}
       {success ? <Alert severity="success">{success}</Alert> : null}
 
-      <Box sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "repeat(2, minmax(0, 1fr))",
-          md: "repeat(3, minmax(0, 1fr))",
-          xl: "repeat(6, minmax(0, 1fr))",
-        },
-        gap: 1.5,
-      }}>
+      <KpiCardGroup>
         <KpiCard
           label="Total Roles"
           value={statistics.totalRoles}
           note={`+ ${statistics.newRolesThisMonth} new this month`}
-          gradient="linear-gradient(135deg, #4338CA 0%, #6D28D9 100%)"
+          tone="primary"
           icon={<BadgeOutlinedIcon />}
         />
         <KpiCard
           label="Active Roles"
           value={statistics.activeRoles}
           note={`${statistics.activeRolePercent}% of total`}
-          gradient="linear-gradient(135deg, #059669 0%, #10B981 100%)"
+          tone="success"
           icon={<ShieldOutlinedIcon />}
         />
         <KpiCard
           label="Total Permissions"
           value={statistics.totalPermissions}
           note={`Across ${statistics.permissionResourceCount} menus`}
-          gradient="linear-gradient(135deg, #F59E0B 0%, #F97316 100%)"
+          tone="warning"
           icon={<VpnKeyOutlinedIcon />}
         />
         <KpiCard
           label="Users Assigned"
           value={statistics.assignedUserCount}
           note="Across all roles"
-          gradient="linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)"
+          tone="accent"
           icon={<GroupOutlinedIcon />}
         />
         <KpiCard
           label="Highly Privileged Roles"
           value={statistics.highlyPrivilegedRoles}
           note="Require attention"
-          gradient="linear-gradient(135deg, #0E7490 0%, #0369A1 100%)"
+          tone="info"
           icon={<LockOutlinedIcon />}
         />
         <KpiCard
           label="Inactive Roles"
           value={statistics.inactiveRoles}
           note="Deactivated roles"
-          gradient="linear-gradient(135deg, #EF4444 0%, #DC2626 100%)"
+          tone="danger"
           icon={<LockOutlinedIcon />}
         />
-      </Box>
+      </KpiCardGroup>
 
       <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
         <Box sx={{
@@ -694,11 +702,10 @@ export default function RolePermission() {
             setRoleSearch("");
             setStatusFilter("ALL");
             setAccessFilter("ALL");
-          }} sx={{
-            textTransform: "none",
+          }} sx={buttonSx("cancel", {
             minHeight: 40,
             whiteSpace: "nowrap",
-          }}>
+          })}>
             Clear Filters
           </Button>
         </Box>
@@ -755,87 +762,6 @@ export default function RolePermission() {
     </MuiThemeProvider>
   );
 }
-function KpiCard({ label, value, note, gradient, icon }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        position: "relative",
-        overflow: "hidden",
-        minHeight: 92,
-        p: 1.5,
-        pr: 5.75,
-        borderRadius: 2,
-        background: gradient,
-        color: "common.white",
-        boxShadow: "0 6px 16px rgba(15,23,42,.10)",
-        transition: "transform .18s ease, box-shadow .18s ease",
-        "&:hover": {
-          transform: "translateY(-1px)",
-          boxShadow: "0 9px 22px rgba(15,23,42,.15)",
-        },
-      }}
-    >
-      <Stack spacing={0.25}>
-        <Typography
-          variant="caption"
-          noWrap
-          sx={{
-            color: "rgba(255,255,255,.92)",
-            fontWeight: 700,
-            lineHeight: 1.25,
-          }}
-        >
-          {label}
-        </Typography>
-
-        <Typography
-          variant="h5"
-          fontWeight={800}
-          lineHeight={1.1}
-          sx={{ letterSpacing: "-0.02em" }}
-        >
-          {value}
-        </Typography>
-
-        <Typography
-          variant="caption"
-          noWrap
-          sx={{
-            color: "rgba(255,255,255,.78)",
-            fontSize: "0.68rem",
-            lineHeight: 1.25,
-          }}
-        >
-          {note}
-        </Typography>
-      </Stack>
-
-      <Box
-        sx={{
-          position: "absolute",
-          right: 12,
-          top: 12,
-          width: 34,
-          height: 34,
-          borderRadius: 1.4,
-          border: "1px solid rgba(255,255,255,.30)",
-          bgcolor: "rgba(255,255,255,.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "common.white",
-          "& .MuiSvgIcon-root": {
-            fontSize: 21,
-          },
-        }}
-      >
-        {icon}
-      </Box>
-    </Paper>
-  );
-}
-
 function SectionHeader({ icon, title, action = null }) {
   return (
     <Box
@@ -976,10 +902,24 @@ function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDea
     />
 
     <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
-      <AgGridTable rowData={roles} columnDefs={columnDefs} height="100%" loading={loading} pagination paginationPageSize={6} getRowId={(params) => String(params.data.id)} onRowClicked={(event) => {
-        if (event.data)
-          onSelect(event.data.id);
-      }} />
+      <AgGridTable
+        className="role-list-grid"
+        rowData={roles}
+        columnDefs={columnDefs}
+        height="100%"
+        loading={loading}
+        rowSelection={false}
+        pagination
+        paginationPageSize={6}
+        getRowId={(params) => String(params.data.id)}
+        selectedRowId={selectedRoleId}
+        selectedRowKey="id"
+        selectedRowClassName="vcc-role-row-selected"
+        onRowClicked={(event) => {
+          if (event.data)
+            onSelect(event.data.id);
+        }}
+      />
     </Box>
 
     <Button
@@ -987,12 +927,11 @@ function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDea
       size="small"
       startIcon={<AddIcon />}
       onClick={onCreate}
-      sx={{
+      sx={buttonSx("primary", {
         position: "absolute",
         right: 12,
         bottom: 10,
         zIndex: 2,
-        textTransform: "none",
         height: PANEL_FOOTER_HEIGHT,
         minHeight: PANEL_FOOTER_HEIGHT,
         maxHeight: PANEL_FOOTER_HEIGHT,
@@ -1004,7 +943,7 @@ function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDea
           display: "flex",
           alignItems: "center",
         },
-      }}
+      })}
     >
       Create Role
     </Button>
@@ -1107,8 +1046,7 @@ function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, load
             !dirty ||
             saving ||
             !isActive(selectedRole.is_active)}
-          sx={{
-            textTransform: "none",
+          sx={buttonSx("primary", {
             minWidth: 110,
             height: PANEL_FOOTER_HEIGHT,
             minHeight: PANEL_FOOTER_HEIGHT,
@@ -1120,7 +1058,7 @@ function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, load
               display: "flex",
               alignItems: "center",
             },
-          }}
+          })}
         >
           {saving ? "Saving..." : "Save Permissions"}
         </Button>
@@ -1211,10 +1149,12 @@ function RoleDetailPanel({
               <IconButton
                 size="small"
                 onClick={() => onEdit(role)}
-                sx={{
-                  color: "text.primary",
+                sx={buttonSx("edit", {
+                  width: 30,
+                  minWidth: 30,
+                  height: 28,
                   p: 0.25,
-                }}
+                })}
               >
                 <EditIcon fontSize="small" />
               </IconButton>
@@ -1476,7 +1416,7 @@ function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave,
     </DialogContent>
 
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={saving} sx={{ textTransform: "none" }}>
+      <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={saving} sx={buttonSx("primary")}>
         {saving ? "Saving..." : "Save Role"}
       </Button>
     </DialogActions>
@@ -1571,8 +1511,8 @@ function toNumber(value) {
   return Number.isFinite(numberValue) ? numberValue : 0;
 }
 function sameNumberSet(left, right) {
-  if (left.length !== right.length)
-    return false;
+    if (left.length !== right.length)
+      return false;
   const rightSet = new Set(right);
   return left.every((value) => rightSet.has(value));
 }

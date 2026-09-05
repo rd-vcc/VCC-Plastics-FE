@@ -982,7 +982,7 @@ function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, load
         const permission = row.permissionsByAction[action];
         if (!permission) {
           return (<Typography variant="caption" color="text.disabled">
-            —
+            -
           </Typography>);
         }
         return (<MatrixToggle checked={selectedPermissionSet.has(permission.id)} disabled={!selectedRole || !isActive(selectedRole.is_active)} title={`${permission.permission_name} (${permission.permission_code})`} onClick={() => onTogglePermission(permission.id)} />);
@@ -1099,7 +1099,7 @@ function RoleDetailPanel({
       flex: 1,
       cellRenderer: (params) => (
         <Typography variant="caption" fontWeight={600} noWrap>
-          {params.data?.employee_code || "—"}
+          {params.data?.employee_code || "-"}
         </Typography>
       ),
     },
@@ -1107,11 +1107,12 @@ function RoleDetailPanel({
       headerName: "User Name",
       minWidth: 110,
       flex: 1.2,
-      valueGetter: (params) =>
-        params.data?.full_name ||
-        params.data?.user_name ||
-        params.data?.name ||
-        "—",
+      valueGetter: (params) => getEmployeeDisplayName(params.data),
+      cellRenderer: (params) => (
+        <Typography variant="caption" fontWeight={600} noWrap>
+          {params.value || "-"}
+        </Typography>
+      ),
     },
     {
       headerName: "Status",
@@ -1200,7 +1201,7 @@ function RoleDetailPanel({
                 value={isActive(role.is_active) ? "Active" : "Inactive"}
                 strong
               />
-              <DetailRow label="Description" value={role.description || "—"} />
+              <DetailRow label="Description" value={role.description || "-"} />
               <DetailRow label="Users" value={String(toNumber(role.user_count))} strong />
             </Stack>
 
@@ -1300,10 +1301,29 @@ function DetailRow({ label, value, strong, custom }) {
       fontWeight: strong ? 700 : 500,
       wordBreak: "break-word",
     }}>
-      {value || "—"}
+      {value || "-"}
     </Typography>)}
   </Box>);
 }
+
+function getEmployeeDisplayName(user) {
+  if (!user)
+    return "-";
+
+  return (
+    user.full_name ||
+    user.employee_name ||
+    user.user_name ||
+    user.username ||
+    user.name ||
+    user.fullName ||
+    user.employee?.full_name ||
+    user.employee?.employee_name ||
+    user.employee?.name ||
+    "-"
+  );
+}
+
 function StatusBadge({ active, compact = false, }) {
   return (<Chip size="small" label={active ? "Active" : "Inactive"} color={active ? "success" : "error"} variant="outlined" sx={{
     height: compact ? 20 : 22,

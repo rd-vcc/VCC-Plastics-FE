@@ -69,6 +69,8 @@ import EditProfile from "./pages/Account/EditProfile";
 import AccountSettings from "./pages/Account/AccountSettings";
 import Support from "./pages/Account/Support";
 import Notifications from "./pages/Account/Notifications";
+import PagePermissionRoute from "./auth/PagePermissionRoute";
+import Forbidden from "./pages/OtherPage/Forbidden";
 export default function App() {
     return (<Router>
       <ScrollToTop />
@@ -78,6 +80,8 @@ export default function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
+          <Route path="/403" element={<Forbidden />}/>
+          <Route element={<PagePermissionRoute />}>
           <Route index element={<Dashboard />}/>
           <Route path="/profile" element={<EditProfile />}/>
           <Route path="/account-settings" element={<AccountSettings />}/>
@@ -143,6 +147,7 @@ export default function App() {
           <Route path="/system-configuration/iot/data-collection-status" element={<DataCollectionStatus />}/>
           <Route path="/system-configuration/integration-settings" element={<IntegrationSettings />}/>
           <Route path="/system-configuration/system-settings" element={<SystemSettings />}/>
+          </Route>
           </Route>
           <Route path="*" element={<NotFound />}/>
         </Route>

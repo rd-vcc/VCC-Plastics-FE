@@ -46,6 +46,7 @@ import { getAccessToken, getCurrentUser } from "../../auth/auth";
 import { buttonSystem } from "../../components/button/ButtonSystem";
 import { KpiCard, KpiCardGroup } from "../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../context/ThemeContext";
+import usePagePermission from "../../auth/usePagePermission";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const PANEL_HEADER_HEIGHT = 30;
@@ -189,6 +190,7 @@ export default function UserManagement() {
   const muiTheme = useMemo(() => createUserManagementTheme(appTheme), [appTheme]);
   const currentUser = getCurrentUser();
   const actor = currentUser?.employee_code || "SYSTEM";
+  const { canEdit } = usePagePermission();
   const [employees, setEmployees] = useState([]);
   const [roles, setRoles] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -402,7 +404,7 @@ export default function UserManagement() {
   }, []);
 
   const handleSave = async () => {
-    if (!selectedEmployee) return;
+    if (!canEdit || !selectedEmployee) return;
     setSaving(true);
     try {
       const result = await requestJson(
@@ -428,6 +430,7 @@ export default function UserManagement() {
   };
 
   const handleOpenAdd = () => {
+    if (!canEdit) return;
     setEmployeeToAdd(null);
     setRolesToAdd([]);
     setNewAccessEnabled(true);
@@ -435,7 +438,7 @@ export default function UserManagement() {
   };
 
   const handleAddEmployee = async () => {
-    if (!employeeToAdd) return;
+    if (!canEdit || !employeeToAdd) return;
     setAdding(true);
     try {
       const result = await requestJson(
@@ -492,6 +495,7 @@ export default function UserManagement() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={handleOpenAdd}
+          disabled={!canEdit}
           sx={buttonSx("primary", { flexShrink: 0 })}
         >
           Add Employee
@@ -759,6 +763,7 @@ export default function UserManagement() {
                   size="small"
                   options={roles}
                   value={selectedRoles}
+                  disabled={!canEdit}
                   onChange={(_, value) => setSelectedRoles(value)}
                   getOptionLabel={(option) => option.role_name || option.role_code}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -787,14 +792,14 @@ export default function UserManagement() {
                     Allow access to VCC Plastics
                   </Typography>
                 </Box>
-                <Switch checked={accessEnabled} onChange={(event) => setAccessEnabled(event.target.checked)} />
+                <Switch disabled={!canEdit} checked={accessEnabled} onChange={(event) => setAccessEnabled(event.target.checked)} />
               </Stack>
 
               <Button
                 fullWidth
                 variant="contained"
                 startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-                disabled={saving}
+                disabled={!canEdit || saving}
                 onClick={handleSave}
                 sx={buttonSx("primary")}
               >
@@ -867,6 +872,7 @@ export default function UserManagement() {
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 2 }}>
             <Autocomplete
+              disabled={!canEdit}
               options={availableEmployees}
               value={employeeToAdd}
               onChange={(_, value) => setEmployeeToAdd(value)}
@@ -883,6 +889,7 @@ export default function UserManagement() {
             />
 
             <Autocomplete
+              disabled={!canEdit}
               multiple
               options={roles}
               value={rolesToAdd}
@@ -902,6 +909,7 @@ export default function UserManagement() {
                 </Typography>
               </Box>
               <Switch
+                disabled={!canEdit}
                 checked={newAccessEnabled}
                 onChange={(event) => setNewAccessEnabled(event.target.checked)}
               />
@@ -919,7 +927,7 @@ export default function UserManagement() {
           <Button
             variant="contained"
             startIcon={adding ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-            disabled={!employeeToAdd || !rolesToAdd.length || adding}
+            disabled={!canEdit || !employeeToAdd || !rolesToAdd.length || adding}
             onClick={handleAddEmployee}
             sx={buttonSx("primary")}
           >

@@ -23,6 +23,7 @@ import AgGridTable from "../../components/tables/BasicTables/BasicTableOne";
 import { buttonSystem } from "../../components/button/ButtonSystem";
 import { KpiCard, KpiCardGroup } from "../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../context/ThemeContext";
+import usePagePermission from "../../auth/usePagePermission";
 const EMPTY_ROLE_FORM = {
   role_code: "",
   role_name: "",
@@ -211,6 +212,7 @@ export default function RolePermission() {
   const muiTheme = useMemo(() => createRolePermissionMuiTheme(appTheme), [appTheme]);
   const currentUser = getCurrentUser();
   const actor = currentUser?.employee_code || "SYSTEM";
+  const { canEdit } = usePagePermission();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -401,11 +403,13 @@ export default function RolePermission() {
     setSelectedRoleId(roleId);
   }
   function openCreateRole() {
+    if (!canEdit) return;
     setEditingRole(null);
     setRoleForm(EMPTY_ROLE_FORM);
     setRoleModalOpen(true);
   }
   function openEditRole(role) {
+    if (!canEdit) return;
     setEditingRole(role);
     setRoleForm({
       role_code: role.role_code,
@@ -423,6 +427,7 @@ export default function RolePermission() {
     setRoleForm(EMPTY_ROLE_FORM);
   }
   async function saveRole() {
+    if (!canEdit) return;
     const roleCode = roleForm.role_code
       .trim()
       .toUpperCase()
@@ -476,6 +481,7 @@ export default function RolePermission() {
     }
   }
   async function deactivateRole(role) {
+    if (!canEdit) return;
     const confirmed = window.confirm(`Are you sure you want to deactivate role "${role.role_name}"?`);
     if (!confirmed)
       return;
@@ -490,6 +496,7 @@ export default function RolePermission() {
     }
   }
   async function reactivateRole(role) {
+    if (!canEdit) return;
     try {
       setError("");
       await requestJson(`/api/roles/${role.id}`, {
@@ -526,12 +533,13 @@ export default function RolePermission() {
     });
   }
   function togglePermission(permissionId) {
+    if (!canEdit) return;
     setSelectedPermissionIds((current) => current.includes(permissionId)
       ? current.filter((id) => id !== permissionId)
       : [...current, permissionId]);
   }
   async function savePermissions() {
-    if (!selectedRole)
+    if (!canEdit || !selectedRole)
       return;
     if (!isActive(selectedRole.is_active)) {
       setError("Permissions cannot be assigned to an inactive role.");
@@ -722,6 +730,7 @@ export default function RolePermission() {
         alignItems: "stretch",
       }}>
         <RoleListPanel
+          canEdit={canEdit}
           loading={loading}
           roles={filteredRoles}
           selectedRoleId={selectedRoleId}
@@ -733,6 +742,7 @@ export default function RolePermission() {
         />
 
         <PermissionMatrixPanel
+          canEdit={canEdit}
           selectedRole={selectedRole}
           rows={permissionMatrixRows}
           selectedPermissionIds={selectedPermissionIds}
@@ -746,6 +756,7 @@ export default function RolePermission() {
         />
 
         <RoleDetailPanel
+          canEdit={canEdit}
           role={selectedRole}
           assignedUsers={assignedUsers}
           loading={loading}
@@ -757,7 +768,7 @@ export default function RolePermission() {
 
     </Stack>
 
-    <RoleModal open={roleModalOpen} editingRole={editingRole} form={roleForm} saving={savingRole} onChange={setRoleForm} onClose={closeRoleModal} onSave={() => void saveRole()} />
+    <RoleModal canEdit={canEdit} open={roleModalOpen} editingRole={editingRole} form={roleForm} saving={savingRole} onChange={setRoleForm} onClose={closeRoleModal} onSave={() => void saveRole()} />
       </Box>
     </MuiThemeProvider>
   );
@@ -831,7 +842,7 @@ function SectionHeader({ icon, title, action = null }) {
   );
 }
 
-function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDeactivate, onReactivate, onCreate, }) {
+function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEdit, onDeactivate, onReactivate, onCreate, }) {
   const columnDefs = useMemo(() => [
     {
       headerName: "",
@@ -927,6 +938,7 @@ function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDea
       size="small"
       startIcon={<AddIcon />}
       onClick={onCreate}
+      disabled={!canEdit}
       sx={buttonSx("primary", {
         position: "absolute",
         right: 12,
@@ -949,7 +961,7 @@ function RoleListPanel({ loading, roles, selectedRoleId, onSelect, onEdit, onDea
     </Button>
   </Paper>);
 }
-function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, loading, saving, dirty, permissionSearch, onPermissionSearchChange, onTogglePermission, onSave, }) {
+function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermissionIds, loading, saving, dirty, permissionSearch, onPermissionSearchChange, onTogglePermission, onSave, }) {
   const selectedPermissionSet = useMemo(() => new Set(selectedPermissionIds), [selectedPermissionIds]);
   const columnDefs = useMemo(() => [
     {
@@ -985,10 +997,10 @@ function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, load
             -
           </Typography>);
         }
-        return (<MatrixToggle checked={selectedPermissionSet.has(permission.id)} disabled={!selectedRole || !isActive(selectedRole.is_active)} title={`${permission.permission_name} (${permission.permission_code})`} onClick={() => onTogglePermission(permission.id)} />);
+        return (<MatrixToggle checked={selectedPermissionSet.has(permission.id)} disabled={!canEdit || !selectedRole || !isActive(selectedRole.is_active)} title={`${permission.permission_name} (${permission.permission_code})`} onClick={() => onTogglePermission(permission.id)} />);
       },
     })),
-  ], [selectedPermissionSet, selectedRole, onTogglePermission]);
+  ], [canEdit, selectedPermissionSet, selectedRole, onTogglePermission]);
   return (<Paper variant="outlined" sx={{ position: "relative", borderRadius: 2, overflow: "hidden", height: MAIN_TABLE_PANEL_HEIGHT, minHeight: MAIN_TABLE_PANEL_HEIGHT, maxHeight: MAIN_TABLE_PANEL_HEIGHT, boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
     <SectionHeader
       icon={<ShieldOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
@@ -1043,6 +1055,7 @@ function PermissionMatrixPanel({ selectedRole, rows, selectedPermissionIds, load
           startIcon={saving ? <CircularProgress size={15} color="inherit" /> : <SaveIcon />}
           onClick={onSave}
           disabled={!selectedRole ||
+            !canEdit ||
             !dirty ||
             saving ||
             !isActive(selectedRole.is_active)}
@@ -1074,6 +1087,7 @@ function MatrixToggle({ checked, disabled, title, onClick }) {
   </Tooltip>);
 }
 function RoleDetailPanel({
+  canEdit,
   role,
   assignedUsers,
   loading,
@@ -1150,6 +1164,7 @@ function RoleDetailPanel({
               <IconButton
                 size="small"
                 onClick={() => onEdit(role)}
+                disabled={!canEdit}
                 sx={buttonSx("edit", {
                   width: 30,
                   minWidth: 30,
@@ -1330,7 +1345,7 @@ function StatusBadge({ active, compact = false, }) {
     "& .MuiChip-label": { px: compact ? 0.75 : 1 },
   }} />);
 }
-function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave, }) {
+function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose, onSave, }) {
   return (<Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" PaperProps={{
     sx: {
       borderRadius: 2.5,
@@ -1418,13 +1433,13 @@ function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave,
 
     <DialogContent sx={{ pt: 2 }}>
       <Stack spacing={2} sx={{ pt: 1 }}>
-        <TextField fullWidth required size="small" label="Role Code" value={form.role_code} disabled={Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder="e.g. PRODUCTION_MANAGER" helperText={editingRole ? "The role code cannot be changed after creation." : undefined} />
+        <TextField fullWidth required size="small" label="Role Code" value={form.role_code} disabled={!canEdit || Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder="e.g. PRODUCTION_MANAGER" helperText={editingRole ? "The role code cannot be changed after creation." : undefined} />
 
-        <TextField fullWidth required size="small" label="Role Name" value={form.role_name} onChange={(event) => onChange({ ...form, role_name: event.target.value })} placeholder="e.g. Production Manager" />
+        <TextField fullWidth required size="small" label="Role Name" value={form.role_name} disabled={!canEdit} onChange={(event) => onChange({ ...form, role_name: event.target.value })} placeholder="e.g. Production Manager" />
 
-        <TextField fullWidth multiline minRows={3} label="Description" value={form.description} onChange={(event) => onChange({ ...form, description: event.target.value })} placeholder="Describe the role scope and intended users..." />
+        <TextField fullWidth multiline minRows={3} label="Description" value={form.description} disabled={!canEdit} onChange={(event) => onChange({ ...form, description: event.target.value })} placeholder="Describe the role scope and intended users..." />
 
-        <FormControlLabel control={<Switch checked={form.is_active} onChange={(event) => onChange({ ...form, is_active: event.target.checked })} />} label={<Box>
+        <FormControlLabel control={<Switch disabled={!canEdit} checked={form.is_active} onChange={(event) => onChange({ ...form, is_active: event.target.checked })} />} label={<Box>
           <Typography variant="body2" fontWeight={600}>
             Activate Role
           </Typography>
@@ -1436,7 +1451,7 @@ function RoleModal({ open, editingRole, form, saving, onChange, onClose, onSave,
     </DialogContent>
 
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={saving} sx={buttonSx("primary")}>
+      <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={!canEdit || saving} sx={buttonSx("primary")}>
         {saving ? "Saving..." : "Save Role"}
       </Button>
     </DialogActions>

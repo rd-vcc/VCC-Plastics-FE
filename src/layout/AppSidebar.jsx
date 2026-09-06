@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { BoltIcon, BoxCubeIcon, BoxIconLine, CheckCircleIcon, ChevronDownIcon, DocsIcon, FolderIcon, GridIcon, HorizontaLDots, PieChartIcon, PlugInIcon, TaskIcon, UserCircleIcon, CircleDotIcon, } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { hasPermission } from "../auth/auth";
+import { getPagePermissions } from "../auth/pagePermissions";
 const navItems = [
     { name: "Dashboard", path: "/", icon: <GridIcon /> },
     {
@@ -162,11 +164,24 @@ function collectActiveAncestorKeys(items, pathname, parentKey = "root") {
     });
     return keys;
 }
+function filterItemsByViewPermission(items) {
+    return items.reduce((visibleItems, item) => {
+        if (item.path) {
+            const permissions = getPagePermissions(item.path);
+            if (!permissions || hasPermission(permissions.view)) visibleItems.push(item);
+            return visibleItems;
+        }
+        const children = filterItemsByViewPermission(item.children || []);
+        if (children.length) visibleItems.push({ ...item, children });
+        return visibleItems;
+    }, []);
+}
 const AppSidebar = () => {
     const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
     const location = useLocation();
     const [openMenus, setOpenMenus] = useState({});
-    const activeAncestorKeys = useMemo(() => collectActiveAncestorKeys(navItems, location.pathname), [location.pathname]);
+    const visibleNavItems = useMemo(() => filterItemsByViewPermission(navItems), []);
+    const activeAncestorKeys = useMemo(() => collectActiveAncestorKeys(visibleNavItems, location.pathname), [visibleNavItems, location.pathname]);
     useEffect(() => {
         const next = {};
         activeAncestorKeys.forEach((key) => {
@@ -255,7 +270,7 @@ const AppSidebar = () => {
           <h2 className={`mb-2.5 flex text-[10px] uppercase leading-4 text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
             {showLabels ? "Menu" : <HorizontaLDots className="size-5"/>}
           </h2>
-          {renderItems(navItems)}
+          {renderItems(visibleNavItems)}
         </nav>
       </div>
     </aside>);

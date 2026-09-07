@@ -3,7 +3,10 @@ import { Navigate, useLocation, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 import { ThemeToggleButton } from "../../components/common/ThemeToggleButton";
 import { isAuthenticated, loginWithVccGroup, } from "../../auth/auth";
+import LanguageSwitcher from "../../components/common/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 export default function Login() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [username, setUsername] = useState("");
@@ -19,7 +22,7 @@ export default function Login() {
         setError("");
         const normalizedUsername = username.trim();
         if (!normalizedUsername || !password) {
-            setError("Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
+            setError(t("login.required"));
             return;
         }
         try {
@@ -32,13 +35,13 @@ export default function Login() {
         }
         catch (err) {
             if (err instanceof TypeError) {
-                setError("Không thể kết nối tới máy chủ VCC Group. Vui lòng kiểm tra địa chỉ API hoặc kết nối mạng.");
+                setError(t("login.connectionError"));
             }
             else if (err instanceof Error) {
                 setError(err.message);
             }
             else {
-                setError("Đăng nhập thất bại. Vui lòng thử lại.");
+                setError(t("login.failed"));
             }
         }
         finally {
@@ -46,10 +49,11 @@ export default function Login() {
         }
     };
     return (<>
-      <PageMeta title="Login | VCC Plastics" description="Login page for VCC Plastics Management System"/>
+      <PageMeta title={`${t("login.title")} | VCC Plastics`} description={t("login.description")}/>
 
       <div className="relative min-h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-        <div className="absolute right-4 top-4 z-20">
+        <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+          <LanguageSwitcher />
           <ThemeToggleButton />
         </div>
 
@@ -70,9 +74,7 @@ export default function Login() {
               </h1>
 
               <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-gray-300">
-                Hệ thống quản lý sản xuất, máy móc, khuôn,
-                chất lượng, vật tư và vận hành nhà máy VCC
-                Plastics.
+                {t("login.systemDescription")}
               </p>
             </div>
           </div>
@@ -94,11 +96,11 @@ export default function Login() {
                   </p>
 
                   <h2 className="text-2xl font-semibold text-gray-800 dark:text-white/90 sm:text-3xl">
-                    Đăng nhập hệ thống
+                    {t("login.title")}
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
-                    Sử dụng tài khoản VCC Group để đăng nhập.
+                    {t("login.description")}
                   </p>
                 </div>
 
@@ -106,26 +108,26 @@ export default function Login() {
                   {/* USERNAME */}
                   <div>
                     <label htmlFor="username" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Tài khoản
+                      {t("login.username")}
                     </label>
 
-                    <input id="username" name="username" type="text" autoComplete="username" value={username} disabled={isSubmitting} onChange={(event) => setUsername(event.target.value)} placeholder="Nhập mã nhân viên" className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
+                    <input id="username" name="username" type="text" autoComplete="username" value={username} disabled={isSubmitting} onChange={(event) => setUsername(event.target.value)} placeholder={t("login.usernamePlaceholder")} className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
                   </div>
 
                   {/* PASSWORD */}
                   <div>
                     <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Mật khẩu
+                      {t("login.password")}
                     </label>
 
                     <div className="relative">
                       <input id="password" name="password" type={showPassword
             ? "text"
-            : "password"} autoComplete="current-password" value={password} disabled={isSubmitting} onChange={(event) => setPassword(event.target.value)} placeholder="Nhập mật khẩu" className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-12 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
+            : "password"} autoComplete="current-password" value={password} disabled={isSubmitting} onChange={(event) => setPassword(event.target.value)} placeholder={t("login.passwordPlaceholder")} className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 pr-12 text-sm text-gray-800 shadow-theme-xs outline-none transition placeholder:text-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-70 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
 
                       <button type="button" disabled={isSubmitting} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-200" aria-label={showPassword
-            ? "Ẩn mật khẩu"
-            : "Hiện mật khẩu"}>
+            ? t("login.hidePassword")
+            : t("login.showPassword")}>
                         {showPassword ? (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M3 3L21 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
 
@@ -149,14 +151,13 @@ export default function Login() {
                   {/* LOGIN BUTTON */}
                   <button type="submit" disabled={isSubmitting} className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-brand-500 px-5 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-none focus:ring-3 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-70">
                     {isSubmitting
-            ? "Đang đăng nhập..."
-            : "Đăng nhập"}
+            ? t("login.submitting")
+            : t("login.submit")}
                   </button>
                 </form>
 
                 <div className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
-                  Tài khoản đăng nhập được xác thực thông qua
-                  hệ thống VCC Group.
+                  {t("login.verifiedBy")}
                 </div>
               </div>
             </div>
@@ -165,3 +166,4 @@ export default function Login() {
       </div>
     </>);
 }
+

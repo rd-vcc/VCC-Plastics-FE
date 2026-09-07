@@ -4,6 +4,8 @@ import { BoltIcon, BoxCubeIcon, BoxIconLine, CheckCircleIcon, ChevronDownIcon, D
 import { useSidebar } from "../context/SidebarContext";
 import { hasPermission } from "../auth/auth";
 import { getPagePermissions } from "../auth/pagePermissions";
+import { useTranslation } from "react-i18next";
+import { toTranslationSlug } from "../i18n";
 const navItems = [
     { name: "Dashboard", path: "/", icon: <GridIcon /> },
     {
@@ -177,6 +179,7 @@ function filterItemsByViewPermission(items) {
     }, []);
 }
 const AppSidebar = () => {
+    const { t } = useTranslation();
     const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
     const location = useLocation();
     const [openMenus, setOpenMenus] = useState({});
@@ -219,7 +222,7 @@ const AppSidebar = () => {
                   </span>)}
                 {showLabels && (<>
                     {depth > 0 && (<CircleDotIcon className="h-3.5 w-3.5 shrink-0 text-current"/>)}
-                    <span className="min-w-0 flex-1 text-left">{item.name}</span>
+                    <span className="min-w-0 flex-1 text-left">{t(`navigation.${toTranslationSlug(item.name)}`, { defaultValue: item.name })}</span>
                   </>)}
               </Link>
             </li>);
@@ -237,7 +240,7 @@ const AppSidebar = () => {
                 </span>)}
               {showLabels && (<>
                   {depth > 0 && (<CircleDotIcon className="h-3.5 w-3.5 shrink-0 text-current"/>)}
-                  <span className="min-w-0 flex-1 text-left">{item.name}</span>
+                  <span className="min-w-0 flex-1 text-left">{t(`navigation.${toTranslationSlug(item.name)}`, { defaultValue: item.name })}</span>
                   <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}/>
                 </>)}
             </button>
@@ -268,7 +271,7 @@ const AppSidebar = () => {
       <div className="flex flex-col overflow-y-auto pb-16 duration-300 ease-linear no-scrollbar">
         <nav className="mb-4">
           <h2 className={`mb-2.5 flex text-[10px] uppercase leading-4 text-gray-400 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
-            {showLabels ? "Menu" : <HorizontaLDots className="size-5"/>}
+            {showLabels ? t("common.menu") : <HorizontaLDots className="size-5"/>}
           </h2>
           {renderItems(visibleNavItems)}
         </nav>
@@ -276,3 +279,4 @@ const AppSidebar = () => {
     </aside>);
 };
 export default AppSidebar;
+

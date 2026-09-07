@@ -4,4 +4,6 @@ export const API_CONFIG = {
 };
 export const API_ENDPOINTS = {
     LOGIN: `${API_CONFIG.VCC_PLASTICS_API}/api/auth/login`,
+    SYSTEM_LANGUAGE: `${API_CONFIG.VCC_PLASTICS_API}/api/system-settings/language`,
 };
+

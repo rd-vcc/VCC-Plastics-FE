@@ -1,7 +1,9 @@
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { getCurrentUser } from "../../auth/auth";
+import { useTranslation } from "react-i18next";
 export default function EditProfile() {
+    const { t } = useTranslation();
     const user = getCurrentUser();
     const displayValue = (value) => {
         if (value === undefined ||
@@ -13,13 +15,13 @@ export default function EditProfile() {
     };
     if (!user) {
         return (<>
-        <PageMeta title="Thông tin nhân viên | VCC Plastics" description="Thông tin nhân viên VCC Plastics"/>
+        <PageMeta title={t("editProfile.metaTitle")} description={t("editProfile.metaDescription")}/>
 
-        <PageBreadcrumb pageTitle="Thông tin nhân viên"/>
+        <PageBreadcrumb pageTitle={t("editProfile.title")}/>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Không tìm thấy thông tin người dùng.
+            {t("editProfile.userNotFound")}
           </p>
         </div>
       </>);
@@ -34,9 +36,9 @@ export default function EditProfile() {
             .toUpperCase()
         : "U";
     return (<>
-      <PageMeta title="Thông tin nhân viên | VCC Plastics" description="Thông tin nhân viên đang đăng nhập"/>
+      <PageMeta title={t("editProfile.metaTitle")} description={t("editProfile.signedInDescription")}/>
 
-      <PageBreadcrumb pageTitle="Thông tin nhân viên"/>
+      <PageBreadcrumb pageTitle={t("editProfile.title")}/>
 
       <div className="space-y-6">
         {/* EMPLOYEE HEADER */}
@@ -53,7 +55,7 @@ export default function EditProfile() {
 
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
                 <span>
-                  Mã nhân viên:{" "}
+                  {t("editProfile.employeeCode")}:{" "}
                   <strong className="font-medium text-gray-700 dark:text-gray-300">
                     {displayValue(user.employee_code)}
                   </strong>
@@ -77,28 +79,28 @@ export default function EditProfile() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Thông tin cá nhân
+              {t("editProfile.personalInformation")}
             </h3>
 
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Thông tin nhân viên được lấy từ hệ thống VCC Group.
+              {t("editProfile.personalDescription")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label="Mã nhân viên" value={displayValue(user.employee_code)}/>
+            <InfoItem label={t("editProfile.employeeCode")} value={displayValue(user.employee_code)}/>
 
-            <InfoItem label="Họ và tên" value={displayValue(user.full_name)}/>
+            <InfoItem label={t("editProfile.fullName")} value={displayValue(user.full_name)}/>
 
-            <InfoItem label="Giới tính" value={displayValue(user.gender)}/>
+            <InfoItem label={t("editProfile.gender")} value={displayValue(user.gender)}/>
 
-            <InfoItem label="Ngày sinh" value={displayValue(user.birth_date)}/>
+            <InfoItem label={t("editProfile.birthDate")} value={displayValue(user.birth_date)}/>
 
-            <InfoItem label="Ngày vào công ty" value={displayValue(user.entry_date)}/>
+            <InfoItem label={t("editProfile.entryDate")} value={displayValue(user.entry_date)}/>
 
-            <InfoItem label="Số điện thoại" value={displayValue(user.phone)}/>
+            <InfoItem label={t("editProfile.phone")} value={displayValue(user.phone)}/>
 
-            <InfoItem label="Chức vụ" value={displayValue(user.position)}/>
+            <InfoItem label={t("editProfile.position")} value={displayValue(user.position)}/>
           </div>
         </div>
 
@@ -106,28 +108,28 @@ export default function EditProfile() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Cơ cấu tổ chức
+              {t("editProfile.organizationInformation")}
             </h3>
 
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Thông tin cơ cấu tổ chức được đồng bộ từ VCC Group.
+              {t("editProfile.organizationDescription")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label="Tập đoàn" value={displayValue(user.corporation)}/>
+            <InfoItem label={t("editProfile.corporation")} value={displayValue(user.corporation)}/>
 
-            <InfoItem label="Công ty" value={displayValue(user.company)}/>
+            <InfoItem label={t("editProfile.company")} value={displayValue(user.company)}/>
 
-            <InfoItem label="Nhà máy" value={displayValue(user.factory)}/>
+            <InfoItem label={t("editProfile.factory")} value={displayValue(user.factory)}/>
 
-            <InfoItem label="Division" value={displayValue(user.division)}/>
+            <InfoItem label={t("editProfile.division")} value={displayValue(user.division)}/>
 
-            <InfoItem label="Sub Division" value={displayValue(user.sub_division)}/>
+            <InfoItem label={t("editProfile.subDivision")} value={displayValue(user.sub_division)}/>
 
-            <InfoItem label="Section" value={displayValue(user.section)}/>
+            <InfoItem label={t("editProfile.section")} value={displayValue(user.section)}/>
 
-            <InfoItem label="Group" value={displayValue(user.group_name)}/>
+            <InfoItem label={t("editProfile.group")} value={displayValue(user.group_name)}/>
             
           </div>
         </div>
@@ -136,20 +138,20 @@ export default function EditProfile() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Thông tin hệ thống
+              {t("editProfile.systemInformation")}
             </h3>
 
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Thông tin liên kết tài khoản hiện tại.
+              {t("editProfile.systemDescription")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label="User ID" value={displayValue(user.id)}/>
+            <InfoItem label={t("editProfile.userId")} value={displayValue(user.id)}/>
 
-            <InfoItem label="Nguồn dữ liệu" value="VCC Group"/>
+            <InfoItem label={t("editProfile.dataSource")} value="VCC Group"/>
 
-            <InfoItem label="Trạng thái" value="Đang hoạt động"/>
+            <InfoItem label={t("editProfile.status")} value={t("editProfile.active")}/>
           </div>
         </div>
       </div>
@@ -166,3 +168,4 @@ function InfoItem({ label, value, }) {
       </p>
     </div>);
 }
+

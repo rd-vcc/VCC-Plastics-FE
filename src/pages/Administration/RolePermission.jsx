@@ -24,6 +24,8 @@ import { buttonSystem } from "../../components/button/ButtonSystem";
 import { KpiCard, KpiCardGroup } from "../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../context/ThemeContext";
 import usePagePermission from "../../auth/usePagePermission";
+import { useTranslation } from "react-i18next";
+import { toTranslationSlug } from "../../i18n";
 const EMPTY_ROLE_FORM = {
   role_code: "",
   role_name: "",
@@ -207,6 +209,7 @@ function rolePermissionPageSx(isDark) {
 }
 
 export default function RolePermission() {
+  const { t } = useTranslation();
   const { theme: appTheme } = useAppTheme();
   const isDark = appTheme === "dark";
   const muiTheme = useMemo(() => createRolePermissionMuiTheme(appTheme), [appTheme]);
@@ -341,7 +344,7 @@ export default function RolePermission() {
     if (!response.ok) {
       const message = payload?.detail ||
         payload?.message ||
-        `Unable to complete the request (HTTP ${response.status}).`;
+        t("rolePermission.errors.request", { status: response.status });
       throw new Error(message);
     }
     return payload;
@@ -369,7 +372,7 @@ export default function RolePermission() {
       });
     }
     catch (err) {
-      setError(errorMessage(err, "Unable to load Role & Permission data."));
+      setError(errorMessage(err, t("rolePermission.errors.load")));
     }
     finally {
       setLoading(false);
@@ -387,7 +390,7 @@ export default function RolePermission() {
     catch (err) {
       setSelectedPermissionIds([]);
       setOriginalPermissionIds([]);
-      setError(errorMessage(err, "Unable to load role permissions."));
+      setError(errorMessage(err, t("rolePermission.errors.loadPermissions")));
     }
     finally {
       setLoadingRolePermissions(false);
@@ -397,7 +400,7 @@ export default function RolePermission() {
     if (roleId === selectedRoleId)
       return;
     if (hasPermissionChanges &&
-      !window.confirm("Permissions have not been saved. Discard changes and switch roles?")) {
+      !window.confirm(t("rolePermission.confirmDiscard"))) {
       return;
     }
     setSelectedRoleId(roleId);
@@ -434,11 +437,11 @@ export default function RolePermission() {
       .replace(/\s+/g, "_");
     const roleName = roleForm.role_name.trim();
     if (!roleCode) {
-      setError("Please enter the role code.");
+      setError(t("rolePermission.errors.roleCodeRequired"));
       return;
     }
     if (!roleName) {
-      setError("Please enter the role name.");
+      setError(t("rolePermission.errors.roleNameRequired"));
       return;
     }
     try {
@@ -454,7 +457,7 @@ export default function RolePermission() {
             updated_by: actor,
           }),
         });
-        setSuccess("Role updated successfully.");
+        setSuccess(t("rolePermission.success.updated"));
       }
       else {
         const result = await requestJson("/api/roles", {
@@ -468,13 +471,13 @@ export default function RolePermission() {
           }),
         });
         setSelectedRoleId(result.id);
-        setSuccess("Role created successfully.");
+        setSuccess(t("rolePermission.success.created"));
       }
       closeRoleModal();
       await reloadRolesAndUsers();
     }
     catch (err) {
-      setError(errorMessage(err, "Unable to save the role."));
+      setError(errorMessage(err, t("rolePermission.errors.saveRole")));
     }
     finally {
       setSavingRole(false);
@@ -482,17 +485,17 @@ export default function RolePermission() {
   }
   async function deactivateRole(role) {
     if (!canEdit) return;
-    const confirmed = window.confirm(`Are you sure you want to deactivate role "${role.role_name}"?`);
+    const confirmed = window.confirm(t("rolePermission.confirmDeactivate", { name: role.role_name }));
     if (!confirmed)
       return;
     try {
       setError("");
       await requestJson(`/api/roles/${role.id}`, { method: "DELETE" });
-      setSuccess("Role deactivated successfully.");
+      setSuccess(t("rolePermission.success.deactivated"));
       await reloadRolesAndUsers();
     }
     catch (err) {
-      setError(errorMessage(err, "Unable to deactivate the role."));
+      setError(errorMessage(err, t("rolePermission.errors.deactivate")));
     }
   }
   async function reactivateRole(role) {
@@ -508,11 +511,11 @@ export default function RolePermission() {
           updated_by: actor,
         }),
       });
-      setSuccess("Role reactivated successfully.");
+      setSuccess(t("rolePermission.success.reactivated"));
       await reloadRolesAndUsers();
     }
     catch (err) {
-      setError(errorMessage(err, "Unable to reactivate the role."));
+      setError(errorMessage(err, t("rolePermission.errors.reactivate")));
     }
   }
   async function reloadRolesAndUsers() {
@@ -542,7 +545,7 @@ export default function RolePermission() {
     if (!canEdit || !selectedRole)
       return;
     if (!isActive(selectedRole.is_active)) {
-      setError("Permissions cannot be assigned to an inactive role.");
+      setError(t("rolePermission.errors.inactivePermissions"));
       return;
     }
     try {
@@ -556,11 +559,11 @@ export default function RolePermission() {
         }),
       });
       setOriginalPermissionIds(selectedPermissionIds);
-      setSuccess(`Permissions saved for role ${selectedRole.role_name}.`);
+      setSuccess(t("rolePermission.success.permissionsSaved", { name: selectedRole.role_name }));
       await reloadRolesAndUsers();
     }
     catch (err) {
-      setError(errorMessage(err, "Unable to save role permissions."));
+      setError(errorMessage(err, t("rolePermission.errors.savePermissions")));
     }
     finally {
       setSavingPermissions(false);
@@ -568,17 +571,17 @@ export default function RolePermission() {
   }
   function exportRoles() {
     const header = [
-      "Role Code",
-      "Role Name",
-      "Status",
-      "Users",
-      "Permissions",
-      "Description",
+      t("rolePermission.roleCode"),
+      t("rolePermission.roleName"),
+      t("rolePermission.status"),
+      t("rolePermission.users"),
+      t("rolePermission.permissions"),
+      t("rolePermission.roleDescription"),
     ];
     const rows = roles.map((role) => [
       role.role_code,
       role.role_name,
-      isActive(role.is_active) ? "Active" : "Inactive",
+      isActive(role.is_active) ? t("rolePermission.active") : t("rolePermission.inactive"),
       String(toNumber(role.user_count)),
       String(toNumber(role.permission_count)),
       role.description || "",
@@ -603,7 +606,7 @@ export default function RolePermission() {
   return (
     <MuiThemeProvider theme={muiTheme}>
       <Box sx={rolePermissionPageSx(isDark)}>
-    <PageMeta title="Role & Permission | VCC Plastics" description="Manage roles and system permissions for VCC Plastics" />
+    <PageMeta title={`${t("rolePermission.title")} | VCC Plastics`} description={t("rolePermission.description")} />
 
     <PageBreadcrumb pageTitle="Role & Permission" />
 
@@ -619,10 +622,10 @@ export default function RolePermission() {
       >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h4" fontWeight={700}>
-            Role & Permission Management
+            {t("rolePermission.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            Manage roles, usage status, and the permission matrix for VCC Plastics.
+            {t("rolePermission.description")}
           </Typography>
         </Box>
 
@@ -634,44 +637,44 @@ export default function RolePermission() {
 
       <KpiCardGroup>
         <KpiCard
-          label="Total Roles"
+          label={t("rolePermission.kpi.totalRoles")}
           value={statistics.totalRoles}
-          note={`+ ${statistics.newRolesThisMonth} new this month`}
+          note={t("rolePermission.kpi.newThisMonth", { count: statistics.newRolesThisMonth })}
           tone="primary"
           icon={<BadgeOutlinedIcon />}
         />
         <KpiCard
-          label="Active Roles"
+          label={t("rolePermission.kpi.activeRoles")}
           value={statistics.activeRoles}
-          note={`${statistics.activeRolePercent}% of total`}
+          note={t("rolePermission.kpi.percentOfTotal", { percent: statistics.activeRolePercent })}
           tone="success"
           icon={<ShieldOutlinedIcon />}
         />
         <KpiCard
-          label="Total Permissions"
+          label={t("rolePermission.kpi.totalPermissions")}
           value={statistics.totalPermissions}
-          note={`Across ${statistics.permissionResourceCount} menus`}
+          note={t("rolePermission.kpi.acrossMenus", { count: statistics.permissionResourceCount })}
           tone="warning"
           icon={<VpnKeyOutlinedIcon />}
         />
         <KpiCard
-          label="Users Assigned"
+          label={t("rolePermission.kpi.usersAssigned")}
           value={statistics.assignedUserCount}
-          note="Across all roles"
+          note={t("rolePermission.kpi.acrossRoles")}
           tone="accent"
           icon={<GroupOutlinedIcon />}
         />
         <KpiCard
-          label="Highly Privileged Roles"
+          label={t("rolePermission.kpi.highlyPrivileged")}
           value={statistics.highlyPrivilegedRoles}
-          note="Require attention"
+          note={t("rolePermission.kpi.requireAttention")}
           tone="info"
           icon={<LockOutlinedIcon />}
         />
         <KpiCard
-          label="Inactive Roles"
+          label={t("rolePermission.kpi.inactiveRoles")}
           value={statistics.inactiveRoles}
-          note="Deactivated roles"
+          note={t("rolePermission.kpi.deactivatedRoles")}
           tone="danger"
           icon={<LockOutlinedIcon />}
         />
@@ -687,23 +690,23 @@ export default function RolePermission() {
           gap: 1,
           alignItems: "center",
         }}>
-          <TextField size="small" fullWidth value={roleSearch} onChange={(event) => setRoleSearch(event.target.value)} placeholder="Search role code, name, or description..." InputProps={{
+          <TextField size="small" fullWidth value={roleSearch} onChange={(event) => setRoleSearch(event.target.value)} placeholder={t("rolePermission.searchPlaceholder")} InputProps={{
             startAdornment: (<InputAdornment position="start">
               <SearchIcon fontSize="small" />
             </InputAdornment>),
           }} />
 
           <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <MenuItem value="ALL">All Statuses</MenuItem>
-            <MenuItem value="ACTIVE">Active</MenuItem>
-            <MenuItem value="INACTIVE">Inactive</MenuItem>
+            <MenuItem value="ALL">{t("rolePermission.allStatuses")}</MenuItem>
+            <MenuItem value="ACTIVE">{t("rolePermission.active")}</MenuItem>
+            <MenuItem value="INACTIVE">{t("rolePermission.inactive")}</MenuItem>
           </TextField>
 
           <TextField select size="small" value={accessFilter} onChange={(event) => setAccessFilter(event.target.value)}>
-            <MenuItem value="ALL">All Access Levels</MenuItem>
-            <MenuItem value="FULL">Full Access</MenuItem>
-            <MenuItem value="PARTIAL">Partial Access</MenuItem>
-            <MenuItem value="NONE">No Access</MenuItem>
+            <MenuItem value="ALL">{t("rolePermission.allAccessLevels")}</MenuItem>
+            <MenuItem value="FULL">{t("rolePermission.fullAccess")}</MenuItem>
+            <MenuItem value="PARTIAL">{t("rolePermission.partialAccess")}</MenuItem>
+            <MenuItem value="NONE">{t("rolePermission.noAccess")}</MenuItem>
           </TextField>
 
           <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={() => {
@@ -714,7 +717,7 @@ export default function RolePermission() {
             minHeight: 40,
             whiteSpace: "nowrap",
           })}>
-            Clear Filters
+            {t("rolePermission.clearFilters")}
           </Button>
         </Box>
       </Paper>
@@ -843,6 +846,7 @@ function SectionHeader({ icon, title, action = null }) {
 }
 
 function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEdit, onDeactivate, onReactivate, onCreate, }) {
+  const { t } = useTranslation();
   const columnDefs = useMemo(() => [
     {
       headerName: "",
@@ -855,7 +859,7 @@ function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEd
       cellClass: "ag-cell-center",
     },
     {
-      headerName: "Role",
+      headerName: t("rolePermission.role"),
       field: "role_name",
       minWidth: 155,
       flex: 1,
@@ -896,7 +900,7 @@ function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEd
       },
     },
     {
-      headerName: "User",
+      headerName: t("rolePermission.users"),
       field: "user_count",
       width: 64,
       minWidth: 64,
@@ -905,11 +909,11 @@ function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEd
       cellClass: "ag-cell-center",
       valueGetter: (params) => toNumber(params.data?.user_count),
     },
-  ], [selectedRoleId, onEdit, onDeactivate, onReactivate]);
+  ], [selectedRoleId, onEdit, onDeactivate, onReactivate, t]);
   return (<Paper variant="outlined" sx={{ position: "relative", borderRadius: 2, overflow: "hidden", height: MAIN_TABLE_PANEL_HEIGHT, minHeight: MAIN_TABLE_PANEL_HEIGHT, maxHeight: MAIN_TABLE_PANEL_HEIGHT, boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
     <SectionHeader
       icon={<BadgeOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-      title="Roles"
+      title={t("rolePermission.roles")}
     />
 
     <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
@@ -957,27 +961,28 @@ function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEd
         },
       })}
     >
-      Create Role
+      {t("rolePermission.createRole")}
     </Button>
   </Paper>);
 }
 function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermissionIds, loading, saving, dirty, permissionSearch, onPermissionSearchChange, onTogglePermission, onSave, }) {
+  const { t } = useTranslation();
   const selectedPermissionSet = useMemo(() => new Set(selectedPermissionIds), [selectedPermissionIds]);
   const columnDefs = useMemo(() => [
     {
-      headerName: "Module",
+      headerName: t("rolePermission.module"),
       width: 210,
       minWidth: 190,
       flex: 1,
       headerClass: "ag-header-center",
       cellClass: "ag-cell-left",
-      valueGetter: (params) => params.data ? moduleLabel(params.data.moduleCode) : "",
+      valueGetter: (params) => params.data ? t(`navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`, { defaultValue: moduleLabel(params.data.moduleCode) }) : "",
       cellRenderer: (params) => params.data ? (<Typography variant="caption" fontWeight={700} noWrap>
-        {moduleLabel(params.data.moduleCode)}
+        {t(`navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`, { defaultValue: moduleLabel(params.data.moduleCode) })}
       </Typography>) : null,
     },
     ...ACTION_ORDER.map((action) => ({
-      headerName: ACTION_LABELS[action],
+      headerName: t(`rolePermission.actions.${action}`),
       width: 92,
       minWidth: 92,
       maxWidth: 92,
@@ -1000,17 +1005,17 @@ function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermission
         return (<MatrixToggle checked={selectedPermissionSet.has(permission.id)} disabled={!canEdit || !selectedRole || !isActive(selectedRole.is_active)} title={`${permission.permission_name} (${permission.permission_code})`} onClick={() => onTogglePermission(permission.id)} />);
       },
     })),
-  ], [canEdit, selectedPermissionSet, selectedRole, onTogglePermission]);
+  ], [canEdit, selectedPermissionSet, selectedRole, onTogglePermission, t]);
   return (<Paper variant="outlined" sx={{ position: "relative", borderRadius: 2, overflow: "hidden", height: MAIN_TABLE_PANEL_HEIGHT, minHeight: MAIN_TABLE_PANEL_HEIGHT, maxHeight: MAIN_TABLE_PANEL_HEIGHT, boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
     <SectionHeader
       icon={<ShieldOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-      title="Permission Matrix (SYSTEM ADMIN)"
+      title={t("rolePermission.permissionMatrix")}
     />
 
     {!selectedRole ? (<Stack alignItems="center" justifyContent="center" spacing={1} sx={{ flex: 1, px: 2 }}>
-      <Typography variant="subtitle2">No Role Selected</Typography>
+      <Typography variant="subtitle2">{t("rolePermission.noRoleSelected")}</Typography>
       <Typography variant="caption" color="text.secondary" textAlign="center">
-        Select a role from the left table to view and assign permissions.
+        {t("rolePermission.selectRoleHelp")}
       </Typography>
     </Stack>) : (<>
       <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
@@ -1045,7 +1050,7 @@ function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermission
               flexShrink: 0,
             }}
           >
-            Unsaved changes
+            {t("rolePermission.unsavedChanges")}
           </Typography>
         ) : null}
 
@@ -1073,7 +1078,7 @@ function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermission
             },
           })}
         >
-          {saving ? "Saving..." : "Save Permissions"}
+          {saving ? t("common.saving") : t("rolePermission.savePermissions")}
         </Button>
       </Stack>
     </>)}
@@ -1095,6 +1100,7 @@ function RoleDetailPanel({
   totalPermissionCount,
   onEdit,
 }) {
+  const { t } = useTranslation();
   const userColumnDefs = useMemo(() => [
     {
       headerName: "",
@@ -1107,7 +1113,7 @@ function RoleDetailPanel({
       cellClass: "ag-cell-center",
     },
     {
-      headerName: "User Code",
+      headerName: t("rolePermission.userCode"),
       field: "employee_code",
       minWidth: 95,
       flex: 1,
@@ -1118,7 +1124,7 @@ function RoleDetailPanel({
       ),
     },
     {
-      headerName: "User Name",
+      headerName: t("rolePermission.userName"),
       minWidth: 110,
       flex: 1.2,
       valueGetter: (params) => getEmployeeDisplayName(params.data),
@@ -1129,7 +1135,7 @@ function RoleDetailPanel({
       ),
     },
     {
-      headerName: "Status",
+      headerName: t("rolePermission.status"),
       width: 68,
       minWidth: 68,
       maxWidth: 68,
@@ -1139,7 +1145,7 @@ function RoleDetailPanel({
       cellRenderer: (params) =>
         params.data ? <StatusBadge active={isActive(params.data.is_active)} compact /> : null,
     },
-  ], []);
+  ], [t]);
 
   return (
     <Paper
@@ -1157,10 +1163,10 @@ function RoleDetailPanel({
     >
       <SectionHeader
         icon={<AssignmentIndOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-        title="Role Details"
+        title={t("rolePermission.roleDetails")}
         action={
           role ? (
-            <Tooltip title="Edit Role">
+            <Tooltip title={t("rolePermission.editRole")}>
               <IconButton
                 size="small"
                 onClick={() => onEdit(role)}
@@ -1186,7 +1192,7 @@ function RoleDetailPanel({
           sx={{ flex: 1, px: 2 }}
         >
           <Typography variant="body2" color="text.secondary">
-            Select a role to view details.
+            {t("rolePermission.selectRoleDetails")}
           </Typography>
         </Stack>
       ) : (
@@ -1209,15 +1215,15 @@ function RoleDetailPanel({
             }}
           >
             <Stack spacing={1.1}>
-              <DetailRow label="Role Name" value={role.role_name} strong />
-              <DetailRow label="Role Code" value={role.role_code} />
+              <DetailRow label={t("rolePermission.roleName")} value={role.role_name} strong />
+              <DetailRow label={t("rolePermission.roleCode")} value={role.role_code} />
               <DetailRow
-                label="Status"
-                value={isActive(role.is_active) ? "Active" : "Inactive"}
+                label={t("rolePermission.status")}
+                value={isActive(role.is_active) ? t("rolePermission.active") : t("rolePermission.inactive")}
                 strong
               />
-              <DetailRow label="Description" value={role.description || "-"} />
-              <DetailRow label="Users" value={String(toNumber(role.user_count))} strong />
+              <DetailRow label={t("rolePermission.roleDescription")} value={role.description || "-"} />
+              <DetailRow label={t("rolePermission.users")} value={String(toNumber(role.user_count))} strong />
             </Stack>
 
             <Stack
@@ -1234,25 +1240,25 @@ function RoleDetailPanel({
               }}
             >
               <Typography variant="caption" color="text.secondary" noWrap>
-                Assigned:{" "}
+                {t("rolePermission.assigned")}: {" "}
                 <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
                   {selectedPermissionCount}
                 </Typography>
               </Typography>
 
               <Typography variant="caption" color="text.secondary" noWrap>
-                Unassigned:{" "}
+                {t("rolePermission.unassigned")}: {" "}
                 <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
                   {Math.max(totalPermissionCount - selectedPermissionCount, 0)}
                 </Typography>
               </Typography>
 
               <Typography variant="caption" color="text.secondary" noWrap>
-                Total:{" "}
+                {t("rolePermission.total")}: {" "}
                 <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
                   {totalPermissionCount}
                 </Typography>
-                {" "}Permission
+                {" "}{t("rolePermission.permissions")}
               </Typography>
             </Stack>
           </Box>
@@ -1280,7 +1286,7 @@ function RoleDetailPanel({
             >
               <GroupOutlinedIcon sx={{ color: "text.secondary" }} fontSize="small" />
               <Typography variant="caption" fontWeight={700} color="text.primary">
-                Assigned Users ({assignedUsers.length})
+                {t("rolePermission.assignedUsers", { count: assignedUsers.length })}
               </Typography>
             </Stack>
 
@@ -1340,12 +1346,14 @@ function getEmployeeDisplayName(user) {
 }
 
 function StatusBadge({ active, compact = false, }) {
-  return (<Chip size="small" label={active ? "Active" : "Inactive"} color={active ? "success" : "error"} variant="outlined" sx={{
+  const { t } = useTranslation();
+  return (<Chip size="small" label={active ? t("rolePermission.active") : t("rolePermission.inactive")} color={active ? "success" : "error"} variant="outlined" sx={{
     height: compact ? 20 : 22,
     "& .MuiChip-label": { px: compact ? 0.75 : 1 },
   }} />);
 }
 function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose, onSave, }) {
+  const { t } = useTranslation();
   return (<Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" PaperProps={{
     sx: {
       borderRadius: 2.5,
@@ -1388,15 +1396,15 @@ function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose
 
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.15 }}>
-              {editingRole ? "Update Role" : "Create New Role"}
+              {editingRole ? t("rolePermission.updateRole") : t("rolePermission.createNewRole")}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
-              Permissions can be configured in the matrix after the role is saved.
+              {t("rolePermission.modalHelp")}
             </Typography>
           </Box>
         </Stack>
 
-        <Tooltip title="Close" arrow>
+        <Tooltip title={t("rolePermission.close")} arrow>
           <span
             style={{
               position: "absolute",
@@ -1433,18 +1441,18 @@ function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose
 
     <DialogContent sx={{ pt: 2 }}>
       <Stack spacing={2} sx={{ pt: 1 }}>
-        <TextField fullWidth required size="small" label="Role Code" value={form.role_code} disabled={!canEdit || Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder="e.g. PRODUCTION_MANAGER" helperText={editingRole ? "The role code cannot be changed after creation." : undefined} />
+        <TextField fullWidth required size="small" label={t("rolePermission.roleCode")} value={form.role_code} disabled={!canEdit || Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder={t("rolePermission.roleCodePlaceholder")} helperText={editingRole ? t("rolePermission.roleCodeHelp") : undefined} />
 
-        <TextField fullWidth required size="small" label="Role Name" value={form.role_name} disabled={!canEdit} onChange={(event) => onChange({ ...form, role_name: event.target.value })} placeholder="e.g. Production Manager" />
+        <TextField fullWidth required size="small" label={t("rolePermission.roleName")} value={form.role_name} disabled={!canEdit} onChange={(event) => onChange({ ...form, role_name: event.target.value })} placeholder={t("rolePermission.roleNamePlaceholder")} />
 
-        <TextField fullWidth multiline minRows={3} label="Description" value={form.description} disabled={!canEdit} onChange={(event) => onChange({ ...form, description: event.target.value })} placeholder="Describe the role scope and intended users..." />
+        <TextField fullWidth multiline minRows={3} label={t("rolePermission.roleDescription")} value={form.description} disabled={!canEdit} onChange={(event) => onChange({ ...form, description: event.target.value })} placeholder={t("rolePermission.descriptionPlaceholder")} />
 
         <FormControlLabel control={<Switch disabled={!canEdit} checked={form.is_active} onChange={(event) => onChange({ ...form, is_active: event.target.checked })} />} label={<Box>
           <Typography variant="body2" fontWeight={600}>
-            Activate Role
+            {t("rolePermission.activateRole")}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Only active roles can be assigned permissions and used.
+            {t("rolePermission.activateHelp")}
           </Typography>
         </Box>} />
       </Stack>
@@ -1452,7 +1460,7 @@ function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose
 
     <DialogActions sx={{ px: 3, pb: 2.5 }}>
       <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={!canEdit || saving} sx={buttonSx("primary")}>
-        {saving ? "Saving..." : "Save Role"}
+        {saving ? t("common.saving") : t("rolePermission.saveRole")}
       </Button>
     </DialogActions>
   </Dialog>);
@@ -1557,3 +1565,4 @@ function errorMessage(error, fallback) {
 function csvCell(value) {
   return `"${value.replaceAll('"', '""')}"`;
 }
+

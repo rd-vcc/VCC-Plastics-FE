@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@300;400;500;600;700&display=swap")
+@import url("https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap")
 layer(base);
 
 @import "tailwindcss";
@@ -7,7 +7,7 @@ layer(base);
 
 @theme {
   --font-*: initial;
-  --font-outfit: "Bai Jamjuree", sans-serif;
+  --font-outfit: "Bai Jamjuree", "Noto Sans JP", sans-serif;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -188,12 +188,12 @@ layer(base);
   html {
     /* Compact UI: scale Tailwind rem-based typography, spacing and controls globally. */
     font-size: 14px;
-    font-family: "Bai Jamjuree", sans-serif;
+    font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif;
   }
 
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50 dark:bg-gray-950;
-    font-family: "Bai Jamjuree", sans-serif;
+    font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif;
   }
 
   #root,
@@ -203,7 +203,7 @@ layer(base);
   textarea,
   select,
   option {
-    font-family: "Bai Jamjuree", sans-serif !important;
+    font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif !important;
   }
 }
 
@@ -335,7 +335,7 @@ layer(base);
 .apexcharts-legend-text,
 .flatpickr-calendar,
 .fc {
-  font-family: "Bai Jamjuree", sans-serif !important;
+  font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif !important;
 }
 
 /* third-party libraries CSS */
@@ -830,3 +830,4 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+

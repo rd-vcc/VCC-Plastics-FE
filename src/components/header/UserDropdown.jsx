@@ -4,11 +4,13 @@ import { AccountCircle, ArrowDropDown, Logout, } from "@mui/icons-material";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { getCurrentUser, logout, } from "../../auth/auth";
+import { useTranslation } from "react-i18next";
 export default function UserDropdown() {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();
     const user = getCurrentUser();
-    const fullName = user?.full_name || "Người dùng";
+    const fullName = user?.full_name || t("common.user");
     const employeeCode = user?.employee_code || "";
     const position = user?.position || "";
     function toggleDropdown() {
@@ -57,7 +59,7 @@ export default function UserDropdown() {
             fontSize: 22,
         }} className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"/>
 
-              Thông tin nhân viên
+              {t("common.employeeProfile")}
             </DropdownItem>
           </li>
 
@@ -106,8 +108,9 @@ export default function UserDropdown() {
             fontSize: 22,
         }} className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"/>
 
-          Đăng xuất
+          {t("common.logout")}
         </button>
       </Dropdown>
     </div>);
 }
+

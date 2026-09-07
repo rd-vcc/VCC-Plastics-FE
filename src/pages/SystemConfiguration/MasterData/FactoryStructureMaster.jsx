@@ -55,6 +55,7 @@ import usePagePermission from "../../../auth/usePagePermission";
 import { buttonSystem } from "../../../components/button/ButtonSystem";
 import { KpiCard, KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const PANEL_HEADER_HEIGHT = 30;
@@ -138,8 +139,9 @@ function SectionHeader({ icon, title, action }) {
 }
 
 function StatusChip({ status }) {
+  const { t } = useTranslation();
   const active = status === "ACTIVE";
-  return <Chip size="small" label={active ? "Active" : "Inactive"} color={active ? "success" : "error"} variant="outlined" sx={{ height: 20, "& .MuiChip-label": { px: 0.75 } }} />;
+  return <Chip size="small" label={active ? t("factoryStructure.active") : t("factoryStructure.inactive")} color={active ? "success" : "error"} variant="outlined" sx={{ height: 20, "& .MuiChip-label": { px: 0.75 } }} />;
 }
 
 function normalizeNode(node) {
@@ -153,11 +155,11 @@ function normalizeNode(node) {
   };
 }
 
-function formatDateTime(value) {
+function formatDateTime(value, language) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat(language === "ja" ? "ja-JP" : language === "vi" ? "vi-VN" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function TreeNode({ node, nodes, selectedId, expanded, onToggle, onSelect, depth = 0 }) {
@@ -181,6 +183,7 @@ function TreeNode({ node, nodes, selectedId, expanded, onToggle, onSelect, depth
 }
 
 function NodeDialog({ open, mode, node, nodes, nodeTypes, saving, onClose, onSave }) {
+  const { t } = useTranslation();
   const activeTypes = nodeTypes.filter((item) => Boolean(item.is_active));
   const suggestedType = node
     ? activeTypes.find((item) => item.parent_type_id === node.node_type_id)
@@ -202,29 +205,30 @@ function NodeDialog({ open, mode, node, nodes, nodeTypes, saving, onClose, onSav
   const parentCandidates = nodes.filter((item) => item.node_type_id === selectedType?.parent_type_id && item.status === "ACTIVE" && item.id !== node?.id);
   return (
     <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle fontWeight={700}>{mode === "edit" ? "Edit Node" : "Add New Node"}</DialogTitle>
+      <DialogTitle fontWeight={700}>{mode === "edit" ? t("factoryStructure.editNode") : t("factoryStructure.addNewNode")}</DialogTitle>
       <IconButton disabled={saving} onClick={onClose} sx={{ position: "absolute", top: 10, right: 10 }}><CloseIcon /></IconButton>
       <Divider />
       <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <TextField fullWidth size="small" label="Node Code" value={form.code} disabled={mode === "edit"} onChange={change("code")} />
-          <TextField fullWidth size="small" label="Node Name" value={form.name} onChange={change("name")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.nodeCode")} value={form.code} disabled={mode === "edit"} onChange={change("code")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.nodeName")} value={form.name} onChange={change("name")} />
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <FormControl fullWidth size="small"><InputLabel>Node Type</InputLabel><Select label="Node Type" value={form.nodeTypeId} onChange={(event) => setForm((old) => ({ ...old, nodeTypeId: event.target.value, parentId: null }))}>{activeTypes.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</Select></FormControl>
-          <FormControl fullWidth size="small" disabled={selectedType?.parent_type_id == null}><InputLabel>Parent Node</InputLabel><Select label="Parent Node" value={form.parentId ?? ""} onChange={change("parentId")}><MenuItem value=""><em>Select parent</em></MenuItem>{parentCandidates.map((item) => <MenuItem key={item.id} value={item.id}>{item.code} — {item.name}</MenuItem>)}</Select></FormControl>
+          <FormControl fullWidth size="small"><InputLabel>{t("factoryStructure.nodeType")}</InputLabel><Select label={t("factoryStructure.nodeType")} value={form.nodeTypeId} onChange={(event) => setForm((old) => ({ ...old, nodeTypeId: event.target.value, parentId: null }))}>{activeTypes.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}</Select></FormControl>
+          <FormControl fullWidth size="small" disabled={selectedType?.parent_type_id == null}><InputLabel>{t("factoryStructure.parentNode")}</InputLabel><Select label={t("factoryStructure.parentNode")} value={form.parentId ?? ""} onChange={change("parentId")}><MenuItem value=""><em>{t("factoryStructure.selectParent")}</em></MenuItem>{parentCandidates.map((item) => <MenuItem key={item.id} value={item.id}>{item.code} — {item.name}</MenuItem>)}</Select></FormControl>
         </Stack>
-        <TextField fullWidth multiline minRows={3} label="Description" value={form.description || ""} onChange={change("description")} />
+        <TextField fullWidth multiline minRows={3} label={t("factoryStructure.description")} value={form.description || ""} onChange={change("description")} />
       </Stack></DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>Cancel</Button>
-        <Button disabled={saving || !form.code.trim() || !form.name.trim() || !selectedType || (selectedType.parent_type_id != null && !form.parentId)} onClick={() => onSave(form)} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>Save</Button>
+        <Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>{t("common.cancel")}</Button>
+        <Button disabled={saving || !form.code.trim() || !form.name.trim() || !selectedType || (selectedType.parent_type_id != null && !form.parentId)} onClick={() => onSave(form)} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{t("common.save")}</Button>
       </DialogActions>
     </Dialog>
   );
 }
 
 function NodeTypeDialog({ open, mode, nodeType, nodeTypes, saving, onClose, onSave }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState(mode === "edit" && nodeType ? {
     code: nodeType.code,
     name: nodeType.name,
@@ -238,28 +242,29 @@ function NodeTypeDialog({ open, mode, nodeType, nodeTypes, saving, onClose, onSa
   const parentOptions = nodeTypes.filter((item) => item.id !== nodeType?.id && Boolean(item.is_active));
   return (
     <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle fontWeight={700}>{mode === "edit" ? "Edit Node Type" : "Add Node Type"}</DialogTitle>
+      <DialogTitle fontWeight={700}>{mode === "edit" ? t("factoryStructure.editNodeType") : t("factoryStructure.addNodeType")}</DialogTitle>
       <IconButton disabled={saving} onClick={onClose} sx={{ position: "absolute", top: 10, right: 10 }}><CloseIcon /></IconButton>
       <Divider />
       <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <TextField fullWidth size="small" label="Type Code" value={form.code} disabled={mode === "edit"} onChange={change("code")} />
-          <TextField fullWidth size="small" label="Type Name" value={form.name} onChange={change("name")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.typeCode")} value={form.code} disabled={mode === "edit"} onChange={change("code")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.typeName")} value={form.name} onChange={change("name")} />
         </Stack>
-        <FormControl fullWidth size="small"><InputLabel>Parent Type</InputLabel><Select label="Parent Type" value={form.parentTypeId} onChange={change("parentTypeId")}><MenuItem value=""><em>Root type (no parent)</em></MenuItem>{parentOptions.map((item) => <MenuItem key={item.id} value={item.id}>{item.code} — {item.name}</MenuItem>)}</Select></FormControl>
+        <FormControl fullWidth size="small"><InputLabel>{t("factoryStructure.parentType")}</InputLabel><Select label={t("factoryStructure.parentType")} value={form.parentTypeId} onChange={change("parentTypeId")}><MenuItem value=""><em>{t("factoryStructure.rootType")}</em></MenuItem>{parentOptions.map((item) => <MenuItem key={item.id} value={item.id}>{item.code} — {item.name}</MenuItem>)}</Select></FormControl>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <TextField fullWidth size="small" label="Color" type="color" value={form.color} onChange={change("color")} InputLabelProps={{ shrink: true }} />
-          <TextField fullWidth size="small" label="Icon Name" value={form.icon} onChange={change("icon")} placeholder="Optional" />
-          <TextField fullWidth size="small" label="Sort Order" type="number" value={form.sortOrder} onChange={change("sortOrder")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.color")} type="color" value={form.color} onChange={change("color")} InputLabelProps={{ shrink: true }} />
+          <TextField fullWidth size="small" label={t("factoryStructure.iconName")} value={form.icon} onChange={change("icon")} placeholder={t("factoryStructure.optional")} />
+          <TextField fullWidth size="small" label={t("factoryStructure.sortOrder")} type="number" value={form.sortOrder} onChange={change("sortOrder")} />
         </Stack>
-        <Stack direction="row" alignItems="center" justifyContent="space-between"><Box><Typography variant="subtitle2" fontWeight={700}>Active Status</Typography><Typography variant="caption" color="text.secondary">Allow this type to be selected when creating nodes</Typography></Box><Switch checked={form.isActive} onChange={(event) => setForm((old) => ({ ...old, isActive: event.target.checked }))} /></Stack>
+        <Stack direction="row" alignItems="center" justifyContent="space-between"><Box><Typography variant="subtitle2" fontWeight={700}>{t("factoryStructure.activeStatus")}</Typography><Typography variant="caption" color="text.secondary">{t("factoryStructure.activeStatusHelp")}</Typography></Box><Switch checked={form.isActive} onChange={(event) => setForm((old) => ({ ...old, isActive: event.target.checked }))} /></Stack>
       </Stack></DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>Cancel</Button><Button disabled={saving || !form.code.trim() || !form.name.trim()} onClick={() => onSave(form)} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>Save</Button></DialogActions>
+      <DialogActions sx={{ px: 3, pb: 2 }}><Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>{t("common.cancel")}</Button><Button disabled={saving || !form.code.trim() || !form.name.trim()} onClick={() => onSave(form)} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{t("common.save")}</Button></DialogActions>
     </Dialog>
   );
 }
 
 export default function FactoryStructureMaster() {
+  const { t, i18n } = useTranslation();
   const { theme: appTheme } = useAppTheme();
   const isDark = appTheme === "dark";
   const muiTheme = useMemo(() => createFactoryTheme(appTheme), [appTheme]);
@@ -288,9 +293,9 @@ export default function FactoryStructureMaster() {
     const token = getAccessToken();
     const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.detail || payload?.message || `Unable to complete the request (HTTP ${response.status}).`);
+    if (!response.ok) throw new Error(payload?.detail || payload?.message || t("factoryStructure.errors.request", { status: response.status }));
     return payload;
-  }, []);
+  }, [t]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -307,11 +312,11 @@ export default function FactoryStructureMaster() {
       setSelectedId((current) => nextNodes.some((node) => node.id === current) ? current : nextNodes[0]?.id ?? null);
       setSelectedTypeId((current) => nextTypes.some((item) => item.id === current) ? current : nextTypes[0]?.id ?? null);
     } catch (error) {
-      showMessage("error", error.message || "Unable to load factory structure.");
+      showMessage("error", error.message || t("factoryStructure.errors.load"));
     } finally {
       setLoading(false);
     }
-  }, [requestJson, showMessage]);
+  }, [requestJson, showMessage, t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -330,21 +335,21 @@ export default function FactoryStructureMaster() {
   const counts = useMemo(() => Object.fromEntries(Object.keys(TYPE_META).map((key) => [key, nodes.filter((node) => node.type === key).length])), [nodes]);
 
   const columnDefs = useMemo(() => [
-    { headerName: "Code", field: "code", width: 145, pinned: "left" },
-    { headerName: "Name", field: "name", minWidth: 175, flex: 1.2 },
-    { headerName: "Type", valueGetter: (params) => TYPE_META[params.data?.type]?.label || params.data?.type, width: 105 },
-    { headerName: "Parent", valueGetter: (params) => getParent(params.data)?.code || "—", width: 115 },
-    { headerName: "Level", field: "level_no", width: 80, cellStyle: { textAlign: "center" } },
-    { headerName: "Status", field: "status", width: 100, cellRenderer: (params) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip status={params.value} /></Box> },
-    { headerName: "Description", field: "description", minWidth: 150, flex: 1 },
-    { headerName: "Actions", width: 100, sortable: false, filter: false, cellRenderer: (params) => <Stack direction="row" alignItems="center" justifyContent="center" height="100%"><Tooltip title="View"><IconButton size="small" onClick={() => setSelectedId(params.data.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title="Edit"><span><IconButton size="small" disabled={!canEdit} onClick={() => { setSelectedId(params.data.id); setDialog({ mode: "edit", node: params.data }); }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip></Stack> },
-  ], [canEdit, getParent]);
+    { headerName: t("factoryStructure.columns.code"), field: "code", width: 145, pinned: "left" },
+    { headerName: t("factoryStructure.columns.name"), field: "name", minWidth: 175, flex: 1.2 },
+    { headerName: t("factoryStructure.columns.type"), valueGetter: (params) => t(`factoryStructure.types.${String(params.data?.type || "").toLowerCase()}`, { defaultValue: TYPE_META[params.data?.type]?.label || params.data?.type }), width: 105 },
+    { headerName: t("factoryStructure.columns.parent"), valueGetter: (params) => getParent(params.data)?.code || "—", width: 115 },
+    { headerName: t("factoryStructure.columns.level"), field: "level_no", width: 80, cellStyle: { textAlign: "center" } },
+    { headerName: t("factoryStructure.columns.status"), field: "status", width: 100, cellRenderer: (params) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip status={params.value} /></Box> },
+    { headerName: t("factoryStructure.columns.description"), field: "description", minWidth: 150, flex: 1 },
+    { headerName: t("factoryStructure.columns.actions"), width: 100, sortable: false, filter: false, cellRenderer: (params) => <Stack direction="row" alignItems="center" justifyContent="center" height="100%"><Tooltip title={t("common.view")}><IconButton size="small" onClick={() => setSelectedId(params.data.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title={t("common.edit")}><span><IconButton size="small" disabled={!canEdit} onClick={() => { setSelectedId(params.data.id); setDialog({ mode: "edit", node: params.data }); }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip></Stack> },
+  ], [canEdit, getParent, t]);
 
   const saveNode = async (form) => {
     if (!canEdit || saving) return;
     const editingNode = dialog?.mode === "edit" ? dialog.node : null;
     const nodeType = nodeTypes.find((item) => item.id === Number(form.nodeTypeId));
-    if (!nodeType) return showMessage("error", "Node type was not found.");
+    if (!nodeType) return showMessage("error", t("factoryStructure.errors.typeNotFound"));
     const payload = { name: form.name.trim(), node_type_id: nodeType.id, parent_id: form.parentId === "" || form.parentId == null ? null : Number(form.parentId), sort_order: Number(form.sort_order || 0), description: form.description?.trim() || null, status: form.status, ...(editingNode ? { updated_by: actor } : { code: form.code.trim().toUpperCase(), created_by: actor }) };
     setSaving(true);
     try {
@@ -352,8 +357,8 @@ export default function FactoryStructureMaster() {
       setDialog(null);
       await loadData();
       if (!editingNode && result?.id) setSelectedId(result.id);
-      showMessage("success", result?.message || "Node saved successfully.");
-    } catch (error) { showMessage("error", error.message || "Unable to save node."); }
+      showMessage("success", result?.message || t("factoryStructure.success.nodeSaved"));
+    } catch (error) { showMessage("error", error.message || t("factoryStructure.errors.saveNode")); }
     finally { setSaving(false); }
   };
 
@@ -365,21 +370,21 @@ export default function FactoryStructureMaster() {
     try {
       const result = await requestJson(`${API_BASE}/api/factory-structure/nodes/${selected.id}`, { method: "PUT", body: JSON.stringify({ name: selected.name, node_type_id: nodeType.id, parent_id: selected.parentId, sort_order: Number(selected.sort_order || 0), description: selected.description || null, status: selected.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", updated_by: actor }) });
       await loadData();
-      showMessage("success", result?.message || "Node status updated successfully.");
-    } catch (error) { showMessage("error", error.message || "Unable to update node status."); }
+      showMessage("success", result?.message || t("factoryStructure.success.statusUpdated"));
+    } catch (error) { showMessage("error", error.message || t("factoryStructure.errors.updateStatus")); }
     finally { setSaving(false); }
   };
 
   const nodeTypeColumnDefs = useMemo(() => [
-    { headerName: "Code", field: "code", width: 140, pinned: "left" },
-    { headerName: "Name", field: "name", minWidth: 180, flex: 1.2 },
-    { headerName: "Parent Type", field: "parent_type_name", minWidth: 160, flex: 1, valueFormatter: (params) => params.value || "— Root —" },
-    { headerName: "Level", field: "level_order", width: 85, cellStyle: { textAlign: "center" } },
-    { headerName: "Nodes", field: "node_count", width: 85, cellStyle: { textAlign: "center" } },
-    { headerName: "Color", field: "color", width: 105, cellRenderer: (params) => <Stack direction="row" spacing={0.75} alignItems="center" height="100%"><Box sx={{ width: 16, height: 16, borderRadius: 0.75, bgcolor: params.value || "#005BAB", border: "1px solid", borderColor: "divider" }} /><Typography variant="caption">{params.value || "—"}</Typography></Stack> },
-    { headerName: "Status", field: "is_active", width: 100, cellRenderer: (params) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip status={params.value ? "ACTIVE" : "INACTIVE"} /></Box> },
-    { headerName: "Actions", width: 110, sortable: false, filter: false, cellRenderer: (params) => <Stack direction="row" alignItems="center" justifyContent="center" height="100%"><Tooltip title="Edit"><span><IconButton size="small" disabled={!canEdit} onClick={() => { setSelectedTypeId(params.data.id); setTypeDialog({ mode: "edit", nodeType: params.data }); }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip><Tooltip title="Delete"><span><IconButton size="small" color="error" disabled={!canEdit || Number(params.data.node_count) > 0} onClick={() => setDeleteType(params.data)}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip></Stack> },
-  ], [canEdit]);
+    { headerName: t("factoryStructure.columns.code"), field: "code", width: 140, pinned: "left" },
+    { headerName: t("factoryStructure.columns.name"), field: "name", minWidth: 180, flex: 1.2 },
+    { headerName: t("factoryStructure.parentType"), field: "parent_type_name", minWidth: 160, flex: 1, valueFormatter: (params) => params.value || t("factoryStructure.root") },
+    { headerName: t("factoryStructure.columns.level"), field: "level_order", width: 85, cellStyle: { textAlign: "center" } },
+    { headerName: t("factoryStructure.nodes"), field: "node_count", width: 85, cellStyle: { textAlign: "center" } },
+    { headerName: t("factoryStructure.color"), field: "color", width: 105, cellRenderer: (params) => <Stack direction="row" spacing={0.75} alignItems="center" height="100%"><Box sx={{ width: 16, height: 16, borderRadius: 0.75, bgcolor: params.value || "#005BAB", border: "1px solid", borderColor: "divider" }} /><Typography variant="caption">{params.value || "—"}</Typography></Stack> },
+    { headerName: t("factoryStructure.columns.status"), field: "is_active", width: 100, cellRenderer: (params) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip status={params.value ? "ACTIVE" : "INACTIVE"} /></Box> },
+    { headerName: t("factoryStructure.columns.actions"), width: 110, sortable: false, filter: false, cellRenderer: (params) => <Stack direction="row" alignItems="center" justifyContent="center" height="100%"><Tooltip title={t("common.edit")}><span><IconButton size="small" disabled={!canEdit} onClick={() => { setSelectedTypeId(params.data.id); setTypeDialog({ mode: "edit", nodeType: params.data }); }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip><Tooltip title={t("common.delete")}><span><IconButton size="small" color="error" disabled={!canEdit || Number(params.data.node_count) > 0} onClick={() => setDeleteType(params.data)}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip></Stack> },
+  ], [canEdit, t]);
 
   const saveNodeType = async (form) => {
     if (!canEdit || saving) return;
@@ -402,8 +407,8 @@ export default function FactoryStructureMaster() {
       setTypeDialog(null);
       await loadData();
       if (!editingType && result?.id) setSelectedTypeId(result.id);
-      showMessage("success", result?.message || "Node type saved successfully.");
-    } catch (error) { showMessage("error", error.message || "Unable to save node type."); }
+      showMessage("success", result?.message || t("factoryStructure.success.typeSaved"));
+    } catch (error) { showMessage("error", error.message || t("factoryStructure.errors.saveType")); }
     finally { setSaving(false); }
   };
 
@@ -414,90 +419,90 @@ export default function FactoryStructureMaster() {
       const result = await requestJson(`${API_BASE}/api/factory-structure/node-types/${deleteType.id}`, { method: "DELETE" });
       setDeleteType(null);
       await loadData();
-      showMessage("success", result?.message || "Node type deleted successfully.");
-    } catch (error) { showMessage("error", error.message || "Unable to delete node type."); }
+      showMessage("success", result?.message || t("factoryStructure.success.typeDeleted"));
+    } catch (error) { showMessage("error", error.message || t("factoryStructure.errors.deleteType")); }
     finally { setSaving(false); }
   };
 
   return (
     <MuiThemeProvider theme={muiTheme}>
       <Box sx={pageSx(isDark)}>
-        <PageMeta title="Factory Structure Master | VCC Plastics" description="Manage the VCC Plastics factory structure" />
-        <PageBreadcrumb pageTitle="Factory Structure Master" />
+        <PageMeta title={`${t("factoryStructure.title")} | VCC Plastics`} description={t("factoryStructure.descriptionText")} />
+        <PageBreadcrumb pageTitle={t("factoryStructure.title")} />
         <Stack spacing={3} sx={{ pb: 2.5 }}>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr auto" }, gap: 1.5, alignItems: "end" }}>
-            <Box><Typography variant="h4" fontWeight={700}>Factory Structure Master</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>Manage factory, area, workshop, line and station structure</Typography></Box>
-            <Button variant="contained" startIcon={<AddIcon />} disabled={!canEdit} onClick={() => activeTab === 0 ? setDialog({ mode: "add", node: null }) : setTypeDialog({ mode: "add", nodeType: null })} sx={buttonSx("primary")}>{activeTab === 0 ? "Add New Node" : "Add Node Type"}</Button>
+            <Box><Typography variant="h4" fontWeight={700}>{t("factoryStructure.title")}</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{t("factoryStructure.descriptionText")}</Typography></Box>
+            <Button variant="contained" startIcon={<AddIcon />} disabled={!canEdit} onClick={() => activeTab === 0 ? setDialog({ mode: "add", node: null }) : setTypeDialog({ mode: "add", nodeType: null })} sx={buttonSx("primary")}>{activeTab === 0 ? t("factoryStructure.addNewNode") : t("factoryStructure.addNodeType")}</Button>
           </Box>
 
           <Paper variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
             <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} sx={{ minHeight: 42, "& .MuiTab-root": { minHeight: 42, fontWeight: 700, textTransform: "none" } }}>
-              <Tab label={`Structure Nodes (${nodes.length})`} />
-              <Tab label={`Node Types (${nodeTypes.length})`} />
+              <Tab label={t("factoryStructure.structureNodes", { count: nodes.length })} />
+              <Tab label={t("factoryStructure.nodeTypes", { count: nodeTypes.length })} />
             </Tabs>
           </Paper>
 
           {activeTab === 0 ? <>
           <KpiCardGroup>
-            <KpiCard label="Total Nodes" value={nodes.length} note="All structure levels" tone="primary" icon={<AccountTreeOutlinedIcon />} />
-            <KpiCard label="Factories" value={counts.FACTORY || 0} note="Across the company" tone="success" icon={<FactoryOutlinedIcon />} />
-            <KpiCard label="Workshops" value={counts.WORKSHOP || 0} note="Across all factories" tone="warning" icon={<PrecisionManufacturingOutlinedIcon />} />
-            <KpiCard label="Lines" value={counts.LINE || 0} note="Across all workshops" tone="accent" icon={<HubOutlinedIcon />} />
-            <KpiCard label="Stations" value={counts.STATION || 0} note="Across all lines" tone="info" icon={<LanOutlinedIcon />} />
-            <KpiCard label="Inactive Nodes" value={nodes.filter((node) => node.status === "INACTIVE").length} note="Access disabled" tone="danger" icon={<DeleteOutlineIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.totalNodes")} value={nodes.length} note={t("factoryStructure.kpi.allLevels")} tone="primary" icon={<AccountTreeOutlinedIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.factories")} value={counts.FACTORY || 0} note={t("factoryStructure.kpi.acrossCompany")} tone="success" icon={<FactoryOutlinedIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.workshops")} value={counts.WORKSHOP || 0} note={t("factoryStructure.kpi.acrossFactories")} tone="warning" icon={<PrecisionManufacturingOutlinedIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.lines")} value={counts.LINE || 0} note={t("factoryStructure.kpi.acrossWorkshops")} tone="accent" icon={<HubOutlinedIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.stations")} value={counts.STATION || 0} note={t("factoryStructure.kpi.acrossLines")} tone="info" icon={<LanOutlinedIcon />} />
+            <KpiCard label={t("factoryStructure.kpi.inactiveNodes")} value={nodes.filter((node) => node.status === "INACTIVE").length} note={t("factoryStructure.kpi.accessDisabled")} tone="danger" icon={<DeleteOutlineIcon />} />
           </KpiCardGroup>
 
           <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,1.6fr) repeat(3,minmax(145px,1fr)) auto" }, gap: 1 }}>
-              <TextField size="small" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Search by name or code..." InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} />
-              <FormControl size="small"><InputLabel>Node Type</InputLabel><Select label="Node Type" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><MenuItem value="all">All Types</MenuItem>{Object.entries(TYPE_META).map(([key, meta]) => <MenuItem key={key} value={key}>{meta.label}</MenuItem>)}</Select></FormControl>
-              <FormControl size="small"><InputLabel>Status</InputLabel><Select label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><MenuItem value="all">All Statuses</MenuItem><MenuItem value="ACTIVE">Active</MenuItem><MenuItem value="INACTIVE">Inactive</MenuItem></Select></FormControl>
-              <FormControl size="small"><InputLabel>Factory</InputLabel><Select label="Factory" value={factoryFilter} onChange={(event) => setFactoryFilter(event.target.value)}><MenuItem value="all">All Factories</MenuItem>{factories.map((factory) => <MenuItem key={factory.id} value={String(factory.id)}>{factory.name}</MenuItem>)}</Select></FormControl>
-              <Button startIcon={<FilterListIcon />} onClick={() => { setKeyword(""); setTypeFilter("all"); setStatusFilter("all"); setFactoryFilter("all"); }} sx={buttonSx("cancel", { minHeight: 40, whiteSpace: "nowrap" })}>Clear Filters</Button>
+              <TextField size="small" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={t("factoryStructure.searchPlaceholder")} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} />
+              <FormControl size="small"><InputLabel>{t("factoryStructure.nodeType")}</InputLabel><Select label={t("factoryStructure.nodeType")} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><MenuItem value="all">{t("factoryStructure.allTypes")}</MenuItem>{Object.entries(TYPE_META).map(([key, meta]) => <MenuItem key={key} value={key}>{t(`factoryStructure.types.${key.toLowerCase()}`, { defaultValue: meta.label })}</MenuItem>)}</Select></FormControl>
+              <FormControl size="small"><InputLabel>{t("factoryStructure.status")}</InputLabel><Select label={t("factoryStructure.status")} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><MenuItem value="all">{t("factoryStructure.allStatuses")}</MenuItem><MenuItem value="ACTIVE">{t("factoryStructure.active")}</MenuItem><MenuItem value="INACTIVE">{t("factoryStructure.inactive")}</MenuItem></Select></FormControl>
+              <FormControl size="small"><InputLabel>{t("factoryStructure.factory")}</InputLabel><Select label={t("factoryStructure.factory")} value={factoryFilter} onChange={(event) => setFactoryFilter(event.target.value)}><MenuItem value="all">{t("factoryStructure.allFactories")}</MenuItem>{factories.map((factory) => <MenuItem key={factory.id} value={String(factory.id)}>{factory.name}</MenuItem>)}</Select></FormControl>
+              <Button startIcon={<FilterListIcon />} onClick={() => { setKeyword(""); setTypeFilter("all"); setStatusFilter("all"); setFactoryFilter("all"); }} sx={buttonSx("cancel", { minHeight: 40, whiteSpace: "nowrap" })}>{t("factoryStructure.clearFilters")}</Button>
             </Box>
           </Paper>
 
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "260px minmax(0,1fr) 290px" }, gap: 2 }}>
             <Paper variant="outlined" sx={{ ...cardSx, height: CONTENT_HEIGHT, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <SectionHeader icon={<AccountTreeOutlinedIcon fontSize="small" />} title="Factory Structure Tree" action={<Tooltip title="Expand all"><IconButton size="small" onClick={() => setExpanded(nodes.map((node) => node.id))}><RefreshIcon fontSize="small" /></IconButton></Tooltip>} />
+              <SectionHeader icon={<AccountTreeOutlinedIcon fontSize="small" />} title={t("factoryStructure.tree")} action={<Tooltip title={t("factoryStructure.expandAll")}><IconButton size="small" onClick={() => setExpanded(nodes.map((node) => node.id))}><RefreshIcon fontSize="small" /></IconButton></Tooltip>} />
               <Box sx={{ p: 0.75, flex: 1, overflowY: "auto" }}>{loading ? <Box sx={{ display: "grid", placeItems: "center", height: "100%" }}><CircularProgress size={24} /></Box> : roots.map((node) => <TreeNode key={node.id} node={node} nodes={nodes} selectedId={selectedId} expanded={expanded} onToggle={(id) => setExpanded((old) => old.includes(id) ? old.filter((item) => item !== id) : [...old, id])} onSelect={setSelectedId} />)}</Box>
             </Paper>
 
             <Paper variant="outlined" sx={{ ...cardSx, height: CONTENT_HEIGHT, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <SectionHeader icon={<FactoryOutlinedIcon fontSize="small" />} title="Factory Structure List" action={loading ? <CircularProgress size={16} /> : <Chip label={`${filteredNodes.length} nodes`} size="small" color="primary" variant="outlined" sx={{ height: 22 }} />} />
+              <SectionHeader icon={<FactoryOutlinedIcon fontSize="small" />} title={t("factoryStructure.list")} action={loading ? <CircularProgress size={16} /> : <Chip label={t("factoryStructure.nodeCount", { count: filteredNodes.length })} size="small" color="primary" variant="outlined" sx={{ height: 22 }} />} />
               <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}><AgGridTable rowData={filteredNodes} columnDefs={columnDefs} loading={loading} pagination paginationPageSize={20} rowSelection="single" onRowClicked={(event) => setSelectedId(event.data.id)} getRowId={(params) => String(params.data.id)} selectedRowId={selectedId} selectedRowKey="id" height="100%" /></Box>
             </Paper>
 
             <Stack spacing={2} sx={{ height: CONTENT_HEIGHT }}>
               <Paper variant="outlined" sx={{ ...cardSx, flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <SectionHeader icon={<DomainOutlinedIcon fontSize="small" />} title="Node Details" />
-                <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>{selected ? <><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: isDark ? "#173A63" : "#EEF4FF", color: "#005BAB", display: "grid", placeItems: "center" }}>{(() => { const Icon = TYPE_META[selected.type]?.icon || DomainOutlinedIcon; return <Icon />; })()}</Box><Box minWidth={0}><Typography variant="subtitle1" fontWeight={700} noWrap>{selected.name}</Typography><Stack direction="row" spacing={0.75} alignItems="center"><Typography variant="caption" color="text.secondary">{selected.code}</Typography><StatusChip status={selected.status} /></Stack></Box></Stack><Divider sx={{ my: 1.75 }} /><Stack spacing={1.3}>{[["Type", TYPE_META[selected.type]?.label || selected.type], ["Parent", getParent(selected)?.name || "—"], ["Level", selected.level_no ?? "—"], ["Description", selected.description || "—"], ["Created By", selected.createdBy || "—"], ["Created Date", formatDateTime(selected.createdAt)], ["Last Modified", formatDateTime(selected.updatedAt)]].map(([label, value]) => <Box key={label}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={600}>{value}</Typography></Box>)}</Stack></> : <Typography variant="body2" color="text.secondary">Select a node to view its details.</Typography>}</Box>
+                <SectionHeader icon={<DomainOutlinedIcon fontSize="small" />} title={t("factoryStructure.nodeDetails")} />
+                <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>{selected ? <><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: isDark ? "#173A63" : "#EEF4FF", color: "#005BAB", display: "grid", placeItems: "center" }}>{(() => { const Icon = TYPE_META[selected.type]?.icon || DomainOutlinedIcon; return <Icon />; })()}</Box><Box minWidth={0}><Typography variant="subtitle1" fontWeight={700} noWrap>{selected.name}</Typography><Stack direction="row" spacing={0.75} alignItems="center"><Typography variant="caption" color="text.secondary">{selected.code}</Typography><StatusChip status={selected.status} /></Stack></Box></Stack><Divider sx={{ my: 1.75 }} /><Stack spacing={1.3}>{[[t("factoryStructure.type"), t(`factoryStructure.types.${String(selected.type).toLowerCase()}`, { defaultValue: TYPE_META[selected.type]?.label || selected.type })], [t("factoryStructure.parent"), getParent(selected)?.name || "—"], [t("factoryStructure.level"), selected.level_no ?? "—"], [t("factoryStructure.description"), selected.description || "—"], [t("factoryStructure.createdBy"), selected.createdBy || "—"], [t("factoryStructure.createdDate"), formatDateTime(selected.createdAt, i18n.resolvedLanguage)], [t("factoryStructure.lastModified"), formatDateTime(selected.updatedAt, i18n.resolvedLanguage)]].map(([label, value]) => <Box key={label}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={600}>{value}</Typography></Box>)}</Stack></> : <Typography variant="body2" color="text.secondary">{t("factoryStructure.selectNodeHelp")}</Typography>}</Box>
               </Paper>
-              <Paper variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}><SectionHeader icon={<EditOutlinedIcon fontSize="small" />} title="Quick Actions" /><Stack direction="row" spacing={1} sx={{ p: 1.25 }}><Button fullWidth disabled={!canEdit || !selected} startIcon={<AddIcon />} onClick={() => setDialog({ mode: "add", node: selected })} sx={buttonSx("primary", { minWidth: 0, fontSize: 11 })}>Add Child</Button><Button fullWidth disabled={!canEdit || !selected} startIcon={<EditOutlinedIcon />} onClick={() => setDialog({ mode: "edit", node: selected })} sx={buttonSx("edit", { minWidth: 0, fontSize: 11 })}>Edit</Button><Button fullWidth disabled={!canEdit || !selected || saving} onClick={toggleStatus} sx={buttonSx(selected?.status === "ACTIVE" ? "delete" : "primary", { minWidth: 0, fontSize: 11 })}>{selected?.status === "ACTIVE" ? "Deactivate" : "Activate"}</Button></Stack></Paper>
+              <Paper variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}><SectionHeader icon={<EditOutlinedIcon fontSize="small" />} title={t("factoryStructure.quickActions")} /><Stack direction="row" spacing={1} sx={{ p: 1.25 }}><Button fullWidth disabled={!canEdit || !selected} startIcon={<AddIcon />} onClick={() => setDialog({ mode: "add", node: selected })} sx={buttonSx("primary", { minWidth: 0, fontSize: 11 })}>{t("factoryStructure.addChild")}</Button><Button fullWidth disabled={!canEdit || !selected} startIcon={<EditOutlinedIcon />} onClick={() => setDialog({ mode: "edit", node: selected })} sx={buttonSx("edit", { minWidth: 0, fontSize: 11 })}>{t("common.edit")}</Button><Button fullWidth disabled={!canEdit || !selected || saving} onClick={toggleStatus} sx={buttonSx(selected?.status === "ACTIVE" ? "delete" : "primary", { minWidth: 0, fontSize: 11 })}>{selected?.status === "ACTIVE" ? t("factoryStructure.deactivate") : t("factoryStructure.activate")}</Button></Stack></Paper>
             </Stack>
           </Box>
           </> : <>
             <KpiCardGroup>
-              <KpiCard label="Total Node Types" value={nodeTypes.length} note="All configured types" tone="primary" icon={<AccountTreeOutlinedIcon />} />
-              <KpiCard label="Active Types" value={nodeTypes.filter((item) => Boolean(item.is_active)).length} note="Available for new nodes" tone="success" icon={<FactoryOutlinedIcon />} />
-              <KpiCard label="Inactive Types" value={nodeTypes.filter((item) => !item.is_active).length} note="Not available for selection" tone="danger" icon={<DeleteOutlineIcon />} />
-              <KpiCard label="Root Types" value={nodeTypes.filter((item) => item.parent_type_id == null).length} note="Types without a parent" tone="accent" icon={<BusinessOutlinedIcon />} />
-              <KpiCard label="Used Types" value={nodeTypes.filter((item) => Number(item.node_count) > 0).length} note="Assigned to structure nodes" tone="warning" icon={<HubOutlinedIcon />} />
-              <KpiCard label="Unused Types" value={nodeTypes.filter((item) => Number(item.node_count) === 0).length} note="Can be deleted safely" tone="info" icon={<DomainOutlinedIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.totalTypes")} value={nodeTypes.length} note={t("factoryStructure.kpi.allConfiguredTypes")} tone="primary" icon={<AccountTreeOutlinedIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.activeTypes")} value={nodeTypes.filter((item) => Boolean(item.is_active)).length} note={t("factoryStructure.kpi.availableNewNodes")} tone="success" icon={<FactoryOutlinedIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.inactiveTypes")} value={nodeTypes.filter((item) => !item.is_active).length} note={t("factoryStructure.kpi.notAvailableSelection")} tone="danger" icon={<DeleteOutlineIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.rootTypes")} value={nodeTypes.filter((item) => item.parent_type_id == null).length} note={t("factoryStructure.kpi.withoutParent")} tone="accent" icon={<BusinessOutlinedIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.usedTypes")} value={nodeTypes.filter((item) => Number(item.node_count) > 0).length} note={t("factoryStructure.kpi.assignedNodes")} tone="warning" icon={<HubOutlinedIcon />} />
+              <KpiCard label={t("factoryStructure.kpi.unusedTypes")} value={nodeTypes.filter((item) => Number(item.node_count) === 0).length} note={t("factoryStructure.kpi.safeDelete")} tone="info" icon={<DomainOutlinedIcon />} />
             </KpiCardGroup>
 
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1.8fr) minmax(300px,0.7fr)" }, gap: 2 }}>
               <Paper variant="outlined" sx={{ ...cardSx, height: CONTENT_HEIGHT, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <SectionHeader icon={<AccountTreeOutlinedIcon fontSize="small" />} title="Node Type List" action={loading ? <CircularProgress size={16} /> : <Chip label={`${nodeTypes.length} types`} size="small" color="primary" variant="outlined" sx={{ height: 22 }} />} />
+                <SectionHeader icon={<AccountTreeOutlinedIcon fontSize="small" />} title={t("factoryStructure.typeList")} action={loading ? <CircularProgress size={16} /> : <Chip label={t("factoryStructure.typeCount", { count: nodeTypes.length })} size="small" color="primary" variant="outlined" sx={{ height: 22 }} />} />
                 <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}><AgGridTable rowData={nodeTypes} columnDefs={nodeTypeColumnDefs} loading={loading} pagination paginationPageSize={20} rowSelection="single" onRowClicked={(event) => setSelectedTypeId(event.data.id)} getRowId={(params) => String(params.data.id)} selectedRowId={selectedTypeId} selectedRowKey="id" height="100%" /></Box>
               </Paper>
 
               <Stack spacing={2} sx={{ height: CONTENT_HEIGHT }}>
                 <Paper variant="outlined" sx={{ ...cardSx, flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                  <SectionHeader icon={<DomainOutlinedIcon fontSize="small" />} title="Node Type Details" />
-                  <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>{selectedType ? <><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: isDark ? "#173A63" : "#EEF4FF", color: selectedType.color || "#005BAB", display: "grid", placeItems: "center" }}><AccountTreeOutlinedIcon /></Box><Box minWidth={0}><Typography variant="subtitle1" fontWeight={700} noWrap>{selectedType.name}</Typography><Stack direction="row" spacing={0.75} alignItems="center"><Typography variant="caption" color="text.secondary">{selectedType.code}</Typography><StatusChip status={selectedType.is_active ? "ACTIVE" : "INACTIVE"} /></Stack></Box></Stack><Divider sx={{ my: 1.75 }} /><Stack spacing={1.4}>{[["Parent Type", selectedType.parent_type_name || "— Root —"], ["Level", selectedType.level_order], ["Sort Order", selectedType.sort_order], ["Assigned Nodes", selectedType.node_count || 0], ["Icon", selectedType.icon || "—"], ["Color", selectedType.color || "—"]].map(([label, value]) => <Box key={label}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={600}>{value}</Typography></Box>)}</Stack></> : <Typography variant="body2" color="text.secondary">Select a node type to view its details.</Typography>}</Box>
+                  <SectionHeader icon={<DomainOutlinedIcon fontSize="small" />} title={t("factoryStructure.typeDetails")} />
+                  <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>{selectedType ? <><Stack direction="row" spacing={1.25} alignItems="center"><Box sx={{ width: 44, height: 44, borderRadius: "50%", bgcolor: isDark ? "#173A63" : "#EEF4FF", color: selectedType.color || "#005BAB", display: "grid", placeItems: "center" }}><AccountTreeOutlinedIcon /></Box><Box minWidth={0}><Typography variant="subtitle1" fontWeight={700} noWrap>{selectedType.name}</Typography><Stack direction="row" spacing={0.75} alignItems="center"><Typography variant="caption" color="text.secondary">{selectedType.code}</Typography><StatusChip status={selectedType.is_active ? "ACTIVE" : "INACTIVE"} /></Stack></Box></Stack><Divider sx={{ my: 1.75 }} /><Stack spacing={1.4}>{[[t("factoryStructure.parentType"), selectedType.parent_type_name || t("factoryStructure.root")], [t("factoryStructure.level"), selectedType.level_order], [t("factoryStructure.sortOrder"), selectedType.sort_order], [t("factoryStructure.assignedNodes"), selectedType.node_count || 0], [t("factoryStructure.icon"), selectedType.icon || "—"], [t("factoryStructure.color"), selectedType.color || "—"]].map(([label, value]) => <Box key={label}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={600}>{value}</Typography></Box>)}</Stack></> : <Typography variant="body2" color="text.secondary">{t("factoryStructure.selectTypeHelp")}</Typography>}</Box>
                 </Paper>
-                <Paper variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}><SectionHeader icon={<EditOutlinedIcon fontSize="small" />} title="Quick Actions" /><Stack direction="row" spacing={1} sx={{ p: 1.25 }}><Button fullWidth disabled={!canEdit || !selectedType} startIcon={<EditOutlinedIcon />} onClick={() => setTypeDialog({ mode: "edit", nodeType: selectedType })} sx={buttonSx("edit")}>Edit</Button><Button fullWidth disabled={!canEdit || !selectedType || Number(selectedType?.node_count) > 0} startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteType(selectedType)} sx={buttonSx("delete")}>Delete</Button></Stack></Paper>
+                <Paper variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}><SectionHeader icon={<EditOutlinedIcon fontSize="small" />} title={t("factoryStructure.quickActions")} /><Stack direction="row" spacing={1} sx={{ p: 1.25 }}><Button fullWidth disabled={!canEdit || !selectedType} startIcon={<EditOutlinedIcon />} onClick={() => setTypeDialog({ mode: "edit", nodeType: selectedType })} sx={buttonSx("edit")}>{t("common.edit")}</Button><Button fullWidth disabled={!canEdit || !selectedType || Number(selectedType?.node_count) > 0} startIcon={<DeleteOutlineIcon />} onClick={() => setDeleteType(selectedType)} sx={buttonSx("delete")}>{t("common.delete")}</Button></Stack></Paper>
               </Stack>
             </Box>
           </>}
@@ -505,9 +510,10 @@ export default function FactoryStructureMaster() {
 
         {dialog && <NodeDialog key={`${dialog.mode}-${dialog.node?.id || "new"}`} open mode={dialog.mode} node={dialog.node} nodes={nodes} nodeTypes={nodeTypes} saving={saving} onClose={() => setDialog(null)} onSave={saveNode} />}
         {typeDialog && <NodeTypeDialog key={`${typeDialog.mode}-${typeDialog.nodeType?.id || "new"}`} open mode={typeDialog.mode} nodeType={typeDialog.nodeType} nodeTypes={nodeTypes} saving={saving} onClose={() => setTypeDialog(null)} onSave={saveNodeType} />}
-        <Dialog open={Boolean(deleteType)} onClose={saving ? undefined : () => setDeleteType(null)} maxWidth="xs" fullWidth><DialogTitle fontWeight={700}>Delete Node Type</DialogTitle><DialogContent><Alert severity="warning">Delete <strong>{deleteType?.name}</strong>? This action is only allowed when the type has no structure nodes and no child types.</Alert></DialogContent><DialogActions sx={{ px: 3, pb: 2 }}><Button disabled={saving} onClick={() => setDeleteType(null)} sx={buttonSx("cancel")}>Cancel</Button><Button disabled={saving} onClick={confirmDeleteNodeType} sx={buttonSx("delete")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>Delete</Button></DialogActions></Dialog>
+        <Dialog open={Boolean(deleteType)} onClose={saving ? undefined : () => setDeleteType(null)} maxWidth="xs" fullWidth><DialogTitle fontWeight={700}>{t("factoryStructure.deleteNodeType")}</DialogTitle><DialogContent><Alert severity="warning">{t("factoryStructure.deleteConfirmation", { name: deleteType?.name })}</Alert></DialogContent><DialogActions sx={{ px: 3, pb: 2 }}><Button disabled={saving} onClick={() => setDeleteType(null)} sx={buttonSx("cancel")}>{t("common.cancel")}</Button><Button disabled={saving} onClick={confirmDeleteNodeType} sx={buttonSx("delete")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{t("common.delete")}</Button></DialogActions></Dialog>
         <Snackbar open={message.open} autoHideDuration={5000} onClose={() => setMessage((old) => ({ ...old, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}><Alert severity={message.type} onClose={() => setMessage((old) => ({ ...old, open: false }))}>{message.text}</Alert></Snackbar>
       </Box>
     </MuiThemeProvider>
   );
 }
+

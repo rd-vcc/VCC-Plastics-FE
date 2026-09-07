@@ -47,6 +47,7 @@ import { buttonSystem } from "../../components/button/ButtonSystem";
 import { KpiCard, KpiCardGroup } from "../../components/kpi/KpiCardSystem";
 import { useTheme as useAppTheme } from "../../context/ThemeContext";
 import usePagePermission from "../../auth/usePagePermission";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const PANEL_HEADER_HEIGHT = 30;
@@ -157,11 +158,11 @@ function userManagementPageSx(isDark) {
   };
 }
 
-function formatDateTime(value) {
-  if (!value) return "Never logged in";
+function formatDateTime(value, language, emptyText) {
+  if (!value) return emptyText;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(language === "ja" ? "ja-JP" : language === "vi" ? "vi-VN" : "en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -170,7 +171,7 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function getDepartment(employee) {
+function getDepartment(employee, fallback = "—") {
   return (
     employee.organization_unit_name ||
     employee.group_name ||
@@ -180,11 +181,12 @@ function getDepartment(employee) {
     employee.factory ||
     employee.company ||
     employee.corporation ||
-    "Not specified"
+    fallback
   );
 }
 
 export default function UserManagement() {
+  const { t, i18n } = useTranslation();
   const { theme: appTheme } = useAppTheme();
   const isDark = appTheme === "dark";
   const muiTheme = useMemo(() => createUserManagementTheme(appTheme), [appTheme]);
@@ -262,7 +264,7 @@ export default function UserManagement() {
         );
       });
     } catch (error) {
-      showMessage("error", error.message || "An error occurred while loading data.");
+      showMessage("error", error.message || t("userManagement.loadError"));
     } finally {
       setLoading(false);
     }
@@ -285,10 +287,10 @@ export default function UserManagement() {
 
   const departments = useMemo(
     () =>
-      [...new Set(employees.filter((employee) => employee.mes_user_id).map(getDepartment))].sort((a, b) =>
+      [...new Set(employees.filter((employee) => employee.mes_user_id).map((employee) => getDepartment(employee, t("userManagement.notSpecified"))))].sort((a, b) =>
         a.localeCompare(b, "en")
       ),
-    [employees]
+    [employees, t]
   );
 
   // The main table only shows employees who have been granted access to VCC Plastics.
@@ -308,21 +310,21 @@ export default function UserManagement() {
     return grantedEmployees.filter((employee) => {
       const matchesKeyword =
         !normalizedKeyword ||
-        [employee.employee_code, employee.full_name, employee.position, getDepartment(employee)]
+        [employee.employee_code, employee.full_name, employee.position, getDepartment(employee, t("userManagement.notSpecified"))]
           .join(" ")
           .toLocaleLowerCase("en")
           .includes(normalizedKeyword);
       const matchesRole =
         roleFilter === "all" || (employee.role_ids || []).includes(Number(roleFilter));
       const matchesDepartment =
-        departmentFilter === "all" || getDepartment(employee) === departmentFilter;
+        departmentFilter === "all" || getDepartment(employee, t("userManagement.notSpecified")) === departmentFilter;
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "active" && employee.mes_user_id && employee.mes_is_active) ||
         (statusFilter === "inactive" && employee.mes_user_id && !employee.mes_is_active);
       return matchesKeyword && matchesRole && matchesDepartment && matchesStatus;
     });
-  }, [departmentFilter, grantedEmployees, keyword, roleFilter, statusFilter]);
+  }, [departmentFilter, grantedEmployees, keyword, roleFilter, statusFilter, t]);
 
   const statistics = useMemo(() => {
     const assigned = employees.filter((employee) => employee.mes_user_id).length;
@@ -346,7 +348,7 @@ export default function UserManagement() {
   const columnDefs = useMemo(
     () => [
       {
-        headerName: "No.",
+        headerName: t("userManagement.columns.no"),
         valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
         width: 64,
         minWidth: 64,
@@ -355,23 +357,23 @@ export default function UserManagement() {
         filter: false,
         cellStyle: { textAlign: "center" },
       },
-      { headerName: "Employee Code", field: "employee_code", width: 130 },
-      { headerName: "Full Name", field: "full_name", minWidth: 180, flex: 1.2 },
+      { headerName: t("userManagement.columns.employeeCode"), field: "employee_code", width: 130 },
+      { headerName: t("userManagement.columns.fullName"), field: "full_name", minWidth: 180, flex: 1.2 },
       {
-        headerName: "Department",
-        valueGetter: (params) => getDepartment(params.data),
+        headerName: t("userManagement.columns.department"),
+        valueGetter: (params) => getDepartment(params.data, t("userManagement.notSpecified")),
         minWidth: 160,
         flex: 1,
       },
-      { headerName: "Job Title", field: "position", minWidth: 150, flex: 1 },
+      { headerName: t("userManagement.columns.jobTitle"), field: "position", minWidth: 150, flex: 1 },
       {
-        headerName: "Roles",
+        headerName: t("userManagement.columns.roles"),
         minWidth: 200,
         flex: 1.25,
         cellRenderer: (params) => {
           const assignedRoles = params.data?.roles || [];
           if (!assignedRoles.length) {
-            return <Typography variant="caption" color="text.secondary">Unassigned</Typography>;
+            return <Typography variant="caption" color="text.secondary">{t("userManagement.unassigned")}</Typography>;
           }
           return (
             <Stack direction="row" spacing={0.5} alignItems="center" height="100%">
@@ -390,13 +392,13 @@ export default function UserManagement() {
         },
       },
       {
-        headerName: "Last Login",
-        valueGetter: (params) => formatDateTime(params.data?.last_login_at),
+        headerName: t("userManagement.columns.lastLogin"),
+        valueGetter: (params) => formatDateTime(params.data?.last_login_at, i18n.resolvedLanguage, t("userManagement.neverLoggedIn")),
         minWidth: 170,
         flex: 1,
       },
     ],
-    []
+    [i18n.resolvedLanguage, t]
   );
 
   const handleRowClicked = useCallback((event) => {
@@ -420,10 +422,10 @@ export default function UserManagement() {
           }),
         }
       );
-      showMessage("success", result.message || "Roles updated successfully.");
+      showMessage("success", result.message || t("userManagement.saveSuccess"));
       await loadData();
     } catch (error) {
-      showMessage("error", error.message || "An error occurred while saving data.");
+      showMessage("error", error.message || t("userManagement.saveError"));
     } finally {
       setSaving(false);
     }
@@ -457,9 +459,9 @@ export default function UserManagement() {
       setSelectedEmployee(employeeToAdd);
       await loadData();
       setAddOpen(false);
-      showMessage("success", result.message || "Employee added to the system successfully.");
+      showMessage("success", result.message || t("userManagement.addSuccess"));
     } catch (error) {
-      showMessage("error", error.message || "An error occurred while adding the employee.");
+      showMessage("error", error.message || t("userManagement.addError"));
     } finally {
       setAdding(false);
     }
@@ -469,8 +471,8 @@ export default function UserManagement() {
     <MuiThemeProvider theme={muiTheme}>
       <Box sx={userManagementPageSx(isDark)}>
         <PageMeta
-          title="User Management | VCC Plastics"
-          description="Manage employee access and assigned roles for VCC Plastics"
+          title={`${t("userManagement.title")} | VCC Plastics`}
+          description={t("userManagement.description")}
         />
         <PageBreadcrumb pageTitle="User Management" />
         <Stack spacing={3} sx={{ pb: 2.5 }}>
@@ -485,10 +487,10 @@ export default function UserManagement() {
       >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h4" fontWeight={700} color="text.primary">
-            User Management
+            {t("userManagement.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            Manage access and assign roles to VCC Plastics employees
+            {t("userManagement.description")}
           </Typography>
         </Box>
         <Button
@@ -498,50 +500,50 @@ export default function UserManagement() {
           disabled={!canEdit}
           sx={buttonSx("primary", { flexShrink: 0 })}
         >
-          Add Employee
+          {t("userManagement.addEmployee")}
         </Button>
       </Box>
 
       <KpiCardGroup>
         <KpiCard
-          label="Total Employees"
+          label={t("userManagement.kpi.totalEmployees")}
           value={statistics.total}
-          note="Synced from VCC Group"
+          note={t("userManagement.kpi.synced")}
           tone="primary"
           icon={<GroupOutlinedIcon />}
         />
         <KpiCard
-          label="Active Users"
+          label={t("userManagement.kpi.activeUsers")}
           value={statistics.active}
-          note="Access enabled"
+          note={t("userManagement.kpi.accessEnabled")}
           tone="success"
           icon={<ShieldOutlinedIcon />}
         />
         <KpiCard
-          label="Inactive Users"
+          label={t("userManagement.kpi.inactiveUsers")}
           value={statistics.inactive}
-          note="Access disabled"
+          note={t("userManagement.kpi.accessDisabled")}
           tone="warning"
           icon={<LockOutlinedIcon />}
         />
         <KpiCard
-          label="Users Assigned"
+          label={t("userManagement.kpi.usersAssigned")}
           value={statistics.assigned}
-          note="Assigned to roles"
+          note={t("userManagement.kpi.assignedToRoles")}
           tone="accent"
           icon={<AssignmentIndOutlinedIcon />}
         />
         <KpiCard
-          label="Unassigned Employees"
+          label={t("userManagement.kpi.unassignedEmployees")}
           value={statistics.unassigned}
-          note="Not added to system"
+          note={t("userManagement.kpi.notAdded")}
           tone="danger"
           icon={<GroupOutlinedIcon />}
         />
         <KpiCard
-          label="Available Roles"
+          label={t("userManagement.kpi.availableRoles")}
           value={statistics.availableRoles}
-          note="Active roles"
+          note={t("userManagement.kpi.activeRoles")}
           tone="info"
           icon={<ShieldOutlinedIcon />}
         />
@@ -563,7 +565,7 @@ export default function UserManagement() {
             size="small"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Search by code, name, or job title..."
+            placeholder={t("userManagement.searchPlaceholder")}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
@@ -571,38 +573,38 @@ export default function UserManagement() {
             }}
           />
           <FormControl size="small">
-            <InputLabel>Status</InputLabel>
+            <InputLabel>{t("userManagement.status")}</InputLabel>
             <Select
               value={statusFilter}
-              label="Status"
+              label={t("userManagement.status")}
               onChange={(event) => setStatusFilter(event.target.value)}
             >
-              <MenuItem value="all">All Statuses</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
+              <MenuItem value="all">{t("userManagement.allStatuses")}</MenuItem>
+              <MenuItem value="active">{t("userManagement.active")}</MenuItem>
+              <MenuItem value="inactive">{t("userManagement.inactive")}</MenuItem>
             </Select>
           </FormControl>
           <FormControl size="small">
-            <InputLabel>Role</InputLabel>
+            <InputLabel>{t("userManagement.role")}</InputLabel>
             <Select
               value={roleFilter}
-              label="Role"
+              label={t("userManagement.role")}
               onChange={(event) => setRoleFilter(event.target.value)}
             >
-              <MenuItem value="all">All Roles</MenuItem>
+              <MenuItem value="all">{t("userManagement.allRoles")}</MenuItem>
               {roles.map((role) => (
                 <MenuItem key={role.id} value={String(role.id)}>{role.role_name}</MenuItem>
               ))}
             </Select>
           </FormControl>
           <FormControl size="small">
-            <InputLabel>Department</InputLabel>
+            <InputLabel>{t("userManagement.department")}</InputLabel>
             <Select
               value={departmentFilter}
-              label="Department"
+              label={t("userManagement.department")}
               onChange={(event) => setDepartmentFilter(event.target.value)}
             >
-              <MenuItem value="all">All Departments</MenuItem>
+              <MenuItem value="all">{t("userManagement.allDepartments")}</MenuItem>
               {departments.map((department) => (
                 <MenuItem key={department} value={department}>{department}</MenuItem>
               ))}
@@ -620,7 +622,7 @@ export default function UserManagement() {
             }}
             sx={buttonSx("cancel", { minHeight: 40, whiteSpace: "nowrap" })}
           >
-            Clear Filters
+            {t("userManagement.clearFilters")}
           </Button>
         </Box>
       </Paper>
@@ -650,13 +652,13 @@ export default function UserManagement() {
         >
           <SectionHeader
             icon={<GroupOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-            title="Authorized Users"
+            title={t("userManagement.authorizedUsers")}
             action={
               loading ? (
                 <CircularProgress size={16} />
               ) : (
                 <Chip
-                  label={`${filteredEmployees.length} users`}
+                  label={t("userManagement.userCount", { count: filteredEmployees.length })}
                   size="small"
                   color="primary"
                   variant="outlined"
@@ -697,7 +699,7 @@ export default function UserManagement() {
         >
           <SectionHeader
             icon={<AssignmentIndOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-            title="User Details"
+            title={t("userManagement.userDetails")}
           />
           <Box sx={{ p: 2, flex: 1, minHeight: 0, overflowY: "auto" }}>
           <Stack direction="row" spacing={1.25} alignItems="center">
@@ -716,7 +718,7 @@ export default function UserManagement() {
             </Box>
             <Box minWidth={0}>
               <Typography variant="subtitle1" fontWeight={700} noWrap>
-                {selectedEmployee?.full_name || "Select an employee"}
+                {selectedEmployee?.full_name || t("userManagement.selectEmployee")}
               </Typography>
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <Typography variant="caption" color="text.secondary">
@@ -725,7 +727,7 @@ export default function UserManagement() {
                 {selectedEmployee ? (
                   <Chip
                     size="small"
-                    label={selectedEmployee.mes_is_active ? "Active" : "Inactive"}
+                    label={selectedEmployee.mes_is_active ? t("userManagement.active") : t("userManagement.inactive")}
                     color={selectedEmployee.mes_is_active ? "success" : "error"}
                     variant="outlined"
                     sx={{ height: 20, "& .MuiChip-label": { px: 0.75 } }}
@@ -740,23 +742,23 @@ export default function UserManagement() {
           {selectedEmployee ? (
             <Stack spacing={1.6}>
               <Box>
-                <Typography variant="caption" color="text.secondary">Department</Typography>
-                <Typography variant="body2" fontWeight={600}>{getDepartment(selectedEmployee)}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("userManagement.department")}</Typography>
+                <Typography variant="body2" fontWeight={600}>{getDepartment(selectedEmployee, t("userManagement.notSpecified"))}</Typography>
               </Box>
               <Box>
-                <Typography variant="caption" color="text.secondary">Job Title</Typography>
+                <Typography variant="caption" color="text.secondary">{t("userManagement.jobTitle")}</Typography>
                 <Typography variant="body2" fontWeight={600}>{selectedEmployee.position || "—"}</Typography>
               </Box>
               <Box>
-                <Typography variant="caption" color="text.secondary">Last Login</Typography>
-                <Typography variant="body2" fontWeight={600}>{formatDateTime(selectedEmployee.last_login_at)}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("userManagement.lastLogin")}</Typography>
+                <Typography variant="body2" fontWeight={600}>{formatDateTime(selectedEmployee.last_login_at, i18n.resolvedLanguage, t("userManagement.neverLoggedIn"))}</Typography>
               </Box>
 
               <Divider />
 
               <Box>
                 <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-                  Assigned Roles
+                  {t("userManagement.assignedRoles")}
                 </Typography>
                 <Autocomplete
                   multiple
@@ -768,7 +770,7 @@ export default function UserManagement() {
                   getOptionLabel={(option) => option.role_name || option.role_code}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   renderInput={(params) => (
-                    <TextField {...params} placeholder={selectedRoles.length ? "" : "Select roles"} />
+                    <TextField {...params} placeholder={selectedRoles.length ? "" : t("userManagement.selectRoles")} />
                   )}
                   renderTags={(value, getTagProps) =>
                     value.map((option, index) => (
@@ -787,9 +789,9 @@ export default function UserManagement() {
 
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
-                  <Typography variant="body2" fontWeight={600}>System Access</Typography>
+                  <Typography variant="body2" fontWeight={600}>{t("userManagement.systemAccess")}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Allow access to VCC Plastics
+                    {t("userManagement.allowAccess")}
                   </Typography>
                 </Box>
                 <Switch disabled={!canEdit} checked={accessEnabled} onChange={(event) => setAccessEnabled(event.target.checked)} />
@@ -803,13 +805,13 @@ export default function UserManagement() {
                 onClick={handleSave}
                 sx={buttonSx("primary")}
               >
-                {saving ? "Saving..." : "Save Permissions"}
+                {saving ? t("common.saving") : t("userManagement.savePermissions")}
               </Button>
             </Stack>
           ) : (
             <Stack alignItems="center" justifyContent="center" sx={{ height: "100%" }}>
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                Select a row in the table to view and update roles.
+                {t("userManagement.selectRowHelp")}
               </Typography>
             </Stack>
           )}
@@ -850,13 +852,13 @@ export default function UserManagement() {
               <AssignmentIndOutlinedIcon fontSize="small" />
             </Box>
             <Box>
-              <Typography variant="h5" fontWeight={800}>Add Employee</Typography>
+              <Typography variant="h5" fontWeight={800}>{t("userManagement.addEmployee")}</Typography>
               <Typography variant="body2" color="text.secondary">
-                Assign roles and grant access to VCC Plastics
+                {t("userManagement.addDescription")}
               </Typography>
             </Box>
           </Stack>
-          <Tooltip title="Close">
+          <Tooltip title={t("userManagement.close")}>
             <span style={{ position: "absolute", top: 12, right: 12 }}>
               <IconButton
                 size="small"
@@ -877,14 +879,14 @@ export default function UserManagement() {
               value={employeeToAdd}
               onChange={(_, value) => setEmployeeToAdd(value)}
               getOptionLabel={(option) =>
-                `${option.employee_code || "—"} - ${option.full_name || "Name unavailable"}`
+                `${option.employee_code || "—"} - ${option.full_name || t("userManagement.nameUnavailable")}`
               }
               isOptionEqualToValue={(option, value) =>
                 option.employee_code === value.employee_code
               }
-              noOptionsText="No employees are available to add"
+              noOptionsText={t("userManagement.noEmployees")}
               renderInput={(params) => (
-                <TextField {...params} label="Employee" placeholder="Search by employee code or name" />
+                <TextField {...params} label={t("userManagement.employee")} placeholder={t("userManagement.searchEmployee")} />
               )}
             />
 
@@ -897,15 +899,15 @@ export default function UserManagement() {
               getOptionLabel={(option) => option.role_name || option.role_code}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               renderInput={(params) => (
-                <TextField {...params} required label="Roles" placeholder="Select at least one role" />
+                <TextField {...params} required label={t("userManagement.roles")} placeholder={t("userManagement.selectAtLeastOneRole")} />
               )}
             />
 
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box>
-                <Typography variant="body2" fontWeight={600}>System Access</Typography>
+                <Typography variant="body2" fontWeight={600}>{t("userManagement.systemAccess")}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Allow the employee to access VCC Plastics
+                  {t("userManagement.allowEmployeeAccess")}
                 </Typography>
               </Box>
               <Switch
@@ -922,7 +924,7 @@ export default function UserManagement() {
             onClick={() => setAddOpen(false)}
             sx={buttonSx("cancel")}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="contained"
@@ -931,7 +933,7 @@ export default function UserManagement() {
             onClick={handleAddEmployee}
             sx={buttonSx("primary")}
           >
-            {adding ? "Adding..." : "Add Employee"}
+            {adding ? t("userManagement.adding") : t("userManagement.addEmployee")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -955,3 +957,4 @@ export default function UserManagement() {
     </MuiThemeProvider>
   );
 }
+

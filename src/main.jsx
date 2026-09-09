@@ -8,7 +8,8 @@ import { AppWrapper } from "./components/common/PageMeta.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import "./i18n";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
-createRoot(document.getElementById("root")).render(<StrictMode>
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
     <LanguageProvider>
       <ThemeProvider>
         <AppWrapper>
@@ -16,5 +17,5 @@ createRoot(document.getElementById("root")).render(<StrictMode>
         </AppWrapper>
       </ThemeProvider>
     </LanguageProvider>
-  </StrictMode>);
-
+  </StrictMode>,
+);

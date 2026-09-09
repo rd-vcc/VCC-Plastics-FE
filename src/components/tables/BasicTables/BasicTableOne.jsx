@@ -35,10 +35,7 @@ export default function AgGridTable({
             }
           : {
               width: "100%",
-              height:
-                typeof height === "number"
-                  ? `${height}px`
-                  : height,
+              height: typeof height === "number" ? `${height}px` : height,
             }
       }
     >

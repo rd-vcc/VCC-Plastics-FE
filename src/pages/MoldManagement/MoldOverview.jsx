@@ -1,4 +1,4 @@
 import ModulePlaceholder from "../_shared/ModulePlaceholder";
 export default function MoldOverview() {
-    return <ModulePlaceholder title="Mold Overview"/>;
+  return <ModulePlaceholder title="Mold Overview" />;
 }

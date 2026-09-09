@@ -1,5 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Stack, Switch, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography, createTheme, } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  ThemeProvider as MuiThemeProvider,
+  Tooltip,
+  Typography,
+  createTheme,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -104,7 +128,8 @@ function createRolePermissionMuiTheme(mode) {
       divider: isDark ? "#344054" : "#D0D5DD",
     },
     typography: {
-      fontFamily: '"Bai Jamjuree", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
+      fontFamily:
+        '"Bai Jamjuree", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
     },
     components: {
       MuiPaper: {
@@ -197,9 +222,10 @@ function rolePermissionPageSx(isDark) {
     "& .vcc-ag-grid .ag-paging-panel .ag-disabled .ag-icon": {
       color: "#667085 !important",
     },
-    "& .vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb, & .vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb": {
-      background: "#475467",
-    },
+    "& .vcc-ag-grid .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb, & .vcc-ag-grid .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb":
+      {
+        background: "#475467",
+      },
     "& .vcc-ag-grid .ag-overlay-loading-center": {
       color: "#E5E7EB",
       backgroundColor: "#182235",
@@ -212,7 +238,10 @@ export default function RolePermission() {
   const { t } = useTranslation();
   const { theme: appTheme } = useAppTheme();
   const isDark = appTheme === "dark";
-  const muiTheme = useMemo(() => createRolePermissionMuiTheme(appTheme), [appTheme]);
+  const muiTheme = useMemo(
+    () => createRolePermissionMuiTheme(appTheme),
+    [appTheme],
+  );
   const currentUser = getCurrentUser();
   const actor = currentUser?.employee_code || "SYSTEM";
   const { canEdit } = usePagePermission();
@@ -247,31 +276,42 @@ export default function RolePermission() {
     void loadRolePermissions(selectedRoleId);
   }, [selectedRoleId]);
   useEffect(() => {
-    if (!error && !success)
-      return;
+    if (!error && !success) return;
     const timer = window.setTimeout(() => {
       setError("");
       setSuccess("");
     }, 5000);
     return () => window.clearTimeout(timer);
   }, [error, success]);
-  const selectedRole = useMemo(() => roles.find((role) => role.id === selectedRoleId) || null, [roles, selectedRoleId]);
-  const hasPermissionChanges = useMemo(() => !sameNumberSet(selectedPermissionIds, originalPermissionIds), [selectedPermissionIds, originalPermissionIds]);
-  const permissionMatrixRows = useMemo(() => buildPermissionMatrixRows(permissions, permissionSearch), [permissions, permissionSearch]);
+  const selectedRole = useMemo(
+    () => roles.find((role) => role.id === selectedRoleId) || null,
+    [roles, selectedRoleId],
+  );
+  const hasPermissionChanges = useMemo(
+    () => !sameNumberSet(selectedPermissionIds, originalPermissionIds),
+    [selectedPermissionIds, originalPermissionIds],
+  );
+  const permissionMatrixRows = useMemo(
+    () => buildPermissionMatrixRows(permissions, permissionSearch),
+    [permissions, permissionSearch],
+  );
   const filteredRoles = useMemo(() => {
     const keyword = roleSearch.trim().toLowerCase();
     const totalPermissions = permissions.length;
     return roles.filter((role) => {
       const active = isActive(role.is_active);
       const permissionCount = toNumber(role.permission_count);
-      const matchesKeyword = !keyword ||
+      const matchesKeyword =
+        !keyword ||
         role.role_name.toLowerCase().includes(keyword) ||
         role.role_code.toLowerCase().includes(keyword) ||
         (role.description || "").toLowerCase().includes(keyword);
-      const matchesStatus = statusFilter === "ALL" ||
+      const matchesStatus =
+        statusFilter === "ALL" ||
         (statusFilter === "ACTIVE" && active) ||
         (statusFilter === "INACTIVE" && !active);
-      const matchesAccess = accessFilter === "ALL" ||
+      const matchesAccess =
+        accessFilter === "ALL" ||
         (accessFilter === "FULL" &&
           totalPermissions > 0 &&
           permissionCount === totalPermissions) ||
@@ -283,39 +323,44 @@ export default function RolePermission() {
     });
   }, [roles, permissions.length, roleSearch, statusFilter, accessFilter]);
   const assignedUsers = useMemo(() => {
-    if (!selectedRole)
-      return [];
-    return users.filter((user) => (user.roles || []).includes(selectedRole.role_code));
+    if (!selectedRole) return [];
+    return users.filter((user) =>
+      (user.roles || []).includes(selectedRole.role_code),
+    );
   }, [users, selectedRole]);
   const statistics = useMemo(() => {
     const totalRoles = roles.length;
     const totalPermissions = permissions.length;
     const activeRoles = roles.filter((role) => isActive(role.is_active)).length;
     const inactiveRoles = totalRoles - activeRoles;
-    const assignedUserCount = users.filter((user) => (user.roles || []).length > 0).length;
+    const assignedUserCount = users.filter(
+      (user) => (user.roles || []).length > 0,
+    ).length;
 
     // With the current API, "Highly Privileged" is defined as an ACTIVE role
     // that owns at least 80% of all system permissions.
     const highlyPrivilegedRoles = roles.filter((role) => {
-      if (!isActive(role.is_active) || totalPermissions <= 0)
-        return false;
+      if (!isActive(role.is_active) || totalPermissions <= 0) return false;
       return toNumber(role.permission_count) / totalPermissions >= 0.8;
     }).length;
 
-    const activeRolePercent = totalRoles > 0
-      ? ((activeRoles / totalRoles) * 100).toFixed(1)
-      : "0.0";
+    const activeRolePercent =
+      totalRoles > 0 ? ((activeRoles / totalRoles) * 100).toFixed(1) : "0.0";
 
-    const permissionResourceCount = buildPermissionMatrixRows(permissions, "").length;
+    const permissionResourceCount = buildPermissionMatrixRows(
+      permissions,
+      "",
+    ).length;
 
     const now = new Date();
     const newRolesThisMonth = roles.filter((role) => {
-      if (!role?.created_at)
-        return false;
+      if (!role?.created_at) return false;
       const createdAt = new Date(role.created_at);
-      return !Number.isNaN(createdAt.getTime()) &&
+      return (
+        !Number.isNaN(createdAt.getTime()) &&
         createdAt.getFullYear() === now.getFullYear() &&
-        createdAt.getMonth() === now.getMonth();
+        createdAt.getMonth() === now.getMonth()
+      );
     }).length;
 
     return {
@@ -342,7 +387,8 @@ export default function RolePermission() {
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      const message = payload?.detail ||
+      const message =
+        payload?.detail ||
         payload?.message ||
         t("rolePermission.errors.request", { status: response.status });
       throw new Error(message);
@@ -362,19 +408,18 @@ export default function RolePermission() {
       setPermissions(permissionData);
       setUsers(userData);
       setSelectedRoleId((current) => {
-        if (current !== null &&
-          roleData.some((role) => role.id === current)) {
+        if (current !== null && roleData.some((role) => role.id === current)) {
           return current;
         }
-        return (roleData.find((role) => isActive(role.is_active))?.id ??
+        return (
+          roleData.find((role) => isActive(role.is_active))?.id ??
           roleData[0]?.id ??
-          null);
+          null
+        );
       });
-    }
-    catch (err) {
+    } catch (err) {
       setError(errorMessage(err, t("rolePermission.errors.load")));
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   }
@@ -382,25 +427,26 @@ export default function RolePermission() {
     try {
       setLoadingRolePermissions(true);
       setError("");
-      const rolePermissions = await requestJson(`/api/roles/${roleId}/permissions`);
+      const rolePermissions = await requestJson(
+        `/api/roles/${roleId}/permissions`,
+      );
       const ids = rolePermissions.map((permission) => permission.id);
       setSelectedPermissionIds(ids);
       setOriginalPermissionIds(ids);
-    }
-    catch (err) {
+    } catch (err) {
       setSelectedPermissionIds([]);
       setOriginalPermissionIds([]);
       setError(errorMessage(err, t("rolePermission.errors.loadPermissions")));
-    }
-    finally {
+    } finally {
       setLoadingRolePermissions(false);
     }
   }
   function selectRole(roleId) {
-    if (roleId === selectedRoleId)
-      return;
-    if (hasPermissionChanges &&
-      !window.confirm(t("rolePermission.confirmDiscard"))) {
+    if (roleId === selectedRoleId) return;
+    if (
+      hasPermissionChanges &&
+      !window.confirm(t("rolePermission.confirmDiscard"))
+    ) {
       return;
     }
     setSelectedRoleId(roleId);
@@ -423,8 +469,7 @@ export default function RolePermission() {
     setRoleModalOpen(true);
   }
   function closeRoleModal() {
-    if (savingRole)
-      return;
+    if (savingRole) return;
     setRoleModalOpen(false);
     setEditingRole(null);
     setRoleForm(EMPTY_ROLE_FORM);
@@ -458,8 +503,7 @@ export default function RolePermission() {
           }),
         });
         setSuccess(t("rolePermission.success.updated"));
-      }
-      else {
+      } else {
         const result = await requestJson("/api/roles", {
           method: "POST",
           body: JSON.stringify({
@@ -475,26 +519,24 @@ export default function RolePermission() {
       }
       closeRoleModal();
       await reloadRolesAndUsers();
-    }
-    catch (err) {
+    } catch (err) {
       setError(errorMessage(err, t("rolePermission.errors.saveRole")));
-    }
-    finally {
+    } finally {
       setSavingRole(false);
     }
   }
   async function deactivateRole(role) {
     if (!canEdit) return;
-    const confirmed = window.confirm(t("rolePermission.confirmDeactivate", { name: role.role_name }));
-    if (!confirmed)
-      return;
+    const confirmed = window.confirm(
+      t("rolePermission.confirmDeactivate", { name: role.role_name }),
+    );
+    if (!confirmed) return;
     try {
       setError("");
       await requestJson(`/api/roles/${role.id}`, { method: "DELETE" });
       setSuccess(t("rolePermission.success.deactivated"));
       await reloadRolesAndUsers();
-    }
-    catch (err) {
+    } catch (err) {
       setError(errorMessage(err, t("rolePermission.errors.deactivate")));
     }
   }
@@ -513,8 +555,7 @@ export default function RolePermission() {
       });
       setSuccess(t("rolePermission.success.reactivated"));
       await reloadRolesAndUsers();
-    }
-    catch (err) {
+    } catch (err) {
       setError(errorMessage(err, t("rolePermission.errors.reactivate")));
     }
   }
@@ -526,24 +567,26 @@ export default function RolePermission() {
     setRoles(roleData);
     setUsers(userData);
     setSelectedRoleId((current) => {
-      if (current !== null &&
-        roleData.some((role) => role.id === current)) {
+      if (current !== null && roleData.some((role) => role.id === current)) {
         return current;
       }
-      return (roleData.find((role) => isActive(role.is_active))?.id ??
+      return (
+        roleData.find((role) => isActive(role.is_active))?.id ??
         roleData[0]?.id ??
-        null);
+        null
+      );
     });
   }
   function togglePermission(permissionId) {
     if (!canEdit) return;
-    setSelectedPermissionIds((current) => current.includes(permissionId)
-      ? current.filter((id) => id !== permissionId)
-      : [...current, permissionId]);
+    setSelectedPermissionIds((current) =>
+      current.includes(permissionId)
+        ? current.filter((id) => id !== permissionId)
+        : [...current, permissionId],
+    );
   }
   async function savePermissions() {
-    if (!canEdit || !selectedRole)
-      return;
+    if (!canEdit || !selectedRole) return;
     if (!isActive(selectedRole.is_active)) {
       setError(t("rolePermission.errors.inactivePermissions"));
       return;
@@ -559,13 +602,15 @@ export default function RolePermission() {
         }),
       });
       setOriginalPermissionIds(selectedPermissionIds);
-      setSuccess(t("rolePermission.success.permissionsSaved", { name: selectedRole.role_name }));
+      setSuccess(
+        t("rolePermission.success.permissionsSaved", {
+          name: selectedRole.role_name,
+        }),
+      );
       await reloadRolesAndUsers();
-    }
-    catch (err) {
+    } catch (err) {
       setError(errorMessage(err, t("rolePermission.errors.savePermissions")));
-    }
-    finally {
+    } finally {
       setSavingPermissions(false);
     }
   }
@@ -581,7 +626,9 @@ export default function RolePermission() {
     const rows = roles.map((role) => [
       role.role_code,
       role.role_name,
-      isActive(role.is_active) ? t("rolePermission.active") : t("rolePermission.inactive"),
+      isActive(role.is_active)
+        ? t("rolePermission.active")
+        : t("rolePermission.inactive"),
       String(toNumber(role.user_count)),
       String(toNumber(role.permission_count)),
       role.description || "",
@@ -606,172 +653,230 @@ export default function RolePermission() {
   return (
     <MuiThemeProvider theme={muiTheme}>
       <Box sx={rolePermissionPageSx(isDark)}>
-    <PageMeta title={`${t("rolePermission.title")} | VCC Plastics`} description={t("rolePermission.description")} />
-
-    <PageBreadcrumb pageTitle="Role & Permission" />
-
-    <Stack spacing={3} sx={{ pb: 2.5 }}>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: 1.5,
-          alignItems: "end",
-          width: "100%",
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h4" fontWeight={700}>
-            {t("rolePermission.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {t("rolePermission.description")}
-          </Typography>
-        </Box>
-
-
-      </Box>
-
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      {success ? <Alert severity="success">{success}</Alert> : null}
-
-      <KpiCardGroup>
-        <KpiCard
-          label={t("rolePermission.kpi.totalRoles")}
-          value={statistics.totalRoles}
-          note={t("rolePermission.kpi.newThisMonth", { count: statistics.newRolesThisMonth })}
-          tone="primary"
-          icon={<BadgeOutlinedIcon />}
+        <PageMeta
+          title={`${t("rolePermission.title")} | VCC Plastics`}
+          description={t("rolePermission.description")}
         />
-        <KpiCard
-          label={t("rolePermission.kpi.activeRoles")}
-          value={statistics.activeRoles}
-          note={t("rolePermission.kpi.percentOfTotal", { percent: statistics.activeRolePercent })}
-          tone="success"
-          icon={<ShieldOutlinedIcon />}
-        />
-        <KpiCard
-          label={t("rolePermission.kpi.totalPermissions")}
-          value={statistics.totalPermissions}
-          note={t("rolePermission.kpi.acrossMenus", { count: statistics.permissionResourceCount })}
-          tone="warning"
-          icon={<VpnKeyOutlinedIcon />}
-        />
-        <KpiCard
-          label={t("rolePermission.kpi.usersAssigned")}
-          value={statistics.assignedUserCount}
-          note={t("rolePermission.kpi.acrossRoles")}
-          tone="accent"
-          icon={<GroupOutlinedIcon />}
-        />
-        <KpiCard
-          label={t("rolePermission.kpi.highlyPrivileged")}
-          value={statistics.highlyPrivilegedRoles}
-          note={t("rolePermission.kpi.requireAttention")}
-          tone="info"
-          icon={<LockOutlinedIcon />}
-        />
-        <KpiCard
-          label={t("rolePermission.kpi.inactiveRoles")}
-          value={statistics.inactiveRoles}
-          note={t("rolePermission.kpi.deactivatedRoles")}
-          tone="danger"
-          icon={<LockOutlinedIcon />}
-        />
-      </KpiCardGroup>
 
-      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-        <Box sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            md: "minmax(260px,1.7fr) minmax(160px,.8fr) minmax(180px,.9fr) auto",
-          },
-          gap: 1,
-          alignItems: "center",
-        }}>
-          <TextField size="small" fullWidth value={roleSearch} onChange={(event) => setRoleSearch(event.target.value)} placeholder={t("rolePermission.searchPlaceholder")} InputProps={{
-            startAdornment: (<InputAdornment position="start">
-              <SearchIcon fontSize="small" />
-            </InputAdornment>),
-          }} />
+        <PageBreadcrumb pageTitle="Role & Permission" />
 
-          <TextField select size="small" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <MenuItem value="ALL">{t("rolePermission.allStatuses")}</MenuItem>
-            <MenuItem value="ACTIVE">{t("rolePermission.active")}</MenuItem>
-            <MenuItem value="INACTIVE">{t("rolePermission.inactive")}</MenuItem>
-          </TextField>
+        <Stack spacing={3} sx={{ pb: 2.5 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: 1.5,
+              alignItems: "end",
+              width: "100%",
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h4" fontWeight={700}>
+                {t("rolePermission.title")}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.25 }}
+              >
+                {t("rolePermission.description")}
+              </Typography>
+            </Box>
+          </Box>
 
-          <TextField select size="small" value={accessFilter} onChange={(event) => setAccessFilter(event.target.value)}>
-            <MenuItem value="ALL">{t("rolePermission.allAccessLevels")}</MenuItem>
-            <MenuItem value="FULL">{t("rolePermission.fullAccess")}</MenuItem>
-            <MenuItem value="PARTIAL">{t("rolePermission.partialAccess")}</MenuItem>
-            <MenuItem value="NONE">{t("rolePermission.noAccess")}</MenuItem>
-          </TextField>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          {success ? <Alert severity="success">{success}</Alert> : null}
 
-          <Button variant="outlined" size="small" startIcon={<FilterIcon />} onClick={() => {
-            setRoleSearch("");
-            setStatusFilter("ALL");
-            setAccessFilter("ALL");
-          }} sx={buttonSx("cancel", {
-            minHeight: 40,
-            whiteSpace: "nowrap",
-          })}>
-            {t("rolePermission.clearFilters")}
-          </Button>
-        </Box>
-      </Paper>
+          <KpiCardGroup>
+            <KpiCard
+              label={t("rolePermission.kpi.totalRoles")}
+              value={statistics.totalRoles}
+              note={t("rolePermission.kpi.newThisMonth", {
+                count: statistics.newRolesThisMonth,
+              })}
+              tone="primary"
+              icon={<BadgeOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("rolePermission.kpi.activeRoles")}
+              value={statistics.activeRoles}
+              note={t("rolePermission.kpi.percentOfTotal", {
+                percent: statistics.activeRolePercent,
+              })}
+              tone="success"
+              icon={<ShieldOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("rolePermission.kpi.totalPermissions")}
+              value={statistics.totalPermissions}
+              note={t("rolePermission.kpi.acrossMenus", {
+                count: statistics.permissionResourceCount,
+              })}
+              tone="warning"
+              icon={<VpnKeyOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("rolePermission.kpi.usersAssigned")}
+              value={statistics.assignedUserCount}
+              note={t("rolePermission.kpi.acrossRoles")}
+              tone="accent"
+              icon={<GroupOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("rolePermission.kpi.highlyPrivileged")}
+              value={statistics.highlyPrivilegedRoles}
+              note={t("rolePermission.kpi.requireAttention")}
+              tone="info"
+              icon={<LockOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("rolePermission.kpi.inactiveRoles")}
+              value={statistics.inactiveRoles}
+              note={t("rolePermission.kpi.deactivatedRoles")}
+              tone="danger"
+              icon={<LockOutlinedIcon />}
+            />
+          </KpiCardGroup>
 
-      <Box sx={{
-        display: "grid",
-        gridTemplateColumns: {
-          xs: "1fr",
-          md: "repeat(2, minmax(0, 1fr))",
-          xl: "repeat(3, minmax(0, 1fr))",
-        },
-        gap: 2,
-        alignItems: "stretch",
-      }}>
-        <RoleListPanel
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "minmax(260px,1.7fr) minmax(160px,.8fr) minmax(180px,.9fr) auto",
+                },
+                gap: 1,
+                alignItems: "center",
+              }}
+            >
+              <TextField
+                size="small"
+                fullWidth
+                value={roleSearch}
+                onChange={(event) => setRoleSearch(event.target.value)}
+                placeholder={t("rolePermission.searchPlaceholder")}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                select
+                size="small"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <MenuItem value="ALL">
+                  {t("rolePermission.allStatuses")}
+                </MenuItem>
+                <MenuItem value="ACTIVE">{t("rolePermission.active")}</MenuItem>
+                <MenuItem value="INACTIVE">
+                  {t("rolePermission.inactive")}
+                </MenuItem>
+              </TextField>
+
+              <TextField
+                select
+                size="small"
+                value={accessFilter}
+                onChange={(event) => setAccessFilter(event.target.value)}
+              >
+                <MenuItem value="ALL">
+                  {t("rolePermission.allAccessLevels")}
+                </MenuItem>
+                <MenuItem value="FULL">
+                  {t("rolePermission.fullAccess")}
+                </MenuItem>
+                <MenuItem value="PARTIAL">
+                  {t("rolePermission.partialAccess")}
+                </MenuItem>
+                <MenuItem value="NONE">{t("rolePermission.noAccess")}</MenuItem>
+              </TextField>
+
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterIcon />}
+                onClick={() => {
+                  setRoleSearch("");
+                  setStatusFilter("ALL");
+                  setAccessFilter("ALL");
+                }}
+                sx={buttonSx("cancel", {
+                  minHeight: 40,
+                  whiteSpace: "nowrap",
+                })}
+              >
+                {t("rolePermission.clearFilters")}
+              </Button>
+            </Box>
+          </Paper>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(2, minmax(0, 1fr))",
+                xl: "repeat(3, minmax(0, 1fr))",
+              },
+              gap: 2,
+              alignItems: "stretch",
+            }}
+          >
+            <RoleListPanel
+              canEdit={canEdit}
+              loading={loading}
+              roles={filteredRoles}
+              selectedRoleId={selectedRoleId}
+              onSelect={selectRole}
+              onEdit={openEditRole}
+              onDeactivate={(role) => void deactivateRole(role)}
+              onReactivate={(role) => void reactivateRole(role)}
+              onCreate={openCreateRole}
+            />
+
+            <PermissionMatrixPanel
+              canEdit={canEdit}
+              selectedRole={selectedRole}
+              rows={permissionMatrixRows}
+              selectedPermissionIds={selectedPermissionIds}
+              loading={loading || loadingRolePermissions}
+              saving={savingPermissions}
+              dirty={hasPermissionChanges}
+              permissionSearch={permissionSearch}
+              onPermissionSearchChange={setPermissionSearch}
+              onTogglePermission={togglePermission}
+              onSave={() => void savePermissions()}
+            />
+
+            <RoleDetailPanel
+              canEdit={canEdit}
+              role={selectedRole}
+              assignedUsers={assignedUsers}
+              loading={loading}
+              selectedPermissionCount={selectedPermissionIds.length}
+              totalPermissionCount={permissions.length}
+              onEdit={openEditRole}
+            />
+          </Box>
+        </Stack>
+
+        <RoleModal
           canEdit={canEdit}
-          loading={loading}
-          roles={filteredRoles}
-          selectedRoleId={selectedRoleId}
-          onSelect={selectRole}
-          onEdit={openEditRole}
-          onDeactivate={(role) => void deactivateRole(role)}
-          onReactivate={(role) => void reactivateRole(role)}
-          onCreate={openCreateRole}
+          open={roleModalOpen}
+          editingRole={editingRole}
+          form={roleForm}
+          saving={savingRole}
+          onChange={setRoleForm}
+          onClose={closeRoleModal}
+          onSave={() => void saveRole()}
         />
-
-        <PermissionMatrixPanel
-          canEdit={canEdit}
-          selectedRole={selectedRole}
-          rows={permissionMatrixRows}
-          selectedPermissionIds={selectedPermissionIds}
-          loading={loading || loadingRolePermissions}
-          saving={savingPermissions}
-          dirty={hasPermissionChanges}
-          permissionSearch={permissionSearch}
-          onPermissionSearchChange={setPermissionSearch}
-          onTogglePermission={togglePermission}
-          onSave={() => void savePermissions()}
-        />
-
-        <RoleDetailPanel
-          canEdit={canEdit}
-          role={selectedRole}
-          assignedUsers={assignedUsers}
-          loading={loading}
-          selectedPermissionCount={selectedPermissionIds.length}
-          totalPermissionCount={permissions.length}
-          onEdit={openEditRole}
-        />
-      </Box>
-
-    </Stack>
-
-    <RoleModal canEdit={canEdit} open={roleModalOpen} editingRole={editingRole} form={roleForm} saving={savingRole} onChange={setRoleForm} onClose={closeRoleModal} onSave={() => void saveRole()} />
       </Box>
     </MuiThemeProvider>
   );
@@ -783,9 +888,11 @@ function SectionHeader({ icon, title, action = null }) {
         height: PANEL_HEADER_HEIGHT,
         minHeight: PANEL_HEADER_HEIGHT,
         px: 1.25,
-        bgcolor: (theme) => theme.palette.mode === "dark" ? "#182235" : "#DDEBFF",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark" ? "#182235" : "#DDEBFF",
         borderBottom: 1,
-        borderColor: (theme) => theme.palette.mode === "dark" ? "#344054" : "#AFC7EE",
+        borderColor: (theme) =>
+          theme.palette.mode === "dark" ? "#344054" : "#AFC7EE",
         boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
@@ -845,251 +952,390 @@ function SectionHeader({ icon, title, action = null }) {
   );
 }
 
-function RoleListPanel({ canEdit, loading, roles, selectedRoleId, onSelect, onEdit, onDeactivate, onReactivate, onCreate, }) {
+function RoleListPanel({
+  canEdit,
+  loading,
+  roles,
+  selectedRoleId,
+  onSelect,
+  onEdit,
+  onDeactivate,
+  onReactivate,
+  onCreate,
+}) {
   const { t } = useTranslation();
-  const columnDefs = useMemo(() => [
-    {
-      headerName: "",
-      width: 50,
-      minWidth: 50,
-      maxWidth: 50,
-      sortable: false,
-      filter: false,
-      valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
-      cellClass: "ag-cell-center",
-    },
-    {
-      headerName: t("rolePermission.role"),
-      field: "role_name",
-      minWidth: 155,
-      flex: 1,
-      cellRenderer: (params) => {
-        const role = params.data;
-        if (!role)
-          return null;
-        const selected = role.id === selectedRoleId;
-        const active = isActive(role.is_active);
-        return (<Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%", minWidth: 0 }}>
-          <Box sx={{
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            flexShrink: 0,
-            bgcolor: selected
-              ? "primary.main"
-              : active
-                ? "success.main"
-                : "grey.400",
-          }} />
-
-          <Box sx={{ minWidth: 0 }}>
-            <Typography
-              variant="caption"
-              noWrap
-              sx={{
-                display: "block",
-                fontWeight: 700,
-                color: selected ? "primary.main" : "text.primary",
-                lineHeight: 1.2,
-              }}
+  const columnDefs = useMemo(
+    () => [
+      {
+        headerName: "",
+        width: 50,
+        minWidth: 50,
+        maxWidth: 50,
+        sortable: false,
+        filter: false,
+        valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
+        cellClass: "ag-cell-center",
+      },
+      {
+        headerName: t("rolePermission.role"),
+        field: "role_name",
+        minWidth: 155,
+        flex: 1,
+        cellRenderer: (params) => {
+          const role = params.data;
+          if (!role) return null;
+          const selected = role.id === selectedRoleId;
+          const active = isActive(role.is_active);
+          return (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ width: "100%", minWidth: 0 }}
             >
-              {role.role_name}
-            </Typography>
-          </Box>
-        </Stack>);
-      },
-    },
-    {
-      headerName: t("rolePermission.users"),
-      field: "user_count",
-      width: 64,
-      minWidth: 64,
-      maxWidth: 64,
-      filter: false,
-      cellClass: "ag-cell-center",
-      valueGetter: (params) => toNumber(params.data?.user_count),
-    },
-  ], [selectedRoleId, onEdit, onDeactivate, onReactivate, t]);
-  return (<Paper variant="outlined" sx={{ position: "relative", borderRadius: 2, overflow: "hidden", height: MAIN_TABLE_PANEL_HEIGHT, minHeight: MAIN_TABLE_PANEL_HEIGHT, maxHeight: MAIN_TABLE_PANEL_HEIGHT, boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-    <SectionHeader
-      icon={<BadgeOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-      title={t("rolePermission.roles")}
-    />
+              <Box
+                sx={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  bgcolor: selected
+                    ? "primary.main"
+                    : active
+                      ? "success.main"
+                      : "grey.400",
+                }}
+              />
 
-    <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
-      <AgGridTable
-        className="role-list-grid"
-        rowData={roles}
-        columnDefs={columnDefs}
-        height="100%"
-        loading={loading}
-        rowSelection={false}
-        pagination
-        paginationPageSize={6}
-        getRowId={(params) => String(params.data.id)}
-        selectedRowId={selectedRoleId}
-        selectedRowKey="id"
-        selectedRowClassName="vcc-role-row-selected"
-        onRowClicked={(event) => {
-          if (event.data)
-            onSelect(event.data.id);
-        }}
-      />
-    </Box>
-
-    <Button
-      variant="contained"
-      size="small"
-      startIcon={<AddIcon />}
-      onClick={onCreate}
-      disabled={!canEdit}
-      sx={buttonSx("primary", {
-        position: "absolute",
-        right: 12,
-        bottom: 10,
-        zIndex: 2,
-        height: PANEL_FOOTER_HEIGHT,
-        minHeight: PANEL_FOOTER_HEIGHT,
-        maxHeight: PANEL_FOOTER_HEIGHT,
-        py: 0,
-        px: 1.75,
-        borderRadius: 1,
-        whiteSpace: "nowrap",
-        "& .MuiButton-startIcon": {
-          display: "flex",
-          alignItems: "center",
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    display: "block",
+                    fontWeight: 700,
+                    color: selected ? "primary.main" : "text.primary",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {role.role_name}
+                </Typography>
+              </Box>
+            </Stack>
+          );
         },
-      })}
-    >
-      {t("rolePermission.createRole")}
-    </Button>
-  </Paper>);
-}
-function PermissionMatrixPanel({ canEdit, selectedRole, rows, selectedPermissionIds, loading, saving, dirty, permissionSearch, onPermissionSearchChange, onTogglePermission, onSave, }) {
-  const { t } = useTranslation();
-  const selectedPermissionSet = useMemo(() => new Set(selectedPermissionIds), [selectedPermissionIds]);
-  const columnDefs = useMemo(() => [
-    {
-      headerName: t("rolePermission.module"),
-      width: 210,
-      minWidth: 190,
-      flex: 1,
-      headerClass: "ag-header-center",
-      cellClass: "ag-cell-left",
-      valueGetter: (params) => params.data ? t(`navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`, { defaultValue: moduleLabel(params.data.moduleCode) }) : "",
-      cellRenderer: (params) => params.data ? (<Typography variant="caption" fontWeight={700} noWrap>
-        {t(`navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`, { defaultValue: moduleLabel(params.data.moduleCode) })}
-      </Typography>) : null,
-    },
-    ...ACTION_ORDER.map((action) => ({
-      headerName: t(`rolePermission.actions.${action}`),
-      width: 92,
-      minWidth: 92,
-      maxWidth: 92,
-      headerClass: "ag-header-center",
-      sortable: false,
-      filter: false,
-      resizable: false,
-      cellClass: "ag-cell-center",
-      cellStyle: { display: "flex", alignItems: "center", justifyContent: "center" },
-      cellRenderer: (params) => {
-        const row = params.data;
-        if (!row)
-          return null;
-        const permission = row.permissionsByAction[action];
-        if (!permission) {
-          return (<Typography variant="caption" color="text.disabled">
-            -
-          </Typography>);
-        }
-        return (<MatrixToggle checked={selectedPermissionSet.has(permission.id)} disabled={!canEdit || !selectedRole || !isActive(selectedRole.is_active)} title={`${permission.permission_name} (${permission.permission_code})`} onClick={() => onTogglePermission(permission.id)} />);
       },
-    })),
-  ], [canEdit, selectedPermissionSet, selectedRole, onTogglePermission, t]);
-  return (<Paper variant="outlined" sx={{ position: "relative", borderRadius: 2, overflow: "hidden", height: MAIN_TABLE_PANEL_HEIGHT, minHeight: MAIN_TABLE_PANEL_HEIGHT, maxHeight: MAIN_TABLE_PANEL_HEIGHT, boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
-    <SectionHeader
-      icon={<ShieldOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
-      title={t("rolePermission.permissionMatrix")}
-    />
+      {
+        headerName: t("rolePermission.users"),
+        field: "user_count",
+        width: 64,
+        minWidth: 64,
+        maxWidth: 64,
+        filter: false,
+        cellClass: "ag-cell-center",
+        valueGetter: (params) => toNumber(params.data?.user_count),
+      },
+    ],
+    [selectedRoleId, onEdit, onDeactivate, onReactivate, t],
+  );
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        position: "relative",
+        borderRadius: 2,
+        overflow: "hidden",
+        height: MAIN_TABLE_PANEL_HEIGHT,
+        minHeight: MAIN_TABLE_PANEL_HEIGHT,
+        maxHeight: MAIN_TABLE_PANEL_HEIGHT,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <SectionHeader
+        icon={
+          <BadgeOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />
+        }
+        title={t("rolePermission.roles")}
+      />
 
-    {!selectedRole ? (<Stack alignItems="center" justifyContent="center" spacing={1} sx={{ flex: 1, px: 2 }}>
-      <Typography variant="subtitle2">{t("rolePermission.noRoleSelected")}</Typography>
-      <Typography variant="caption" color="text.secondary" textAlign="center">
-        {t("rolePermission.selectRoleHelp")}
-      </Typography>
-    </Stack>) : (<>
       <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
-        <AgGridTable rowData={rows} columnDefs={columnDefs} height="100%" loading={loading} pagination={false} getRowId={(params) => params.data.key} />
+        <AgGridTable
+          className="role-list-grid"
+          rowData={roles}
+          columnDefs={columnDefs}
+          height="100%"
+          loading={loading}
+          rowSelection={false}
+          pagination
+          paginationPageSize={6}
+          getRowId={(params) => String(params.data.id)}
+          selectedRowId={selectedRoleId}
+          selectedRowKey="id"
+          selectedRowClassName="vcc-role-row-selected"
+          onRowClicked={(event) => {
+            if (event.data) onSelect(event.data.id);
+          }}
+        />
       </Box>
 
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="flex-end"
-        spacing={1}
-        sx={{
+      <Button
+        variant="contained"
+        size="small"
+        startIcon={<AddIcon />}
+        onClick={onCreate}
+        disabled={!canEdit}
+        sx={buttonSx("primary", {
           position: "absolute",
           right: 12,
           bottom: 10,
           zIndex: 2,
           height: PANEL_FOOTER_HEIGHT,
-          flexWrap: "nowrap",
+          minHeight: PANEL_FOOTER_HEIGHT,
+          maxHeight: PANEL_FOOTER_HEIGHT,
+          py: 0,
+          px: 1.75,
+          borderRadius: 1,
           whiteSpace: "nowrap",
-        }}
+          "& .MuiButton-startIcon": {
+            display: "flex",
+            alignItems: "center",
+          },
+        })}
       >
-        {dirty ? (
+        {t("rolePermission.createRole")}
+      </Button>
+    </Paper>
+  );
+}
+function PermissionMatrixPanel({
+  canEdit,
+  selectedRole,
+  rows,
+  selectedPermissionIds,
+  loading,
+  saving,
+  dirty,
+  permissionSearch,
+  onPermissionSearchChange,
+  onTogglePermission,
+  onSave,
+}) {
+  const { t } = useTranslation();
+  const selectedPermissionSet = useMemo(
+    () => new Set(selectedPermissionIds),
+    [selectedPermissionIds],
+  );
+  const columnDefs = useMemo(
+    () => [
+      {
+        headerName: t("rolePermission.module"),
+        width: 210,
+        minWidth: 190,
+        flex: 1,
+        headerClass: "ag-header-center",
+        cellClass: "ag-cell-left",
+        valueGetter: (params) =>
+          params.data
+            ? t(
+                `navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`,
+                { defaultValue: moduleLabel(params.data.moduleCode) },
+              )
+            : "",
+        cellRenderer: (params) =>
+          params.data ? (
+            <Typography variant="caption" fontWeight={700} noWrap>
+              {t(
+                `navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`,
+                { defaultValue: moduleLabel(params.data.moduleCode) },
+              )}
+            </Typography>
+          ) : null,
+      },
+      ...ACTION_ORDER.map((action) => ({
+        headerName: t(`rolePermission.actions.${action}`),
+        width: 92,
+        minWidth: 92,
+        maxWidth: 92,
+        headerClass: "ag-header-center",
+        sortable: false,
+        filter: false,
+        resizable: false,
+        cellClass: "ag-cell-center",
+        cellStyle: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        cellRenderer: (params) => {
+          const row = params.data;
+          if (!row) return null;
+          const permission = row.permissionsByAction[action];
+          if (!permission) {
+            return (
+              <Typography variant="caption" color="text.disabled">
+                -
+              </Typography>
+            );
+          }
+          return (
+            <MatrixToggle
+              checked={selectedPermissionSet.has(permission.id)}
+              disabled={
+                !canEdit || !selectedRole || !isActive(selectedRole.is_active)
+              }
+              title={`${permission.permission_name} (${permission.permission_code})`}
+              onClick={() => onTogglePermission(permission.id)}
+            />
+          );
+        },
+      })),
+    ],
+    [canEdit, selectedPermissionSet, selectedRole, onTogglePermission, t],
+  );
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        position: "relative",
+        borderRadius: 2,
+        overflow: "hidden",
+        height: MAIN_TABLE_PANEL_HEIGHT,
+        minHeight: MAIN_TABLE_PANEL_HEIGHT,
+        maxHeight: MAIN_TABLE_PANEL_HEIGHT,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <SectionHeader
+        icon={
+          <ShieldOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />
+        }
+        title={t("rolePermission.permissionMatrix")}
+      />
+
+      {!selectedRole ? (
+        <Stack
+          alignItems="center"
+          justifyContent="center"
+          spacing={1}
+          sx={{ flex: 1, px: 2 }}
+        >
+          <Typography variant="subtitle2">
+            {t("rolePermission.noRoleSelected")}
+          </Typography>
           <Typography
             variant="caption"
             color="text.secondary"
-            noWrap
+            textAlign="center"
+          >
+            {t("rolePermission.selectRoleHelp")}
+          </Typography>
+        </Stack>
+      ) : (
+        <>
+          <Box sx={{ p: 0.75, pb: 6, flex: 1, minHeight: 0 }}>
+            <AgGridTable
+              rowData={rows}
+              columnDefs={columnDefs}
+              height="100%"
+              loading={loading}
+              pagination={false}
+              getRowId={(params) => params.data.key}
+            />
+          </Box>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="flex-end"
+            spacing={1}
             sx={{
+              position: "absolute",
+              right: 12,
+              bottom: 10,
+              zIndex: 2,
               height: PANEL_FOOTER_HEIGHT,
-              display: "flex",
-              alignItems: "center",
-              lineHeight: `${PANEL_FOOTER_HEIGHT}px`,
-              flexShrink: 0,
+              flexWrap: "nowrap",
+              whiteSpace: "nowrap",
             }}
           >
-            {t("rolePermission.unsavedChanges")}
-          </Typography>
-        ) : null}
+            {dirty ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                noWrap
+                sx={{
+                  height: PANEL_FOOTER_HEIGHT,
+                  display: "flex",
+                  alignItems: "center",
+                  lineHeight: `${PANEL_FOOTER_HEIGHT}px`,
+                  flexShrink: 0,
+                }}
+              >
+                {t("rolePermission.unsavedChanges")}
+              </Typography>
+            ) : null}
 
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={saving ? <CircularProgress size={15} color="inherit" /> : <SaveIcon />}
-          onClick={onSave}
-          disabled={!selectedRole ||
-            !canEdit ||
-            !dirty ||
-            saving ||
-            !isActive(selectedRole.is_active)}
-          sx={buttonSx("primary", {
-            minWidth: 110,
-            height: PANEL_FOOTER_HEIGHT,
-            minHeight: PANEL_FOOTER_HEIGHT,
-            maxHeight: PANEL_FOOTER_HEIGHT,
-            py: 0,
-            borderRadius: 1,
-            flexShrink: 0,
-            "& .MuiButton-startIcon": {
-              display: "flex",
-              alignItems: "center",
-            },
-          })}
-        >
-          {saving ? t("common.saving") : t("rolePermission.savePermissions")}
-        </Button>
-      </Stack>
-    </>)}
-  </Paper>);
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={
+                saving ? (
+                  <CircularProgress size={15} color="inherit" />
+                ) : (
+                  <SaveIcon />
+                )
+              }
+              onClick={onSave}
+              disabled={
+                !selectedRole ||
+                !canEdit ||
+                !dirty ||
+                saving ||
+                !isActive(selectedRole.is_active)
+              }
+              sx={buttonSx("primary", {
+                minWidth: 110,
+                height: PANEL_FOOTER_HEIGHT,
+                minHeight: PANEL_FOOTER_HEIGHT,
+                maxHeight: PANEL_FOOTER_HEIGHT,
+                py: 0,
+                borderRadius: 1,
+                flexShrink: 0,
+                "& .MuiButton-startIcon": {
+                  display: "flex",
+                  alignItems: "center",
+                },
+              })}
+            >
+              {saving
+                ? t("common.saving")
+                : t("rolePermission.savePermissions")}
+            </Button>
+          </Stack>
+        </>
+      )}
+    </Paper>
+  );
 }
 function MatrixToggle({ checked, disabled, title, onClick }) {
-  return (<Tooltip title={title} arrow>
-    <Box component="span">
-      <Checkbox size="small" checked={checked} disabled={disabled} onClick={(event) => event.stopPropagation()} onChange={() => onClick()} sx={{ p: 0.25 }} />
-    </Box>
-  </Tooltip>);
+  return (
+    <Tooltip title={title} arrow>
+      <Box component="span">
+        <Checkbox
+          size="small"
+          checked={checked}
+          disabled={disabled}
+          onClick={(event) => event.stopPropagation()}
+          onChange={() => onClick()}
+          sx={{ p: 0.25 }}
+        />
+      </Box>
+    </Tooltip>
+  );
 }
 function RoleDetailPanel({
   canEdit,
@@ -1101,51 +1347,56 @@ function RoleDetailPanel({
   onEdit,
 }) {
   const { t } = useTranslation();
-  const userColumnDefs = useMemo(() => [
-    {
-      headerName: "",
-      width: 42,
-      minWidth: 42,
-      maxWidth: 42,
-      sortable: false,
-      filter: false,
-      valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
-      cellClass: "ag-cell-center",
-    },
-    {
-      headerName: t("rolePermission.userCode"),
-      field: "employee_code",
-      minWidth: 95,
-      flex: 1,
-      cellRenderer: (params) => (
-        <Typography variant="caption" fontWeight={600} noWrap>
-          {params.data?.employee_code || "-"}
-        </Typography>
-      ),
-    },
-    {
-      headerName: t("rolePermission.userName"),
-      minWidth: 110,
-      flex: 1.2,
-      valueGetter: (params) => getEmployeeDisplayName(params.data),
-      cellRenderer: (params) => (
-        <Typography variant="caption" fontWeight={600} noWrap>
-          {params.value || "-"}
-        </Typography>
-      ),
-    },
-    {
-      headerName: t("rolePermission.status"),
-      width: 68,
-      minWidth: 68,
-      maxWidth: 68,
-      sortable: false,
-      filter: false,
-      cellClass: "ag-cell-center",
-      cellRenderer: (params) =>
-        params.data ? <StatusBadge active={isActive(params.data.is_active)} compact /> : null,
-    },
-  ], [t]);
+  const userColumnDefs = useMemo(
+    () => [
+      {
+        headerName: "",
+        width: 42,
+        minWidth: 42,
+        maxWidth: 42,
+        sortable: false,
+        filter: false,
+        valueGetter: (params) => (params.node?.rowIndex ?? 0) + 1,
+        cellClass: "ag-cell-center",
+      },
+      {
+        headerName: t("rolePermission.userCode"),
+        field: "employee_code",
+        minWidth: 95,
+        flex: 1,
+        cellRenderer: (params) => (
+          <Typography variant="caption" fontWeight={600} noWrap>
+            {params.data?.employee_code || "-"}
+          </Typography>
+        ),
+      },
+      {
+        headerName: t("rolePermission.userName"),
+        minWidth: 110,
+        flex: 1.2,
+        valueGetter: (params) => getEmployeeDisplayName(params.data),
+        cellRenderer: (params) => (
+          <Typography variant="caption" fontWeight={600} noWrap>
+            {params.value || "-"}
+          </Typography>
+        ),
+      },
+      {
+        headerName: t("rolePermission.status"),
+        width: 68,
+        minWidth: 68,
+        maxWidth: 68,
+        sortable: false,
+        filter: false,
+        cellClass: "ag-cell-center",
+        cellRenderer: (params) =>
+          params.data ? (
+            <StatusBadge active={isActive(params.data.is_active)} compact />
+          ) : null,
+      },
+    ],
+    [t],
+  );
 
   return (
     <Paper
@@ -1162,7 +1413,12 @@ function RoleDetailPanel({
       }}
     >
       <SectionHeader
-        icon={<AssignmentIndOutlinedIcon sx={{ color: "text.primary" }} fontSize="small" />}
+        icon={
+          <AssignmentIndOutlinedIcon
+            sx={{ color: "text.primary" }}
+            fontSize="small"
+          />
+        }
         title={t("rolePermission.roleDetails")}
         action={
           role ? (
@@ -1215,15 +1471,33 @@ function RoleDetailPanel({
             }}
           >
             <Stack spacing={1.1}>
-              <DetailRow label={t("rolePermission.roleName")} value={role.role_name} strong />
-              <DetailRow label={t("rolePermission.roleCode")} value={role.role_code} />
               <DetailRow
-                label={t("rolePermission.status")}
-                value={isActive(role.is_active) ? t("rolePermission.active") : t("rolePermission.inactive")}
+                label={t("rolePermission.roleName")}
+                value={role.role_name}
                 strong
               />
-              <DetailRow label={t("rolePermission.roleDescription")} value={role.description || "-"} />
-              <DetailRow label={t("rolePermission.users")} value={String(toNumber(role.user_count))} strong />
+              <DetailRow
+                label={t("rolePermission.roleCode")}
+                value={role.role_code}
+              />
+              <DetailRow
+                label={t("rolePermission.status")}
+                value={
+                  isActive(role.is_active)
+                    ? t("rolePermission.active")
+                    : t("rolePermission.inactive")
+                }
+                strong
+              />
+              <DetailRow
+                label={t("rolePermission.roleDescription")}
+                value={role.description || "-"}
+              />
+              <DetailRow
+                label={t("rolePermission.users")}
+                value={String(toNumber(role.user_count))}
+                strong
+              />
             </Stack>
 
             <Stack
@@ -1240,25 +1514,40 @@ function RoleDetailPanel({
               }}
             >
               <Typography variant="caption" color="text.secondary" noWrap>
-                {t("rolePermission.assigned")}: {" "}
-                <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
+                {t("rolePermission.assigned")}:{" "}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  fontWeight={700}
+                  color="text.primary"
+                >
                   {selectedPermissionCount}
                 </Typography>
               </Typography>
 
               <Typography variant="caption" color="text.secondary" noWrap>
-                {t("rolePermission.unassigned")}: {" "}
-                <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
+                {t("rolePermission.unassigned")}:{" "}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  fontWeight={700}
+                  color="text.primary"
+                >
                   {Math.max(totalPermissionCount - selectedPermissionCount, 0)}
                 </Typography>
               </Typography>
 
               <Typography variant="caption" color="text.secondary" noWrap>
-                {t("rolePermission.total")}: {" "}
-                <Typography component="span" variant="caption" fontWeight={700} color="text.primary">
+                {t("rolePermission.total")}:{" "}
+                <Typography
+                  component="span"
+                  variant="caption"
+                  fontWeight={700}
+                  color="text.primary"
+                >
                   {totalPermissionCount}
-                </Typography>
-                {" "}{t("rolePermission.permissions")}
+                </Typography>{" "}
+                {t("rolePermission.permissions")}
               </Typography>
             </Stack>
           </Box>
@@ -1284,9 +1573,18 @@ function RoleDetailPanel({
                 flexShrink: 0,
               }}
             >
-              <GroupOutlinedIcon sx={{ color: "text.secondary" }} fontSize="small" />
-              <Typography variant="caption" fontWeight={700} color="text.primary">
-                {t("rolePermission.assignedUsers", { count: assignedUsers.length })}
+              <GroupOutlinedIcon
+                sx={{ color: "text.secondary" }}
+                fontSize="small"
+              />
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="text.primary"
+              >
+                {t("rolePermission.assignedUsers", {
+                  count: assignedUsers.length,
+                })}
               </Typography>
             </Stack>
 
@@ -1308,28 +1606,36 @@ function RoleDetailPanel({
 }
 
 function DetailRow({ label, value, strong, custom }) {
-  return (<Box sx={{
-    display: "grid",
-    gridTemplateColumns: "82px minmax(0,1fr)",
-    gap: 1,
-    alignItems: "start",
-  }}>
-    <Typography variant="caption" color="text.secondary">
-      {label}
-    </Typography>
-    {custom || (<Typography variant="caption" sx={{
-      color: "text.primary",
-      fontWeight: strong ? 700 : 500,
-      wordBreak: "break-word",
-    }}>
-      {value || "-"}
-    </Typography>)}
-  </Box>);
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "82px minmax(0,1fr)",
+        gap: 1,
+        alignItems: "start",
+      }}
+    >
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      {custom || (
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.primary",
+            fontWeight: strong ? 700 : 500,
+            wordBreak: "break-word",
+          }}
+        >
+          {value || "-"}
+        </Typography>
+      )}
+    </Box>
+  );
 }
 
 function getEmployeeDisplayName(user) {
-  if (!user)
-    return "-";
+  if (!user) return "-";
 
   return (
     user.full_name ||
@@ -1345,125 +1651,230 @@ function getEmployeeDisplayName(user) {
   );
 }
 
-function StatusBadge({ active, compact = false, }) {
+function StatusBadge({ active, compact = false }) {
   const { t } = useTranslation();
-  return (<Chip size="small" label={active ? t("rolePermission.active") : t("rolePermission.inactive")} color={active ? "success" : "error"} variant="outlined" sx={{
-    height: compact ? 20 : 22,
-    "& .MuiChip-label": { px: compact ? 0.75 : 1 },
-  }} />);
-}
-function RoleModal({ canEdit, open, editingRole, form, saving, onChange, onClose, onSave, }) {
-  const { t } = useTranslation();
-  return (<Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" PaperProps={{
-    sx: {
-      borderRadius: 2.5,
-      overflow: "hidden",
-      boxShadow: (theme) => theme.palette.mode === "dark"
-        ? "0 18px 48px rgba(0,0,0,.48)"
-        : "0 18px 48px rgba(15,23,42,.18)",
-    },
-  }}>
-    <DialogTitle
+  return (
+    <Chip
+      size="small"
+      label={active ? t("rolePermission.active") : t("rolePermission.inactive")}
+      color={active ? "success" : "error"}
+      variant="outlined"
       sx={{
-        position: "relative",
-        pb: 1.25,
-        pl: 2.5,
-        pr: 7,
-        pt: 2,
-        bgcolor: (theme) => theme.palette.mode === "dark" ? "#182235" : "#EEF4FF",
-        borderBottom: 1,
-        borderColor: "divider",
+        height: compact ? 20 : 22,
+        "& .MuiChip-label": { px: compact ? 0.75 : 1 },
+      }}
+    />
+  );
+}
+function RoleModal({
+  canEdit,
+  open,
+  editingRole,
+  form,
+  saving,
+  onChange,
+  onClose,
+  onSave,
+}) {
+  const { t } = useTranslation();
+  return (
+    <Dialog
+      open={open}
+      onClose={saving ? undefined : onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 2.5,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 18px 48px rgba(0,0,0,.48)"
+              : "0 18px 48px rgba(15,23,42,.18)",
+        },
       }}
     >
-      <Stack direction="row" alignItems="flex-start" spacing={2}>
-        <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ minWidth: 0 }}>
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 1.5,
-              bgcolor: "primary.main",
-              color: "common.white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: "0 8px 20px rgba(0,91,171,.22)",
-            }}
+      <DialogTitle
+        sx={{
+          position: "relative",
+          pb: 1.25,
+          pl: 2.5,
+          pr: 7,
+          pt: 2,
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#182235" : "#EEF4FF",
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Stack direction="row" alignItems="flex-start" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={1.25}
+            alignItems="flex-start"
+            sx={{ minWidth: 0 }}
           >
-            <ShieldOutlinedIcon fontSize="small" />
-          </Box>
-
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={800} sx={{ lineHeight: 1.15 }}>
-              {editingRole ? t("rolePermission.updateRole") : t("rolePermission.createNewRole")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.35 }}>
-              {t("rolePermission.modalHelp")}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Tooltip title={t("rolePermission.close")} arrow>
-          <span
-            style={{
-              position: "absolute",
-              top: 10,
-              right: 10,
-            }}
-          >
-            <IconButton
-              size="small"
-              onClick={onClose}
-              disabled={saving}
+            <Box
               sx={{
-                width: 34,
-                height: 34,
-                border: 1,
-                borderColor: "divider",
-                bgcolor: "background.paper",
-                color: "text.secondary",
-                boxShadow: (theme) => theme.palette.mode === "dark"
-                  ? "0 4px 12px rgba(0,0,0,.28)"
-                  : "0 4px 12px rgba(15,23,42,.08)",
-                "&:hover": {
-                  bgcolor: (theme) => theme.palette.mode === "dark" ? "#1F2A3D" : "#E6EEF9",
-                  color: "text.primary",
-                },
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                bgcolor: "primary.main",
+                color: "common.white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                boxShadow: "0 8px 20px rgba(0,91,171,.22)",
               }}
             >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Stack>
-    </DialogTitle>
+              <ShieldOutlinedIcon fontSize="small" />
+            </Box>
 
-    <DialogContent sx={{ pt: 2 }}>
-      <Stack spacing={2} sx={{ pt: 1 }}>
-        <TextField fullWidth required size="small" label={t("rolePermission.roleCode")} value={form.role_code} disabled={!canEdit || Boolean(editingRole)} onChange={(event) => onChange({ ...form, role_code: event.target.value })} placeholder={t("rolePermission.roleCodePlaceholder")} helperText={editingRole ? t("rolePermission.roleCodeHelp") : undefined} />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="h5"
+                fontWeight={800}
+                sx={{ lineHeight: 1.15 }}
+              >
+                {editingRole
+                  ? t("rolePermission.updateRole")
+                  : t("rolePermission.createNewRole")}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.35 }}
+              >
+                {t("rolePermission.modalHelp")}
+              </Typography>
+            </Box>
+          </Stack>
 
-        <TextField fullWidth required size="small" label={t("rolePermission.roleName")} value={form.role_name} disabled={!canEdit} onChange={(event) => onChange({ ...form, role_name: event.target.value })} placeholder={t("rolePermission.roleNamePlaceholder")} />
+          <Tooltip title={t("rolePermission.close")} arrow>
+            <span
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+              }}
+            >
+              <IconButton
+                size="small"
+                onClick={onClose}
+                disabled={saving}
+                sx={{
+                  width: 34,
+                  height: 34,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  color: "text.secondary",
+                  boxShadow: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "0 4px 12px rgba(0,0,0,.28)"
+                      : "0 4px 12px rgba(15,23,42,.08)",
+                  "&:hover": {
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "#1F2A3D" : "#E6EEF9",
+                    color: "text.primary",
+                  },
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+      </DialogTitle>
 
-        <TextField fullWidth multiline minRows={3} label={t("rolePermission.roleDescription")} value={form.description} disabled={!canEdit} onChange={(event) => onChange({ ...form, description: event.target.value })} placeholder={t("rolePermission.descriptionPlaceholder")} />
+      <DialogContent sx={{ pt: 2 }}>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            fullWidth
+            required
+            size="small"
+            label={t("rolePermission.roleCode")}
+            value={form.role_code}
+            disabled={!canEdit || Boolean(editingRole)}
+            onChange={(event) =>
+              onChange({ ...form, role_code: event.target.value })
+            }
+            placeholder={t("rolePermission.roleCodePlaceholder")}
+            helperText={
+              editingRole ? t("rolePermission.roleCodeHelp") : undefined
+            }
+          />
 
-        <FormControlLabel control={<Switch disabled={!canEdit} checked={form.is_active} onChange={(event) => onChange({ ...form, is_active: event.target.checked })} />} label={<Box>
-          <Typography variant="body2" fontWeight={600}>
-            {t("rolePermission.activateRole")}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t("rolePermission.activateHelp")}
-          </Typography>
-        </Box>} />
-      </Stack>
-    </DialogContent>
+          <TextField
+            fullWidth
+            required
+            size="small"
+            label={t("rolePermission.roleName")}
+            value={form.role_name}
+            disabled={!canEdit}
+            onChange={(event) =>
+              onChange({ ...form, role_name: event.target.value })
+            }
+            placeholder={t("rolePermission.roleNamePlaceholder")}
+          />
 
-    <DialogActions sx={{ px: 3, pb: 2.5 }}>
-      <Button variant="contained" startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} onClick={onSave} disabled={!canEdit || saving} sx={buttonSx("primary")}>
-        {saving ? t("common.saving") : t("rolePermission.saveRole")}
-      </Button>
-    </DialogActions>
-  </Dialog>);
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label={t("rolePermission.roleDescription")}
+            value={form.description}
+            disabled={!canEdit}
+            onChange={(event) =>
+              onChange({ ...form, description: event.target.value })
+            }
+            placeholder={t("rolePermission.descriptionPlaceholder")}
+          />
+
+          <FormControlLabel
+            control={
+              <Switch
+                disabled={!canEdit}
+                checked={form.is_active}
+                onChange={(event) =>
+                  onChange({ ...form, is_active: event.target.checked })
+                }
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {t("rolePermission.activateRole")}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t("rolePermission.activateHelp")}
+                </Typography>
+              </Box>
+            }
+          />
+        </Stack>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button
+          variant="contained"
+          startIcon={
+            saving ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <SaveIcon />
+            )
+          }
+          onClick={onSave}
+          disabled={!canEdit || saving}
+          sx={buttonSx("primary")}
+        >
+          {saving ? t("common.saving") : t("rolePermission.saveRole")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 }
 function buildPermissionMatrixRows(permissions, search) {
   const keyword = search.trim().toLowerCase();
@@ -1471,10 +1882,12 @@ function buildPermissionMatrixRows(permissions, search) {
   permissions.forEach((permission) => {
     const moduleCode = permission.module_code || "OTHER";
     const backendAction = permissionAction(permission.permission_code);
-    if (!["view", "create", "edit"].includes(backendAction))
-      return;
+    if (!["view", "create", "edit"].includes(backendAction)) return;
     const action = backendAction === "create" ? "edit" : backendAction;
-    const resourceCode = permissionResource(permission.permission_code, moduleCode);
+    const resourceCode = permissionResource(
+      permission.permission_code,
+      moduleCode,
+    );
     const searchable = [
       permission.permission_code,
       permission.permission_name,
@@ -1486,8 +1899,7 @@ function buildPermissionMatrixRows(permissions, search) {
     ]
       .join(" ")
       .toLowerCase();
-    if (keyword && !searchable.includes(keyword))
-      return;
+    if (keyword && !searchable.includes(keyword)) return;
     const key = `${moduleCode}|${resourceCode}`;
     const current = rowMap.get(key) || {
       key,
@@ -1503,9 +1915,9 @@ function buildPermissionMatrixRows(permissions, search) {
     rowMap.set(key, current);
   });
   return Array.from(rowMap.values()).sort((left, right) => {
-    const moduleDifference = moduleOrder(left.moduleCode) - moduleOrder(right.moduleCode);
-    if (moduleDifference !== 0)
-      return moduleDifference;
+    const moduleDifference =
+      moduleOrder(left.moduleCode) - moduleOrder(right.moduleCode);
+    if (moduleDifference !== 0) return moduleDifference;
     return left.resourceCode.localeCompare(right.resourceCode);
   });
 }
@@ -1515,14 +1927,15 @@ function permissionAction(permissionCode) {
 }
 function permissionResource(permissionCode, moduleCode) {
   const parts = permissionCode.split(".").filter(Boolean);
-  if (parts.length <= 1)
-    return moduleCode.toLowerCase();
+  if (parts.length <= 1) return moduleCode.toLowerCase();
   return parts.slice(0, -1).join(".");
 }
 function resourceLabel(resourceCode, moduleCode) {
   const normalizedModule = moduleCode.toLowerCase();
-  if (resourceCode === normalizedModule ||
-    resourceCode.replaceAll("_", "") === normalizedModule.replaceAll("_", "")) {
+  if (
+    resourceCode === normalizedModule ||
+    resourceCode.replaceAll("_", "") === normalizedModule.replaceAll("_", "")
+  ) {
     return moduleLabel(moduleCode);
   }
   return resourceCode
@@ -1554,8 +1967,7 @@ function toNumber(value) {
   return Number.isFinite(numberValue) ? numberValue : 0;
 }
 function sameNumberSet(left, right) {
-    if (left.length !== right.length)
-      return false;
+  if (left.length !== right.length) return false;
   const rightSet = new Set(right);
   return left.every((value) => rightSet.has(value));
 }
@@ -1565,4 +1977,3 @@ function errorMessage(error, fallback) {
 function csvCell(value) {
   return `"${value.replaceAll('"', '""')}"`;
 }
-

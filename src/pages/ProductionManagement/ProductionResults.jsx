@@ -1,4 +1,4 @@
 import ModulePlaceholder from "../_shared/ModulePlaceholder";
 export default function ProductionResults() {
-    return <ModulePlaceholder title="Production Results"/>;
+  return <ModulePlaceholder title="Production Results" />;
 }

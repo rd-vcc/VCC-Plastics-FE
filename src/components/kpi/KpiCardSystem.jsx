@@ -15,7 +15,12 @@ const DEFAULT_COLUMNS = {
   xl: "repeat(6, minmax(0, 1fr))",
 };
 
-export function KpiCardGroup({ children, columns = DEFAULT_COLUMNS, gap = 1.5, sx }) {
+export function KpiCardGroup({
+  children,
+  columns = DEFAULT_COLUMNS,
+  gap = 1.5,
+  sx,
+}) {
   return (
     <Box
       sx={[

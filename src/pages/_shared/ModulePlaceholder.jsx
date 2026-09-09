@@ -3,11 +3,17 @@ import PageMeta from "../../components/common/PageMeta";
 import { useTranslation } from "react-i18next";
 import { toTranslationSlug } from "../../i18n";
 export default function ModulePlaceholder({ title }) {
-    const { t } = useTranslation();
-    const translatedTitle = t(`navigation.${toTranslationSlug(title)}`, { defaultValue: title });
-    return (<div>
-      <PageMeta title={`${translatedTitle} | VCC Plastics`} description={`${translatedTitle} - VCC Plastics Management System`}/>
-      <PageBreadcrumb pageTitle={title}/>
+  const { t } = useTranslation();
+  const translatedTitle = t(`navigation.${toTranslationSlug(title)}`, {
+    defaultValue: title,
+  });
+  return (
+    <div>
+      <PageMeta
+        title={`${translatedTitle} | VCC Plastics`}
+        description={`${translatedTitle} - VCC Plastics Management System`}
+      />
+      <PageBreadcrumb pageTitle={title} />
       <div className="min-h-[calc(100vh-112px)] w-full rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="flex min-h-[calc(100vh-138px)] w-full items-center justify-center text-center">
           <div>
@@ -20,6 +26,6 @@ export default function ModulePlaceholder({ title }) {
           </div>
         </div>
       </div>
-    </div>);
+    </div>
+  );
 }
-

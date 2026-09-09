@@ -15,14 +15,18 @@ export default function LanguageSwitcher({ compact = false }) {
           value={currentLanguage}
           onChange={(event) => changeTemporaryLanguage(event.target.value)}
           aria-label={t("common.language")}
-          startAdornment={<LanguageOutlinedIcon sx={{ mr: 0.5, fontSize: 18 }} />}
+          startAdornment={
+            <LanguageOutlinedIcon sx={{ mr: 0.5, fontSize: 18 }} />
+          }
           sx={{
             height: 36,
             borderRadius: "8px",
             fontSize: 13,
             color: "inherit",
             "& .MuiSelect-select": { py: 0.75, pl: 0.25 },
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(148,163,184,.35)" },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: "rgba(148,163,184,.35)",
+            },
           }}
         >
           {supportedLanguages.map((language) => (
@@ -35,4 +39,3 @@ export default function LanguageSwitcher({ compact = false }) {
     </Tooltip>
   );
 }
-

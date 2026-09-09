@@ -3,42 +3,49 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { getCurrentUser } from "../../auth/auth";
 import { useTranslation } from "react-i18next";
 export default function EditProfile() {
-    const { t } = useTranslation();
-    const user = getCurrentUser();
-    const displayValue = (value) => {
-        if (value === undefined ||
-            value === null ||
-            value === "") {
-            return "—";
-        }
-        return String(value);
-    };
-    if (!user) {
-        return (<>
-        <PageMeta title={t("editProfile.metaTitle")} description={t("editProfile.metaDescription")}/>
+  const { t } = useTranslation();
+  const user = getCurrentUser();
+  const displayValue = (value) => {
+    if (value === undefined || value === null || value === "") {
+      return "—";
+    }
+    return String(value);
+  };
+  if (!user) {
+    return (
+      <>
+        <PageMeta
+          title={t("editProfile.metaTitle")}
+          description={t("editProfile.metaDescription")}
+        />
 
-        <PageBreadcrumb pageTitle={t("editProfile.title")}/>
+        <PageBreadcrumb pageTitle={t("editProfile.title")} />
 
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t("editProfile.userNotFound")}
           </p>
         </div>
-      </>);
-    }
-    const initials = user.full_name
-        ? user.full_name
-            .trim()
-            .split(/\s+/)
-            .slice(-2)
-            .map((item) => item.charAt(0))
-            .join("")
-            .toUpperCase()
-        : "U";
-    return (<>
-      <PageMeta title={t("editProfile.metaTitle")} description={t("editProfile.signedInDescription")}/>
+      </>
+    );
+  }
+  const initials = user.full_name
+    ? user.full_name
+        .trim()
+        .split(/\s+/)
+        .slice(-2)
+        .map((item) => item.charAt(0))
+        .join("")
+        .toUpperCase()
+    : "U";
+  return (
+    <>
+      <PageMeta
+        title={t("editProfile.metaTitle")}
+        description={t("editProfile.signedInDescription")}
+      />
 
-      <PageBreadcrumb pageTitle={t("editProfile.title")}/>
+      <PageBreadcrumb pageTitle={t("editProfile.title")} />
 
       <div className="space-y-6">
         {/* EMPLOYEE HEADER */}
@@ -61,15 +68,19 @@ export default function EditProfile() {
                   </strong>
                 </span>
 
-                {user.position && (<>
+                {user.position && (
+                  <>
                     <span className="hidden sm:inline">•</span>
                     <span>{user.position}</span>
-                  </>)}
+                  </>
+                )}
 
-                {user.company && (<>
+                {user.company && (
+                  <>
                     <span className="hidden sm:inline">•</span>
                     <span>{user.company}</span>
-                  </>)}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -88,19 +99,40 @@ export default function EditProfile() {
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label={t("editProfile.employeeCode")} value={displayValue(user.employee_code)}/>
+            <InfoItem
+              label={t("editProfile.employeeCode")}
+              value={displayValue(user.employee_code)}
+            />
 
-            <InfoItem label={t("editProfile.fullName")} value={displayValue(user.full_name)}/>
+            <InfoItem
+              label={t("editProfile.fullName")}
+              value={displayValue(user.full_name)}
+            />
 
-            <InfoItem label={t("editProfile.gender")} value={displayValue(user.gender)}/>
+            <InfoItem
+              label={t("editProfile.gender")}
+              value={displayValue(user.gender)}
+            />
 
-            <InfoItem label={t("editProfile.birthDate")} value={displayValue(user.birth_date)}/>
+            <InfoItem
+              label={t("editProfile.birthDate")}
+              value={displayValue(user.birth_date)}
+            />
 
-            <InfoItem label={t("editProfile.entryDate")} value={displayValue(user.entry_date)}/>
+            <InfoItem
+              label={t("editProfile.entryDate")}
+              value={displayValue(user.entry_date)}
+            />
 
-            <InfoItem label={t("editProfile.phone")} value={displayValue(user.phone)}/>
+            <InfoItem
+              label={t("editProfile.phone")}
+              value={displayValue(user.phone)}
+            />
 
-            <InfoItem label={t("editProfile.position")} value={displayValue(user.position)}/>
+            <InfoItem
+              label={t("editProfile.position")}
+              value={displayValue(user.position)}
+            />
           </div>
         </div>
 
@@ -117,20 +149,40 @@ export default function EditProfile() {
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label={t("editProfile.corporation")} value={displayValue(user.corporation)}/>
+            <InfoItem
+              label={t("editProfile.corporation")}
+              value={displayValue(user.corporation)}
+            />
 
-            <InfoItem label={t("editProfile.company")} value={displayValue(user.company)}/>
+            <InfoItem
+              label={t("editProfile.company")}
+              value={displayValue(user.company)}
+            />
 
-            <InfoItem label={t("editProfile.factory")} value={displayValue(user.factory)}/>
+            <InfoItem
+              label={t("editProfile.factory")}
+              value={displayValue(user.factory)}
+            />
 
-            <InfoItem label={t("editProfile.division")} value={displayValue(user.division)}/>
+            <InfoItem
+              label={t("editProfile.division")}
+              value={displayValue(user.division)}
+            />
 
-            <InfoItem label={t("editProfile.subDivision")} value={displayValue(user.sub_division)}/>
+            <InfoItem
+              label={t("editProfile.subDivision")}
+              value={displayValue(user.sub_division)}
+            />
 
-            <InfoItem label={t("editProfile.section")} value={displayValue(user.section)}/>
+            <InfoItem
+              label={t("editProfile.section")}
+              value={displayValue(user.section)}
+            />
 
-            <InfoItem label={t("editProfile.group")} value={displayValue(user.group_name)}/>
-            
+            <InfoItem
+              label={t("editProfile.group")}
+              value={displayValue(user.group_name)}
+            />
           </div>
         </div>
 
@@ -147,18 +199,26 @@ export default function EditProfile() {
           </div>
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2 xl:grid-cols-3">
-            <InfoItem label={t("editProfile.userId")} value={displayValue(user.id)}/>
+            <InfoItem
+              label={t("editProfile.userId")}
+              value={displayValue(user.id)}
+            />
 
-            <InfoItem label={t("editProfile.dataSource")} value="VCC Group"/>
+            <InfoItem label={t("editProfile.dataSource")} value="VCC Group" />
 
-            <InfoItem label={t("editProfile.status")} value={t("editProfile.active")}/>
+            <InfoItem
+              label={t("editProfile.status")}
+              value={t("editProfile.active")}
+            />
           </div>
         </div>
       </div>
-    </>);
+    </>
+  );
 }
-function InfoItem({ label, value, }) {
-    return (<div>
+function InfoItem({ label, value }) {
+  return (
+    <div>
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
         {label}
       </p>
@@ -166,6 +226,6 @@ function InfoItem({ label, value, }) {
       <p className="break-words text-sm font-medium text-gray-800 dark:text-white/90">
         {value}
       </p>
-    </div>);
+    </div>
+  );
 }
-

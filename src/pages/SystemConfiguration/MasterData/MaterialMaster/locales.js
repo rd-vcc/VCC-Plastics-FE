@@ -1,13 +1,238 @@
-import i18n from "../../../../i18n";
+let activeLanguage = "en";
+export function setActiveLanguage(language) {
+  activeLanguage = language;
+}
 
-export const translations = {
-  "vi": {},
-  "en": {},
-  "ja": {}
+export const UI_TEXT = {
+  vi: {
+    "Material Master": "Danh mục vật tư",
+    "Manage raw materials, compounds, additives, recycled and packaging materials with category hierarchy and technical specifications.":
+      "Quản lý nguyên vật liệu, hợp chất, phụ gia, vật liệu tái chế và bao bì theo cây danh mục cùng thông số kỹ thuật.",
+    "Add Material": "Thêm vật tư",
+    "Settings": "Cài đặt",
+    "Manage Categories": "Quản lý danh mục",
+    "Total Materials": "Tổng số vật tư",
+    "All materials": "Tất cả vật tư",
+    "Active Materials": "Vật tư đang dùng",
+    "of total": "trên tổng số",
+    "Raw Materials": "Nguyên liệu thô",
+    "Compounds": "Hợp chất",
+    "Additives & Others": "Phụ gia & Khác",
+    "Inactive Materials": "Vật tư ngừng dùng",
+    "Search by material code or name...": "Tìm theo mã hoặc tên vật tư...",
+    "All Types": "Tất cả loại",
+    "All Statuses": "Tất cả trạng thái",
+    "All Suppliers": "Tất cả nhà cung cấp",
+    "Clear": "Xóa lọc",
+    "Category Hierarchy": "Cây danh mục vật tư",
+    "All Categories": "Tất cả danh mục",
+    "Category List": "Danh sách danh mục",
+    "Category Types": "Loại danh mục",
+    "Add Category": "Thêm danh mục",
+    "Edit Category": "Sửa danh mục",
+    "Add Category Type": "Thêm loại danh mục",
+    "Edit Category Type": "Sửa loại danh mục",
+    "Root category": "Danh mục gốc",
+    "Categories": "Danh mục",
+    "Add Child Category": "Thêm danh mục con",
+    "Add Root Category": "Thêm danh mục gốc",
+    "Select a category on the left to view its details.": "Chọn một danh mục bên trái để xem chi tiết.",
+    "Custom Fields": "Trường mở rộng",
+    "Define extra fields (e.g. characteristics, origin) that can be filled in on any material.":
+      "Định nghĩa thêm các trường thông tin (VD: đặc điểm, xuất xứ) để nhập khi thêm/sửa vật tư.",
+    "Data Type": "Kiểu dữ liệu",
+    "Required": "Bắt buộc",
+    "Select a field on the left to view its details.": "Chọn một trường bên trái để xem chi tiết.",
+    "Material List": "Danh sách vật tư",
+    "Material Detail": "Chi tiết vật tư",
+    "Select a material to view details.": "Chọn một vật tư để xem chi tiết.",
+    "General": "Thông tin chung",
+    "Specification": "Thông số",
+    "No materials found.": "Không tìm thấy vật tư nào.",
+    "Material Code": "Mã vật tư",
+    "Material Name": "Tên vật tư",
+    "Material Type": "Loại vật tư",
+    "Category": "Danh mục",
+    "Base Resin": "Nhựa nền",
+    "Material Group": "Nhóm vật tư",
+    "Supplier": "Nhà cung cấp",
+    "Unit": "Đơn vị",
+    "Status": "Trạng thái",
+    "Density (g/cm³)": "Tỷ trọng (g/cm³)",
+    "MFI (g/10min)": "Chỉ số MFI (g/10min)",
+    "Moisture Content (%)": "Độ ẩm (%)",
+    "Melting Point Min (°C)": "Nhiệt độ nóng chảy tối thiểu (°C)",
+    "Melting Point Max (°C)": "Nhiệt độ nóng chảy tối đa (°C)",
+    "Image URL": "Đường dẫn ảnh",
+    "Description": "Mô tả",
+    "Code": "Mã",
+    "Name": "Tên",
+    "Parent Category": "Danh mục cha",
+    "Level Order": "Cấp bậc",
+    "Sort Order": "Thứ tự",
+    "Actions": "Thao tác",
+    "Edit Material": "Sửa vật tư",
+    "Cancel": "Hủy",
+    "Save": "Lưu",
+    "Close": "Đóng",
+    "Edit": "Sửa",
+    "View": "Xem",
+    "Delete": "Xóa",
+    "Activate material": "Kích hoạt vật tư",
+    "Deactivate material": "Ngừng dùng vật tư",
+    "Edit material": "Sửa vật tư",
+    "Unable to load Material Master data.": "Không thể tải dữ liệu danh mục vật tư.",
+    "Unable to save data.": "Không thể lưu dữ liệu.",
+    "Data saved successfully.": "Đã lưu dữ liệu thành công.",
+    "Data deleted.": "Đã xóa dữ liệu.",
+    "Status updated.": "Đã cập nhật trạng thái.",
+    "Are you sure you want to delete this item?": "Bạn có chắc muốn xóa mục này không?",
+    "This record was changed by someone else. Please reload and try again.":
+      "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang và thử lại.",
+    "Add New": "Thêm mới",
+    "Back": "Quay lại",
+    "Loading data...": "Đang tải dữ liệu...",
+  },
+  ja: {
+    "Material Master": "材料マスター",
+    "Manage raw materials, compounds, additives, recycled and packaging materials with category hierarchy and technical specifications.":
+      "原材料、コンパウンド、添加剤、再生材、包装材をカテゴリ階層と技術仕様で管理します。",
+    "Add Material": "材料を追加",
+    "Settings": "設定",
+    "Manage Categories": "カテゴリ管理",
+    "Total Materials": "材料総数",
+    "All materials": "全材料",
+    "Active Materials": "有効な材料",
+    "of total": "全体比",
+    "Raw Materials": "原材料",
+    "Compounds": "コンパウンド",
+    "Additives & Others": "添加剤・その他",
+    "Inactive Materials": "無効な材料",
+    "Search by material code or name...": "材料コードまたは名称で検索...",
+    "All Types": "全タイプ",
+    "All Statuses": "全状態",
+    "All Suppliers": "全サプライヤー",
+    "Clear": "クリア",
+    "Category Hierarchy": "材料カテゴリ階層",
+    "All Categories": "全カテゴリ",
+    "Category List": "カテゴリ一覧",
+    "Category Types": "カテゴリタイプ",
+    "Add Category": "カテゴリを追加",
+    "Edit Category": "カテゴリを編集",
+    "Add Category Type": "タイプを追加",
+    "Edit Category Type": "タイプを編集",
+    "Root category": "ルートカテゴリ",
+    "Categories": "カテゴリ",
+    "Add Child Category": "サブカテゴリを追加",
+    "Add Root Category": "ルートカテゴリを追加",
+    "Select a category on the left to view its details.": "左のカテゴリを選択すると詳細が表示されます。",
+    "Custom Fields": "カスタム項目",
+    "Define extra fields (e.g. characteristics, origin) that can be filled in on any material.":
+      "材料に入力できる追加項目（特性、原産地など）を定義します。",
+    "Data Type": "データ型",
+    "Required": "必須",
+    "Select a field on the left to view its details.": "左の項目を選択すると詳細が表示されます。",
+    "Material List": "材料一覧",
+    "Material Detail": "材料詳細",
+    "Select a material to view details.": "材料を選択して詳細を表示してください。",
+    "General": "基本情報",
+    "Specification": "仕様",
+    "No materials found.": "材料が見つかりません。",
+    "Material Code": "材料コード",
+    "Material Name": "材料名",
+    "Material Type": "材料タイプ",
+    "Category": "カテゴリ",
+    "Base Resin": "ベース樹脂",
+    "Material Group": "材料グループ",
+    "Supplier": "サプライヤー",
+    "Unit": "単位",
+    "Status": "状態",
+    "Density (g/cm³)": "密度 (g/cm³)",
+    "MFI (g/10min)": "MFI (g/10min)",
+    "Moisture Content (%)": "水分率 (%)",
+    "Melting Point Min (°C)": "融点 下限 (°C)",
+    "Melting Point Max (°C)": "融点 上限 (°C)",
+    "Image URL": "画像URL",
+    "Description": "説明",
+    "Code": "コード",
+    "Name": "名称",
+    "Parent Category": "親カテゴリ",
+    "Level Order": "階層順",
+    "Sort Order": "表示順",
+    "Actions": "操作",
+    "Edit Material": "材料を編集",
+    "Cancel": "キャンセル",
+    "Save": "保存",
+    "Close": "閉じる",
+    "Edit": "編集",
+    "View": "表示",
+    "Delete": "削除",
+    "Activate material": "材料を有効化",
+    "Deactivate material": "材料を無効化",
+    "Edit material": "材料を編集",
+    "Unable to load Material Master data.": "材料マスターデータを読み込めません。",
+    "Unable to save data.": "データを保存できません。",
+    "Data saved successfully.": "保存しました。",
+    "Data deleted.": "削除しました。",
+    "Status updated.": "状態を更新しました。",
+    "Are you sure you want to delete this item?": "削除してもよろしいですか？",
+    "This record was changed by someone else. Please reload and try again.":
+      "他のユーザーによってデータが変更されました。再読み込みしてもう一度お試しください。",
+    "Add New": "新規追加",
+    "Back": "戻る",
+    "Loading data...": "読み込み中...",
+  },
 };
 
-Object.entries(translations).forEach(([language, translation]) => {
-  i18n.addResourceBundle(language, "translation", translation, true, true);
-});
+export function tx(text) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return UI_TEXT[lang]?.[text] || text;
+}
 
-export default translations;
+const MATERIAL_TYPE_LABELS = {
+  vi: {
+    RAW_MATERIAL: "Nguyên liệu thô",
+    COMPOUND: "Hợp chất",
+    ADDITIVE: "Phụ gia",
+    RECYCLED: "Tái chế",
+    PACKAGING: "Bao bì",
+  },
+  ja: {
+    RAW_MATERIAL: "原材料",
+    COMPOUND: "コンパウンド",
+    ADDITIVE: "添加剤",
+    RECYCLED: "再生材",
+    PACKAGING: "包装材",
+  },
+  en: {
+    RAW_MATERIAL: "Raw Material",
+    COMPOUND: "Compound",
+    ADDITIVE: "Additive",
+    RECYCLED: "Recycled",
+    PACKAGING: "Packaging",
+  },
+};
+
+export function materialTypeText(value) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return (
+    MATERIAL_TYPE_LABELS[lang]?.[value] ||
+    MATERIAL_TYPE_LABELS.en[value] ||
+    value ||
+    "—"
+  );
+}
+
+const STATUS_LABELS = {
+  vi: { ACTIVE: "Hoạt động", INACTIVE: "Không hoạt động" },
+  ja: { ACTIVE: "有効", INACTIVE: "無効" },
+  en: { ACTIVE: "Active", INACTIVE: "Inactive" },
+};
+
+export function statusText(value) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return (
+    STATUS_LABELS[lang]?.[value] || STATUS_LABELS.en[value] || value || "—"
+  );
+}
+

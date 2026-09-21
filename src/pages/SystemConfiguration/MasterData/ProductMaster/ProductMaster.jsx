@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControl,
   FormControlLabel,
@@ -19,6 +18,9 @@ import {
   InputAdornment,
   InputLabel,
   LinearProgress,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -112,12 +114,98 @@ function createProductTheme(mode) {
       MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
       MuiOutlinedInput: {
         styleOverrides: {
-          root: { backgroundColor: dark ? "#0F172A" : "#FFFFFF" },
+          root: {
+            backgroundColor: dark ? "#0F172A" : "#FFFFFF",
+            // Tailwind's preflight resets border-width globally, which can
+            // strip MUI's default notched-outline border on this page — so
+            // it's re-asserted explicitly here.
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderWidth: "1px !important",
+              borderStyle: "solid !important",
+              borderColor: `${dark ? "#3B4759" : "#CBD3DF"} !important`,
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor: `${dark ? "#5B6B84" : "#98A2B3"} !important`,
+            },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderWidth: "2px !important",
+              borderColor: "#005BAB !important",
+            },
+            "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+              borderColor: "#EE1B1B !important",
+            },
+          },
         },
       },
       MuiDialog: { styleOverrides: { paper: { backgroundImage: "none" } } },
     },
   });
+}
+
+function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
+  const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
+  return (
+    <Box
+      sx={{
+        px: 3,
+        pt: 2.5,
+        pb: 2,
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        borderBottom: 1,
+        borderColor: "divider",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark"
+            ? tone === "danger"
+              ? "rgba(238,27,27,0.10)"
+              : "rgba(0,91,171,0.14)"
+            : tone === "danger"
+              ? "#FFF3F3"
+              : "#F1F7FF",
+      }}
+    >
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark"
+              ? tone === "danger"
+                ? "#4C1D1D"
+                : "#173A63"
+              : tone === "danger"
+                ? "#FDECEC"
+                : "#EEF4FF",
+          color: toneColor,
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle1" fontWeight={700} noWrap>
+          {title}
+        </Typography>
+        {subtitle ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Box>
+      <IconButton
+        size="small"
+        disabled={disabled}
+        onClick={onClose}
+        sx={{ mr: -0.5 }}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
 }
 
 function SectionHeader({ icon, title, action }) {
@@ -305,20 +393,30 @@ function FamilyDialog({ family, families, saving, onClose, onSave }) {
     return ids;
   }, [families, family]);
   return (
-    <Dialog open fullWidth maxWidth="sm" onClose={saving ? undefined : onClose}>
-      <DialogTitle fontWeight={800}>
-        {family ? tx("Edit Product Family") : tx("Add Product Family")}
-      </DialogTitle>
-      <IconButton
-        onClick={onClose}
+    <Dialog
+      open
+      fullWidth
+      maxWidth="sm"
+      onClose={saving ? undefined : onClose}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
+    >
+      <DialogHeader
+        icon={<CategoryOutlinedIcon />}
+        title={family ? tx("Edit Product Family") : tx("Add Product Family")}
         disabled={saving}
-        sx={{ position: "absolute", right: 10, top: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        onClose={onClose}
+      />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
             <TextField
               fullWidth
@@ -388,7 +486,16 @@ function FamilyDialog({ family, families, saving, onClose, onSave }) {
           />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+        }}
+      >
         <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
           {tx("Cancel")}
         </Button>
@@ -471,20 +578,30 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
     setForm((old) => ({ ...old, [key]: event.target.checked }));
   const needsOptions = ["SELECT", "MULTI_SELECT"].includes(form.type);
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose}>
-      <DialogTitle fontWeight={800}>
-        {field ? tx("Edit Product Field") : tx("Add Dynamic Product Field")}
-      </DialogTitle>
-      <IconButton
-        onClick={onClose}
+    <Dialog
+      open
+      fullWidth
+      maxWidth="md"
+      onClose={saving ? undefined : onClose}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
+    >
+      <DialogHeader
+        icon={<TuneOutlinedIcon />}
+        title={field ? tx("Edit Product Field") : tx("Add Dynamic Product Field")}
         disabled={saving}
-        sx={{ position: "absolute", right: 10, top: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        onClose={onClose}
+      />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
             <TextField
               fullWidth
@@ -651,7 +768,16 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
           )}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+        }}
+      >
         <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
           {tx("Cancel")}
         </Button>
@@ -853,20 +979,30 @@ function ProductDialog({
           values[field.id]?.length === 0),
     );
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose}>
-      <DialogTitle fontWeight={800}>
-        {product ? tx("Edit Product") : tx("Add Product")}
-      </DialogTitle>
-      <IconButton
-        onClick={onClose}
+    <Dialog
+      open
+      fullWidth
+      maxWidth="md"
+      onClose={saving ? undefined : onClose}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
+    >
+      <DialogHeader
+        icon={<Inventory2OutlinedIcon />}
+        title={product ? tx("Edit Product") : tx("Add Product")}
         disabled={saving}
-        sx={{ position: "absolute", right: 10, top: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
+        onClose={onClose}
+      />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
             <TextField
               fullWidth
@@ -956,7 +1092,16 @@ function ProductDialog({
           ))}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+        }}
+      >
         <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
           {tx("Cancel")}
         </Button>
@@ -985,15 +1130,27 @@ function HierarchyManager({
   onDelete,
 }) {
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={onClose}>
-      <DialogTitle fontWeight={800}>{tx("Product Hierarchy")}</DialogTitle>
-      <IconButton
-        onClick={onClose}
-        sx={{ position: "absolute", right: 10, top: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
+    <Dialog
+      open
+      fullWidth
+      maxWidth="md"
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
+    >
+      <DialogHeader
+        icon={<AccountTreeOutlinedIcon />}
+        title={tx("Product Hierarchy")}
+        onClose={onClose}
+      />
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ p: 1.5, display: "flex", justifyContent: "flex-end" }}>
           <Button
@@ -1073,17 +1230,27 @@ function FieldManager({
   onDelete,
 }) {
   return (
-    <Dialog open fullWidth maxWidth="lg" onClose={onClose}>
-      <DialogTitle fontWeight={800}>
-        {tx("Product Field Configuration")}
-      </DialogTitle>
-      <IconButton
-        onClick={onClose}
-        sx={{ position: "absolute", right: 10, top: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
+    <Dialog
+      open
+      fullWidth
+      maxWidth="lg"
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
+    >
+      <DialogHeader
+        icon={<TuneOutlinedIcon />}
+        title={tx("Product Field Configuration")}
+        onClose={onClose}
+      />
       <DialogContent sx={{ p: 0 }}>
         <Box
           sx={{
@@ -1214,6 +1381,7 @@ export default function ProductMaster() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialog, setDialog] = useState(null);
+  const [settingsAnchor, setSettingsAnchor] = useState(null);
   const [message, setMessage] = useState({
     open: false,
     type: "success",
@@ -1669,14 +1837,16 @@ export default function ProductMaster() {
           )}
         />
         <PageBreadcrumb pageTitle={tx("Product Master")} />
-        <Stack
-          direction={{ xs: "column", lg: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "stretch", lg: "center" }}
-          gap={1.5}
-          sx={{ mb: 1.5 }}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", lg: "1fr auto" },
+            gap: 1.5,
+            alignItems: "center",
+            mb: 1.5,
+          }}
         >
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography variant="h5" fontWeight={800}>
               {tx("Product Master")}
             </Typography>
@@ -1688,42 +1858,72 @@ export default function ProductMaster() {
           </Box>
           <Stack
             direction="row"
-            flexWrap="wrap"
-            gap={1}
-            justifyContent={{ lg: "flex-end" }}
+            sx={{ flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}
           >
-            <Tooltip title={tx("Import API will be added later")}>
-              <span>
-                <Button
-                  disabled
-                  startIcon={<UploadFileOutlinedIcon />}
-                  variant="outlined"
-                >
-                  {tx("Import Data")}
-                </Button>
-              </span>
+            <Tooltip title={tx("Settings")}>
+              <IconButton
+                onClick={(event) => setSettingsAnchor(event.currentTarget)}
+                sx={{
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                }}
+              >
+                <SettingsOutlinedIcon />
+              </IconButton>
             </Tooltip>
-            <Button
-              startIcon={<DownloadOutlinedIcon />}
-              variant="outlined"
-              onClick={exportCsv}
+            <Menu
+              anchorEl={settingsAnchor}
+              open={Boolean(settingsAnchor)}
+              onClose={() => setSettingsAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
-              {tx("Export Data")}
-            </Button>
-            <Button
-              startIcon={<TuneOutlinedIcon />}
-              variant="outlined"
-              onClick={() => setDialog({ type: "fields" })}
-            >
-              {tx("Field Configuration")}
-            </Button>
-            <Button
-              startIcon={<AccountTreeOutlinedIcon />}
-              variant="outlined"
-              onClick={() => setDialog({ type: "hierarchy" })}
-            >
-              {tx("Product Hierarchy")}
-            </Button>
+              <MenuItem
+                disabled
+                onClick={() => setSettingsAnchor(null)}
+                title={tx("Import API will be added later")}
+              >
+                <ListItemIcon>
+                  <UploadFileOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{tx("Import Data")}</ListItemText>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSettingsAnchor(null);
+                  exportCsv();
+                }}
+              >
+                <ListItemIcon>
+                  <DownloadOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{tx("Export Data")}</ListItemText>
+              </MenuItem>
+              <Divider />
+              <MenuItem
+                onClick={() => {
+                  setSettingsAnchor(null);
+                  setDialog({ type: "fields" });
+                }}
+              >
+                <ListItemIcon>
+                  <TuneOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{tx("Field Configuration")}</ListItemText>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSettingsAnchor(null);
+                  setDialog({ type: "hierarchy" });
+                }}
+              >
+                <ListItemIcon>
+                  <AccountTreeOutlinedIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{tx("Product Hierarchy")}</ListItemText>
+              </MenuItem>
+            </Menu>
             <Button
               disabled={!canEdit}
               startIcon={<AddIcon />}
@@ -1733,7 +1933,7 @@ export default function ProductMaster() {
               {tx("Add New Product")}
             </Button>
           </Stack>
-        </Stack>
+        </Box>
         <KpiCardGroup sx={{ mb: 1.5 }}>
           <KpiCard
             label={tx("Total Products")}
@@ -2045,9 +2245,7 @@ export default function ProductMaster() {
                 <Divider />
                 <Stack
                   direction="row"
-                  justifyContent="center"
-                  gap={1}
-                  sx={{ p: 1.25 }}
+                  sx={{ p: 1.5, justifyContent: "center", gap: 2.5 }}
                 >
                   <Tooltip title={tx("Edit Product")}>
                     <span>

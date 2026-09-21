@@ -10,7 +10,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   FormControl,
   IconButton,
@@ -45,6 +44,7 @@ import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import LanOutlinedIcon from "@mui/icons-material/LanOutlined";
 import PrecisionManufacturingOutlinedIcon from "@mui/icons-material/PrecisionManufacturingOutlined";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import PageMeta from "../../../../components/common/PageMeta";
@@ -118,7 +118,27 @@ function createFactoryTheme(mode) {
       MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
       MuiOutlinedInput: {
         styleOverrides: {
-          root: { backgroundColor: isDark ? "#0F172A" : "#FFFFFF" },
+          root: {
+            backgroundColor: isDark ? "#0F172A" : "#FFFFFF",
+            // Tailwind's preflight resets border-width globally, which can
+            // strip MUI's default notched-outline border on this page — so
+            // it's re-asserted explicitly here.
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderWidth: "1px !important",
+              borderStyle: "solid !important",
+              borderColor: `${isDark ? "#3B4759" : "#CBD3DF"} !important`,
+            },
+            "&:hover .MuiOutlinedInput-notchedOutline": {
+              borderColor: `${isDark ? "#5B6B84" : "#98A2B3"} !important`,
+            },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderWidth: "2px !important",
+              borderColor: "#005BAB !important",
+            },
+            "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+              borderColor: "#EE1B1B !important",
+            },
+          },
         },
       },
     },
@@ -172,6 +192,89 @@ function SectionHeader({ icon, title, action }) {
       </Stack>
       {action}
     </Box>
+  );
+}
+
+function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
+  const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
+  return (
+    <Box
+      sx={{
+        px: 3,
+        pt: 2.5,
+        pb: 2,
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        borderBottom: 1,
+        borderColor: "divider",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark"
+            ? tone === "danger"
+              ? "rgba(238,27,27,0.10)"
+              : "rgba(0,91,171,0.14)"
+            : tone === "danger"
+              ? "#FFF3F3"
+              : "#F1F7FF",
+      }}
+    >
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark"
+              ? tone === "danger"
+                ? "#4C1D1D"
+                : "#173A63"
+              : tone === "danger"
+                ? "#FDECEC"
+                : "#EEF4FF",
+          color: toneColor,
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle1" fontWeight={700} noWrap>
+          {title}
+        </Typography>
+        {subtitle ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Box>
+      <IconButton
+        size="small"
+        disabled={disabled}
+        onClick={onClose}
+        sx={{ mr: -0.5 }}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
+}
+
+function FieldGroupLabel({ children }) {
+  return (
+    <Typography
+      variant="caption"
+      sx={{
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        color: "text.secondary",
+        fontSize: "0.68rem",
+      }}
+    >
+      {children}
+    </Typography>
   );
 }
 
@@ -347,42 +450,59 @@ function NodeDialog({
       onClose={saving ? undefined : onClose}
       fullWidth
       maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
     >
-      <DialogTitle fontWeight={700}>
-        {mode === "edit"
-          ? t("factoryStructure.editNode")
-          : t("factoryStructure.addNewNode")}
-      </DialogTitle>
-      <IconButton
+      <DialogHeader
+        icon={<AccountTreeOutlinedIcon />}
+        title={
+          mode === "edit"
+            ? t("factoryStructure.editNode")
+            : t("factoryStructure.addNewNode")
+        }
+        subtitle={t("factoryStructure.descriptionText")}
         disabled={saving}
-        onClick={onClose}
-        sx={{ position: "absolute", top: 10, right: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.nodeCode")}
-              value={form.code}
-              disabled={mode === "edit"}
-              onChange={change("code")}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.nodeName")}
-              value={form.name}
-              onChange={change("name")}
-            />
+        onClose={onClose}
+      />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2.25}>
+          <Stack spacing={1.25}>
+            <FieldGroupLabel>
+              {t("factoryStructure.sectionBasicInfo")}
+            </FieldGroupLabel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.nodeCode")}
+                value={form.code}
+                disabled={mode === "edit"}
+                onChange={change("code")}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.nodeName")}
+                value={form.name}
+                onChange={change("name")}
+              />
+            </Stack>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>{t("factoryStructure.nodeType")}</InputLabel>
+          <Stack spacing={1.25}>
+            <FieldGroupLabel>
+              {t("factoryStructure.sectionHierarchy")}
+            </FieldGroupLabel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>{t("factoryStructure.nodeType")}</InputLabel>
               <Select
                 label={t("factoryStructure.nodeType")}
                 value={form.nodeTypeId}
@@ -422,6 +542,7 @@ function NodeDialog({
                 ))}
               </Select>
             </FormControl>
+            </Stack>
           </Stack>
           <TextField
             fullWidth
@@ -433,11 +554,18 @@ function NodeDialog({
           />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>
-          {t("common.cancel")}
-        </Button>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+        }}
+      >
         <Button
+          fullWidth
           disabled={
             saving ||
             !form.code.trim() ||
@@ -448,7 +576,11 @@ function NodeDialog({
           onClick={() => onSave(form)}
           sx={buttonSx("primary")}
           startIcon={
-            saving ? <CircularProgress size={16} color="inherit" /> : null
+            saving ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <SaveOutlinedIcon />
+            )
           }
         >
           {t("common.save")}
@@ -500,82 +632,104 @@ function NodeTypeDialog({
       onClose={saving ? undefined : onClose}
       fullWidth
       maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
     >
-      <DialogTitle fontWeight={700}>
-        {mode === "edit"
-          ? t("factoryStructure.editNodeType")
-          : t("factoryStructure.addNodeType")}
-      </DialogTitle>
-      <IconButton
+      <DialogHeader
+        icon={<DomainOutlinedIcon />}
+        title={
+          mode === "edit"
+            ? t("factoryStructure.editNodeType")
+            : t("factoryStructure.addNodeType")
+        }
         disabled={saving}
-        onClick={onClose}
-        sx={{ position: "absolute", top: 10, right: 10 }}
-      >
-        <CloseIcon />
-      </IconButton>
-      <Divider />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.typeCode")}
-              value={form.code}
-              disabled={mode === "edit"}
-              onChange={change("code")}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.typeName")}
-              value={form.name}
-              onChange={change("name")}
-            />
+        onClose={onClose}
+      />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2.25}>
+          <Stack spacing={1.25}>
+            <FieldGroupLabel>
+              {t("factoryStructure.sectionBasicInfo")}
+            </FieldGroupLabel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.typeCode")}
+                value={form.code}
+                disabled={mode === "edit"}
+                onChange={change("code")}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.typeName")}
+                value={form.name}
+                onChange={change("name")}
+              />
+            </Stack>
           </Stack>
-          <FormControl fullWidth size="small">
-            <InputLabel>{t("factoryStructure.parentType")}</InputLabel>
-            <Select
-              label={t("factoryStructure.parentType")}
-              value={form.parentTypeId}
-              onChange={change("parentTypeId")}
-            >
-              <MenuItem value="">
-                <em>{t("factoryStructure.rootType")}</em>
-              </MenuItem>
-              {parentOptions.map((item) => (
-                <MenuItem key={item.id} value={item.id}>
-                  {item.code} — {item.name}
+          <Stack spacing={1.25}>
+            <FieldGroupLabel>
+              {t("factoryStructure.sectionHierarchy")}
+            </FieldGroupLabel>
+            <FormControl fullWidth size="small">
+              <InputLabel>{t("factoryStructure.parentType")}</InputLabel>
+              <Select
+                label={t("factoryStructure.parentType")}
+                value={form.parentTypeId}
+                onChange={change("parentTypeId")}
+              >
+                <MenuItem value="">
+                  <em>{t("factoryStructure.rootType")}</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.color")}
-              type="color"
-              value={form.color}
-              onChange={change("color")}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.iconName")}
-              value={form.icon}
-              onChange={change("icon")}
-              placeholder={t("factoryStructure.optional")}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={t("factoryStructure.sortOrder")}
-              type="number"
-              value={form.sortOrder}
-              onChange={change("sortOrder")}
-            />
+                {parentOptions.map((item) => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.code} — {item.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+          <Stack spacing={1.25}>
+            <FieldGroupLabel>
+              {t("factoryStructure.sectionAppearance")}
+            </FieldGroupLabel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.color")}
+                type="color"
+                value={form.color}
+                onChange={change("color")}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.iconName")}
+                value={form.icon}
+                onChange={change("icon")}
+                placeholder={t("factoryStructure.optional")}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label={t("factoryStructure.sortOrder")}
+                type="number"
+                value={form.sortOrder}
+                onChange={change("sortOrder")}
+              />
+            </Stack>
           </Stack>
           <Stack
             direction="row"
@@ -599,16 +753,27 @@ function NodeTypeDialog({
           </Stack>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button disabled={saving} onClick={onClose} sx={buttonSx("cancel")}>
-          {t("common.cancel")}
-        </Button>
+      <DialogActions
+        sx={{
+          px: 3,
+          py: 1.75,
+          borderTop: 1,
+          borderColor: "divider",
+          bgcolor: (theme) =>
+            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+        }}
+      >
         <Button
+          fullWidth
           disabled={saving || !form.code.trim() || !form.name.trim()}
           onClick={() => onSave(form)}
           sx={buttonSx("primary")}
           startIcon={
-            saving ? <CircularProgress size={16} color="inherit" /> : null
+            saving ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <SaveOutlinedIcon />
+            )
           }
         >
           {t("common.save")}
@@ -1580,36 +1745,51 @@ export default function FactoryStructureMaster() {
                       icon={<EditOutlinedIcon fontSize="small" />}
                       title={t("factoryStructure.quickActions")}
                     />
-                    <Stack direction="row" spacing={1} sx={{ p: 1.25 }}>
+                    <Stack spacing={1} sx={{ p: 1.25 }}>
                       <Button
                         fullWidth
+                        size="medium"
                         disabled={!canEdit || !selected}
                         startIcon={<AddIcon />}
                         onClick={() =>
                           setDialog({ mode: "add", node: selected })
                         }
-                        sx={buttonSx("primary", { minWidth: 0, fontSize: 11 })}
+                        sx={buttonSx("primary", {
+                          justifyContent: "flex-start",
+                        })}
                       >
                         {t("factoryStructure.addChild")}
                       </Button>
                       <Button
                         fullWidth
+                        size="medium"
                         disabled={!canEdit || !selected}
                         startIcon={<EditOutlinedIcon />}
                         onClick={() =>
                           setDialog({ mode: "edit", node: selected })
                         }
-                        sx={buttonSx("edit", { minWidth: 0, fontSize: 11 })}
+                        sx={buttonSx("edit", {
+                          justifyContent: "flex-start",
+                          minHeight: 40,
+                        })}
                       >
                         {t("common.edit")}
                       </Button>
                       <Button
                         fullWidth
+                        size="medium"
                         disabled={!canEdit || !selected || saving}
+                        startIcon={
+                          selected?.status === "ACTIVE" ? (
+                            <DeleteOutlineIcon />
+                          ) : (
+                            <AddIcon />
+                          )
+                        }
                         onClick={toggleStatus}
                         sx={buttonSx(
                           selected?.status === "ACTIVE" ? "delete" : "primary",
-                          { minWidth: 0, fontSize: 11 },
+                          { justifyContent: "flex-start" },
                         )}
                       >
                         {selected?.status === "ACTIVE"
@@ -1859,9 +2039,10 @@ export default function FactoryStructureMaster() {
                       icon={<EditOutlinedIcon fontSize="small" />}
                       title={t("factoryStructure.quickActions")}
                     />
-                    <Stack direction="row" spacing={1} sx={{ p: 1.25 }}>
+                    <Stack spacing={1} sx={{ p: 1.25 }}>
                       <Button
                         fullWidth
+                        size="medium"
                         disabled={!canEdit || !selectedType}
                         startIcon={<EditOutlinedIcon />}
                         onClick={() =>
@@ -1870,12 +2051,16 @@ export default function FactoryStructureMaster() {
                             nodeType: selectedType,
                           })
                         }
-                        sx={buttonSx("edit")}
+                        sx={buttonSx("edit", {
+                          justifyContent: "flex-start",
+                          minHeight: 40,
+                        })}
                       >
                         {t("common.edit")}
                       </Button>
                       <Button
                         fullWidth
+                        size="medium"
                         disabled={
                           !canEdit ||
                           !selectedType ||
@@ -1883,7 +2068,7 @@ export default function FactoryStructureMaster() {
                         }
                         startIcon={<DeleteOutlineIcon />}
                         onClick={() => setDeleteType(selectedType)}
-                        sx={buttonSx("delete")}
+                        sx={buttonSx("delete", { justifyContent: "flex-start" })}
                       >
                         {t("common.delete")}
                       </Button>
@@ -1925,18 +2110,41 @@ export default function FactoryStructureMaster() {
           onClose={saving ? undefined : () => setDeleteType(null)}
           maxWidth="xs"
           fullWidth
+          PaperProps={{
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+          boxShadow: (theme) =>
+            theme.palette.mode === "dark"
+              ? "0 24px 60px rgba(0,0,0,.55)"
+              : "0 24px 60px rgba(15,23,42,.18)",
+        },
+      }}
         >
-          <DialogTitle fontWeight={700}>
-            {t("factoryStructure.deleteNodeType")}
-          </DialogTitle>
-          <DialogContent>
-            <Alert severity="warning">
+          <DialogHeader
+            icon={<DeleteOutlineIcon />}
+            title={t("factoryStructure.deleteNodeType")}
+            tone="danger"
+            disabled={saving}
+            onClose={() => setDeleteType(null)}
+          />
+          <DialogContent sx={{ px: 3, py: 2.5 }}>
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
               {t("factoryStructure.deleteConfirmation", {
                 name: deleteType?.name,
               })}
             </Alert>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
+          <DialogActions
+            sx={{
+              px: 3,
+              py: 1.75,
+              borderTop: 1,
+              borderColor: "divider",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+            }}
+          >
             <Button
               disabled={saving}
               onClick={() => setDeleteType(null)}

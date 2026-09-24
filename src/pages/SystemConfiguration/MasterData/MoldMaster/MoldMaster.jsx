@@ -52,6 +52,8 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import PageMeta from "../../../../components/common/PageMeta";
+import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
+import MoldDocuments from "./MoldDocuments";
 import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
 import { API_CONFIG } from "../../../../config/config";
@@ -79,6 +81,7 @@ const MOLD_STATUSES = [
   "IN_PRODUCTION",
   "IN_MAINTENANCE",
   "IN_REPAIR",
+  "LOCKED",
   "RETIRED",
   "SCRAPPED",
 ];
@@ -93,6 +96,9 @@ const DATA_TYPES = [
   "SELECT",
   "MULTI_SELECT",
 ];
+
+const LOCATION_CATEGORIES = ["STORAGE", "MAINTENANCE", "REPAIR", "SCRAP"];
+const numOrNull = (v) => (v === "" || v == null ? null : Number(v));
 
 const panelSx = {
   border: "1px solid",
@@ -471,6 +477,9 @@ const emptyMold = {
   image_url: "",
   description: "",
   remark: "",
+  revision: "",
+  pm_interval_shot: "",
+  pm_interval_days: "",
   is_active: true,
   attributeMap: {},
   productIds: [],
@@ -501,6 +510,9 @@ function MoldDialog({
             ...mold,
             current_location_id: mold.current_location_id || "",
             manufacture_date: mold.manufacture_date || "",
+            revision: mold.revision || "",
+            pm_interval_shot: mold.pm_interval_shot ?? "",
+            pm_interval_days: mold.pm_interval_days ?? "",
             attributeMap,
             productIds: (mold.products || []).map((item) => item.product_id),
           }
@@ -524,6 +536,9 @@ function MoldDialog({
       width_mm: form.width_mm === "" ? null : Number(form.width_mm),
       height_mm: form.height_mm === "" ? null : Number(form.height_mm),
       manufacture_date: form.manufacture_date || null,
+      revision: form.revision?.trim() || null,
+      pm_interval_shot: numOrNull(form.pm_interval_shot),
+      pm_interval_days: numOrNull(form.pm_interval_days),
       attribute_values: attributes.map((item) => ({
         attribute_definition_id: item.id,
         value: form.attributeMap[item.id] ?? null,
@@ -600,9 +615,11 @@ function MoldDialog({
               label={t("moldMaster.fields.status")}
               value={form.status}
               onChange={(e) => set("status", e.target.value)}
+              disabled={Boolean(mold?.current_machine_id)}
+              helperText={mold?.current_machine_id ? t("moldMaster.mountedHint") : ""}
             >
               {MOLD_STATUSES.map((item) => (
-                <MenuItem key={item} value={item}>
+                <MenuItem key={item} value={item} disabled={item === "IN_PRODUCTION" && !mold?.current_machine_id}>
                   {t(`moldMaster.status.${item}`)}
                 </MenuItem>
               ))}
@@ -645,12 +662,14 @@ function MoldDialog({
               value={form.manufacture_date}
               onChange={(e) => set("manufacture_date", e.target.value)}
             />
-            <TextField
-              size="small"
-              label={t("moldMaster.fields.imageUrl")}
-              value={form.image_url || ""}
-              onChange={(e) => set("image_url", e.target.value)}
-            />
+            <Box sx={{ gridColumn: "1 / -1" }}>
+              <ImageUploadField
+                value={form.image_url || ""}
+                category="mold"
+                label={t("moldMaster.fields.image", { defaultValue: "Image" })}
+                onChange={(v) => set("image_url", v || "")}
+              />
+            </Box>
             <TextField
               size="small"
               multiline
@@ -702,6 +721,29 @@ function MoldDialog({
                 onChange={(e) => set(key, e.target.value)}
               />
             ))}
+            <TextField
+              size="small"
+              label={t("moldMaster.fields.revision")}
+              value={form.revision || ""}
+              onChange={(e) => set("revision", e.target.value)}
+            />
+            <Box />
+            <TextField
+              size="small"
+              type="number"
+              label={t("moldMaster.fields.pmIntervalShot")}
+              helperText={t("moldMaster.fields.pmIntervalShotHelp")}
+              value={form.pm_interval_shot}
+              onChange={(e) => set("pm_interval_shot", e.target.value)}
+            />
+            <TextField
+              size="small"
+              type="number"
+              label={t("moldMaster.fields.pmIntervalDays")}
+              helperText={t("moldMaster.fields.pmIntervalDaysHelp")}
+              value={form.pm_interval_days}
+              onChange={(e) => set("pm_interval_days", e.target.value)}
+            />
             <TextField
               size="small"
               multiline
@@ -980,11 +1022,13 @@ function HierarchyDialog({
             parent_id: item?.parent_id || "",
             status: item?.status || "ACTIVE",
             sort_order: item?.sort_order || 0,
+            capacity: item?.capacity ?? "",
           }
         : {
             type_code: item?.type_code || "",
             type_name: item?.type_name || "",
             level_order: item?.level_order || 1,
+            location_category: item?.location_category || "STORAGE",
             is_active: item?.is_active ?? true,
             sort_order: item?.sort_order || 0,
           },
@@ -1003,6 +1047,7 @@ function HierarchyDialog({
           parent_id: form.parent_id === "" ? null : Number(form.parent_id),
           status: form.status,
           sort_order: Number(form.sort_order || 0),
+          capacity: numOrNull(form.capacity),
           ...(editing
             ? { updated_by: actor }
             : { node_code: form.node_code, created_by: actor }),
@@ -1010,6 +1055,7 @@ function HierarchyDialog({
       : {
           type_name: form.type_name,
           level_order: Number(form.level_order),
+          location_category: form.location_category || "STORAGE",
           is_active: form.is_active,
           sort_order: Number(form.sort_order || 0),
           ...(editing
@@ -1147,6 +1193,14 @@ function HierarchyDialog({
                       </MenuItem>
                     ))}
                 </TextField>
+                <TextField
+                  size="small"
+                  type="number"
+                  label={t("moldMaster.fields.capacity")}
+                  helperText={t("moldMaster.fields.capacityHelp")}
+                  value={form.capacity ?? ""}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                />
               </>
             ) : (
               <>
@@ -1179,6 +1233,17 @@ function HierarchyDialog({
                     setForm({ ...form, level_order: e.target.value })
                   }
                 />
+                <TextField
+                  select
+                  size="small"
+                  label={t("moldMaster.fields.locationCategory")}
+                  value={form.location_category || "STORAGE"}
+                  onChange={(e) => setForm({ ...form, location_category: e.target.value })}
+                >
+                  {LOCATION_CATEGORIES.map((c) => (
+                    <MenuItem key={c} value={c}>{t(`moldMaster.locationCategory.${c}`)}</MenuItem>
+                  ))}
+                </TextField>
                 <FormControlLabel
                   control={
                     <Switch
@@ -1865,7 +1930,7 @@ export default function MoldMaster() {
                   <Stack direction="row" spacing={1.25} sx={{ p: 1.5 }}>
                     <Avatar
                       variant="rounded"
-                      src={selected.image_url || undefined}
+                      src={resolveImageUrl(selected.image_url) || undefined}
                       sx={{ width: 58, height: 58, bgcolor: "action.hover" }}
                     >
                       <PrecisionManufacturingOutlinedIcon />
@@ -1900,6 +1965,7 @@ export default function MoldMaster() {
                     <Tab label={t("moldMaster.general")} />
                     <Tab label={t("moldMaster.specification")} />
                     <Tab label={t("moldMaster.products")} />
+                    <Tab label={t("moldMaster.documents.tab")} />
                   </Tabs>
                   <Box
                     sx={{ px: 1.5, py: 1, maxHeight: 350, overflow: "auto" }}
@@ -1971,6 +2037,9 @@ export default function MoldMaster() {
                             </Field>
                           ))}
                       </>
+                    )}
+                    {detailTab === 3 && (
+                      <MoldDocuments moldId={selected.id} apiBase={API_BASE} request={request} actor={actor} canEdit={canEdit} />
                     )}
                     {detailTab === 2 &&
                       (selected.products?.length ? (

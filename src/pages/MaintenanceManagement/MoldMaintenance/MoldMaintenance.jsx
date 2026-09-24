@@ -1,5 +1,6 @@
 import "./locales";
-import ModulePlaceholder from "../../_shared/ModulePlaceholder";
+import MaintenanceExecution from "../maintExecution";
+
 export default function MoldMaintenance() {
-  return <ModulePlaceholder title="Mold Maintenance" />;
+  return <MaintenanceExecution scope="MOLD" />;
 }

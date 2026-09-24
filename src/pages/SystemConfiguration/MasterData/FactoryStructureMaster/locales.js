@@ -4,6 +4,7 @@ export const translations = {
   "vi": {
     "factoryStructure": {
       "title": "Quản lý cơ cấu nhà máy",
+      "layoutImage": "Ảnh mặt bằng / minh họa",
       "descriptionText": "Quản lý phân cấp nhà máy, xưởng, dây chuyền và trạm làm việc.",
       "structureNodes": "Cơ cấu",
       "nodeTypes": "Loại nút",
@@ -128,6 +129,7 @@ export const translations = {
   "en": {
     "factoryStructure": {
       "title": "Factory Structure Management",
+      "layoutImage": "Layout image",
       "descriptionText": "Manage the hierarchy of factories, workshops, lines, and workstations.",
       "structureNodes": "Structure Nodes",
       "nodeTypes": "Node Types",
@@ -252,6 +254,7 @@ export const translations = {
   "ja": {
     "factoryStructure": {
       "title": "工場構成管理",
+      "layoutImage": "レイアウト画像",
       "descriptionText": "工場、作業場、ライン、作業ステーションの階層を管理します。",
       "structureNodes": "構成ノード",
       "nodeTypes": "ノードタイプ",

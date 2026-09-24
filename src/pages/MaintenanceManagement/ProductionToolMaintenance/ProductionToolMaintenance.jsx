@@ -1,5 +1,6 @@
 import "./locales";
-import ModulePlaceholder from "../../_shared/ModulePlaceholder";
+import MaintenanceExecution from "../maintExecution";
+
 export default function ProductionToolMaintenance() {
-  return <ModulePlaceholder title="Production Tool Maintenance" />;
+  return <MaintenanceExecution scope="TOOL" />;
 }

@@ -1,5 +1,6 @@
 import "./locales";
-import ModulePlaceholder from "../../_shared/ModulePlaceholder";
+import MaintenanceExecution from "../maintExecution";
+
 export default function MachineEquipmentMaintenance() {
-  return <ModulePlaceholder title="Machine & Equipment Maintenance" />;
+  return <MaintenanceExecution scope="MACHINE" />;
 }

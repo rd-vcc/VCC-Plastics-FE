@@ -62,6 +62,7 @@ export const translations = {
         manufacturer: "Nhà chế tạo",
         manufactureDate: "Ngày chế tạo",
         imageUrl: "Đường dẫn ảnh",
+        image: "Ảnh minh họa",
         description: "Mô tả",
         remark: "Ghi chú",
         linkedProducts: "Sản phẩm liên kết",
@@ -89,6 +90,7 @@ export const translations = {
         IN_PRODUCTION: "Đang sản xuất",
         IN_MAINTENANCE: "Đang bảo trì",
         IN_REPAIR: "Đang sửa chữa",
+        LOCKED: "Bị khóa",
         RETIRED: "Ngừng sử dụng",
         SCRAPPED: "Thanh lý",
       },
@@ -162,6 +164,7 @@ export const translations = {
         manufacturer: "Manufacturer",
         manufactureDate: "Manufacture Date",
         imageUrl: "Image URL",
+        image: "Image",
         description: "Description",
         remark: "Remark",
         linkedProducts: "Linked Products",
@@ -189,6 +192,7 @@ export const translations = {
         IN_PRODUCTION: "In Production",
         IN_MAINTENANCE: "In Maintenance",
         IN_REPAIR: "In Repair",
+        LOCKED: "Locked",
         RETIRED: "Retired",
         SCRAPPED: "Scrapped",
       },
@@ -261,6 +265,7 @@ export const translations = {
         manufacturer: "メーカー",
         manufactureDate: "製造日",
         imageUrl: "画像URL",
+        image: "画像",
         description: "説明",
         remark: "備考",
         linkedProducts: "関連製品",
@@ -288,6 +293,7 @@ export const translations = {
         IN_PRODUCTION: "生産中",
         IN_MAINTENANCE: "保全中",
         IN_REPAIR: "修理中",
+        LOCKED: "ロック",
         RETIRED: "使用終了",
         SCRAPPED: "廃棄",
       },
@@ -312,6 +318,17 @@ Object.entries(translations).forEach(([language, resources]) => {
       true,
     );
   });
+});
+
+
+// Mold Management additions (PM interval, revision, location groups, capacity)
+const moldMgmtAdditions = {
+  "vi": { moldMaster: { mountedHint: 'Khuôn đang lắp trên máy: trạng thái do Quản lý khuôn điều khiển (lắp / tháo).', fields: {'revision': 'Phiên bản (Revision)', 'pmIntervalShot': 'Chu kỳ PM (shot)', 'pmIntervalShotHelp': 'Bảo trì sau mỗi N shot kể từ lần PM gần nhất', 'pmIntervalDays': 'Chu kỳ PM (ngày)', 'pmIntervalDaysHelp': 'Bảo trì sau mỗi N ngày', 'capacity': 'Sức chứa (khuôn)', 'capacityHelp': 'Bỏ trống nếu không giới hạn', 'locationCategory': 'Nhóm vị trí'}, locationCategory: {'STORAGE': 'Kho khuôn', 'MAINTENANCE': 'Khu bảo trì', 'REPAIR': 'Khu sửa chữa', 'SCRAP': 'Khu thanh lý'} } },
+  "en": { moldMaster: { mountedHint: 'Mold is mounted on a machine: its status is driven by Mold Management (install / remove).', fields: {'revision': 'Revision', 'pmIntervalShot': 'PM interval (shots)', 'pmIntervalShotHelp': 'Maintenance every N shots after the last PM', 'pmIntervalDays': 'PM interval (days)', 'pmIntervalDaysHelp': 'Maintenance every N days', 'capacity': 'Capacity (molds)', 'capacityHelp': 'Leave empty for no limit', 'locationCategory': 'Location group'}, locationCategory: {'STORAGE': 'Mold Storage', 'MAINTENANCE': 'Maintenance Area', 'REPAIR': 'Repair Area', 'SCRAP': 'Scrap Area'} } },
+  "ja": { moldMaster: { mountedHint: '金型は機械に取付中です。状態は金型管理（取付 / 取外し）で制御されます。', fields: {'revision': '改訂', 'pmIntervalShot': 'PM周期（ショット）', 'pmIntervalShotHelp': '前回PMからNショットごとに保全', 'pmIntervalDays': 'PM周期（日）', 'pmIntervalDaysHelp': 'N日ごとに保全', 'capacity': '収容数（型）', 'capacityHelp': '無制限の場合は空欄', 'locationCategory': '所在グループ'}, locationCategory: {'STORAGE': '金型倉庫', 'MAINTENANCE': '保全エリア', 'REPAIR': '修理エリア', 'SCRAP': '廃棄エリア'} } },
+};
+Object.entries(moldMgmtAdditions).forEach(([language, translation]) => {
+  i18n.addResourceBundle(language, "translation", translation, true, true);
 });
 
 export default translations;

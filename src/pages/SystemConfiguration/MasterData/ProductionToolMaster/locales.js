@@ -1,13 +1,257 @@
-import i18n from "../../../../i18n";
+let activeLanguage = "en";
+export function setActiveLanguage(language) {
+  activeLanguage = language;
+}
 
-export const translations = {
-  "vi": {},
-  "en": {},
-  "ja": {}
+export const UI_TEXT = {
+  vi: {
+    "Production Tool Master": "Danh mục dụng cụ sản xuất",
+    "Manage cutting, assembly, measuring and handling tools with location hierarchy, calibration tracking and technical specifications.":
+      "Quản lý dụng cụ cắt gọt, lắp ráp, đo lường và vận chuyển theo cây vị trí, theo dõi hiệu chuẩn cùng thông số kỹ thuật.",
+    "Add Tool": "Thêm dụng cụ",
+    "Settings": "Cài đặt",
+    "Manage Locations": "Quản lý vị trí",
+    "Total Tools": "Tổng số dụng cụ",
+    "of total": "trên tổng số",
+    "In Use": "Đang sử dụng",
+    "Available": "Sẵn sàng",
+    "In Maintenance": "Đang bảo trì",
+    "Out of Service": "Ngừng sử dụng",
+    "Calibration Due": "Sắp đến hạn hiệu chuẩn",
+    "Search by tool code or name...": "Tìm theo mã hoặc tên dụng cụ...",
+    "All Types": "Tất cả loại",
+    "All Statuses": "Tất cả trạng thái",
+    "All Manufacturers": "Tất cả nhà sản xuất",
+    "Clear": "Xóa lọc",
+    "Location Hierarchy": "Cây vị trí dụng cụ",
+    "All Locations": "Tất cả vị trí",
+    "Location List": "Danh sách vị trí",
+    "Location Types": "Loại vị trí",
+    "Add Location": "Thêm vị trí",
+    "Edit Location": "Sửa vị trí",
+    "Add Location Type": "Thêm loại vị trí",
+    "Edit Location Type": "Sửa loại vị trí",
+    "Root location": "Vị trí gốc",
+    "Locations": "Vị trí",
+    "Add Child Location": "Thêm vị trí con",
+    "Add Root Location": "Thêm vị trí gốc",
+    "Select a location on the left to view its details.": "Chọn một vị trí bên trái để xem chi tiết.",
+    "Custom Fields": "Trường mở rộng",
+    "Define extra fields (e.g. specification, note) that can be filled in on any tool.":
+      "Định nghĩa thêm các trường thông tin (VD: thông số, ghi chú) để nhập khi thêm/sửa dụng cụ.",
+    "Data Type": "Kiểu dữ liệu",
+    "Required": "Bắt buộc",
+    "Select a field on the left to view its details.": "Chọn một trường bên trái để xem chi tiết.",
+    "Tool List": "Danh sách dụng cụ",
+    "Tool Detail": "Chi tiết dụng cụ",
+    "Select a tool to view details.": "Chọn một dụng cụ để xem chi tiết.",
+    "General": "Thông tin chung",
+    "Specification": "Thông số",
+    "No tools found.": "Không tìm thấy dụng cụ nào.",
+    "Tool Code": "Mã dụng cụ",
+    "Tool Name": "Tên dụng cụ",
+    "Tool Type": "Loại dụng cụ",
+    "Location": "Vị trí",
+    "Category": "Danh mục",
+    "Manufacturer": "Nhà sản xuất",
+    "Model": "Model",
+    "Serial Number": "Số seri",
+    "Assigned Process": "Công đoạn sử dụng",
+    "Unit": "Đơn vị",
+    "Status": "Trạng thái",
+    "Measurement Range": "Dải đo",
+    "Measurement Resolution": "Độ phân giải",
+    "Calibration Required": "Yêu cầu hiệu chuẩn",
+    "Calibration Due Date": "Ngày đến hạn hiệu chuẩn",
+    "Last Calibration Date": "Ngày hiệu chuẩn gần nhất",
+    "Calibration Interval (days)": "Chu kỳ hiệu chuẩn (ngày)",
+    "Description": "Mô tả",
+    "Image": "Ảnh minh họa",
+    "Code": "Mã",
+    "Name": "Tên",
+    "Parent Location": "Vị trí cha",
+    "Level Order": "Cấp bậc",
+    "Sort Order": "Thứ tự",
+    "Actions": "Thao tác",
+    "Edit Tool": "Sửa dụng cụ",
+    "Add New Tool": "Thêm dụng cụ",
+    "Cancel": "Hủy",
+    "Save": "Lưu",
+    "Close": "Đóng",
+    "Edit": "Sửa",
+    "View": "Xem",
+    "Delete": "Xóa",
+    "Activate tool": "Kích hoạt dụng cụ",
+    "Deactivate tool": "Ngừng dùng dụng cụ",
+    "Edit tool": "Sửa dụng cụ",
+    "Unable to load Production Tool Master data.": "Không thể tải dữ liệu danh mục dụng cụ.",
+    "Unable to save data.": "Không thể lưu dữ liệu.",
+    "Data saved successfully.": "Đã lưu dữ liệu thành công.",
+    "Status updated.": "Đã cập nhật trạng thái.",
+    "Are you sure you want to delete this item?": "Bạn có chắc muốn xóa mục này không?",
+    "This record was changed by someone else. Please reload and try again.":
+      "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang và thử lại.",
+    "Add New": "Thêm mới",
+    "Loading data...": "Đang tải dữ liệu...",
+  },
+  ja: {
+    "Production Tool Master": "生産工具マスター",
+    "Manage cutting, assembly, measuring and handling tools with location hierarchy, calibration tracking and technical specifications.":
+      "切削・組立・測定・搬送工具を、設置場所の階層、校正管理、技術仕様とともに管理します。",
+    "Add Tool": "工具を追加",
+    "Settings": "設定",
+    "Manage Locations": "設置場所管理",
+    "Total Tools": "工具総数",
+    "of total": "全体比",
+    "In Use": "使用中",
+    "Available": "利用可能",
+    "In Maintenance": "メンテナンス中",
+    "Out of Service": "使用停止",
+    "Calibration Due": "校正期限間近",
+    "Search by tool code or name...": "工具コードまたは名称で検索...",
+    "All Types": "全タイプ",
+    "All Statuses": "全状態",
+    "All Manufacturers": "全メーカー",
+    "Clear": "クリア",
+    "Location Hierarchy": "工具設置場所階層",
+    "All Locations": "全設置場所",
+    "Location List": "設置場所一覧",
+    "Location Types": "設置場所タイプ",
+    "Add Location": "設置場所を追加",
+    "Edit Location": "設置場所を編集",
+    "Add Location Type": "タイプを追加",
+    "Edit Location Type": "タイプを編集",
+    "Root location": "ルート設置場所",
+    "Locations": "設置場所",
+    "Add Child Location": "サブ設置場所を追加",
+    "Add Root Location": "ルート設置場所を追加",
+    "Select a location on the left to view its details.": "左の設置場所を選択すると詳細が表示されます。",
+    "Custom Fields": "カスタム項目",
+    "Define extra fields (e.g. specification, note) that can be filled in on any tool.":
+      "工具に入力できる追加項目（仕様、備考など）を定義します。",
+    "Data Type": "データ型",
+    "Required": "必須",
+    "Select a field on the left to view its details.": "左の項目を選択すると詳細が表示されます。",
+    "Tool List": "工具一覧",
+    "Tool Detail": "工具詳細",
+    "Select a tool to view details.": "工具を選択して詳細を表示してください。",
+    "General": "基本情報",
+    "Specification": "仕様",
+    "No tools found.": "工具が見つかりません。",
+    "Tool Code": "工具コード",
+    "Tool Name": "工具名",
+    "Tool Type": "工具タイプ",
+    "Location": "設置場所",
+    "Category": "分類",
+    "Manufacturer": "メーカー",
+    "Model": "型式",
+    "Serial Number": "シリアル番号",
+    "Assigned Process": "使用工程",
+    "Unit": "単位",
+    "Status": "状態",
+    "Measurement Range": "測定範囲",
+    "Measurement Resolution": "分解能",
+    "Calibration Required": "校正要否",
+    "Calibration Due Date": "校正期限日",
+    "Last Calibration Date": "前回校正日",
+    "Calibration Interval (days)": "校正周期（日）",
+    "Description": "説明",
+    "Image": "画像",
+    "Code": "コード",
+    "Name": "名称",
+    "Parent Location": "親設置場所",
+    "Level Order": "階層順",
+    "Sort Order": "表示順",
+    "Actions": "操作",
+    "Edit Tool": "工具を編集",
+    "Add New Tool": "工具を追加",
+    "Cancel": "キャンセル",
+    "Save": "保存",
+    "Close": "閉じる",
+    "Edit": "編集",
+    "View": "表示",
+    "Delete": "削除",
+    "Activate tool": "工具を有効化",
+    "Deactivate tool": "工具を無効化",
+    "Edit tool": "工具を編集",
+    "Unable to load Production Tool Master data.": "生産工具マスターデータを読み込めません。",
+    "Unable to save data.": "データを保存できません。",
+    "Data saved successfully.": "保存しました。",
+    "Status updated.": "状態を更新しました。",
+    "Are you sure you want to delete this item?": "削除してもよろしいですか？",
+    "This record was changed by someone else. Please reload and try again.":
+      "他のユーザーによってデータが変更されました。再読み込みしてもう一度お試しください。",
+    "Add New": "新規追加",
+    "Loading data...": "読み込み中...",
+  },
 };
 
-Object.entries(translations).forEach(([language, translation]) => {
-  i18n.addResourceBundle(language, "translation", translation, true, true);
-});
+export function tx(text) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return UI_TEXT[lang]?.[text] || text;
+}
 
-export default translations;
+const TOOL_TYPE_LABELS = {
+  vi: {
+    CUTTING: "Dụng cụ cắt gọt",
+    ASSEMBLY: "Dụng cụ lắp ráp",
+    MEASURING: "Dụng cụ đo lường",
+    HANDLING: "Dụng cụ vận chuyển",
+  },
+  ja: {
+    CUTTING: "切削工具",
+    ASSEMBLY: "組立工具",
+    MEASURING: "測定工具",
+    HANDLING: "搬送工具",
+  },
+  en: {
+    CUTTING: "Cutting Tool",
+    ASSEMBLY: "Assembly Tool",
+    MEASURING: "Measuring Tool",
+    HANDLING: "Handling Tool",
+  },
+};
+
+export function toolTypeText(value) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return (
+    TOOL_TYPE_LABELS[lang]?.[value] ||
+    TOOL_TYPE_LABELS.en[value] ||
+    value ||
+    "—"
+  );
+}
+
+const STATUS_LABELS = {
+  vi: {
+    ACTIVE: "Hoạt động",
+    IN_USE: "Đang sử dụng",
+    AVAILABLE: "Sẵn sàng",
+    IN_MAINTENANCE: "Đang bảo trì",
+    OUT_OF_SERVICE: "Ngừng sử dụng",
+    INACTIVE: "Không hoạt động",
+  },
+  ja: {
+    ACTIVE: "有効",
+    IN_USE: "使用中",
+    AVAILABLE: "利用可能",
+    IN_MAINTENANCE: "メンテナンス中",
+    OUT_OF_SERVICE: "使用停止",
+    INACTIVE: "無効",
+  },
+  en: {
+    ACTIVE: "Active",
+    IN_USE: "In Use",
+    AVAILABLE: "Available",
+    IN_MAINTENANCE: "In Maintenance",
+    OUT_OF_SERVICE: "Out of Service",
+    INACTIVE: "Inactive",
+  },
+};
+
+export function statusText(value) {
+  const lang = String(activeLanguage || "en").split("-")[0];
+  return (
+    STATUS_LABELS[lang]?.[value] || STATUS_LABELS.en[value] || value || "—"
+  );
+}

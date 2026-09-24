@@ -47,7 +47,10 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
+import MachineLayoutDialog from "./MachineLayoutDialog";
 import PageMeta from "../../../../components/common/PageMeta";
+import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
 import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
 import { API_CONFIG } from "../../../../config/config";
@@ -552,6 +555,12 @@ function NodeDialog({
             value={form.description || ""}
             onChange={change("description")}
           />
+          <ImageUploadField
+            value={form.image_url || ""}
+            category="factory"
+            label={t("factoryStructure.layoutImage", { defaultValue: "Layout image" })}
+            onChange={(v) => setForm((old) => ({ ...old, image_url: v || "" }))}
+          />
         </Stack>
       </DialogContent>
       <DialogActions
@@ -803,6 +812,7 @@ export default function FactoryStructureMaster() {
   const [factoryFilter, setFactoryFilter] = useState("all");
   const [dialog, setDialog] = useState(null);
   const [typeDialog, setTypeDialog] = useState(null);
+  const [layoutNode, setLayoutNode] = useState(null);
   const [deleteType, setDeleteType] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1029,6 +1039,7 @@ export default function FactoryStructureMaster() {
           : Number(form.parentId),
       sort_order: Number(form.sort_order || 0),
       description: form.description?.trim() || null,
+      image_url: form.image_url || null,
       status: form.status,
       ...(editingNode
         ? { updated_by: actor }
@@ -1075,6 +1086,7 @@ export default function FactoryStructureMaster() {
             parent_id: selected.parentId,
             sort_order: Number(selected.sort_order || 0),
             description: selected.description || null,
+            image_url: selected.image_url || null,
             status: selected.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
             updated_by: actor,
           }),
@@ -1672,6 +1684,7 @@ export default function FactoryStructureMaster() {
                             </Box>
                           </Stack>
                           <Divider sx={{ my: 1.75 }} />
+                          {selected.image_url ? <Box component="img" src={resolveImageUrl(selected.image_url)} alt="" sx={{ width: "100%", maxHeight: 180, objectFit: "contain", bgcolor: "action.hover", borderRadius: 1.5, mb: 1.5 }} /> : null}
                           <Stack spacing={1.3}>
                             {[
                               [
@@ -1774,6 +1787,19 @@ export default function FactoryStructureMaster() {
                         })}
                       >
                         {t("common.edit")}
+                      </Button>
+                      <Button
+                        fullWidth
+                        size="medium"
+                        disabled={!canEdit || !selected}
+                        startIcon={<GridViewOutlinedIcon />}
+                        onClick={() => setLayoutNode(selected)}
+                        sx={buttonSx("edit", {
+                          justifyContent: "flex-start",
+                          minHeight: 40,
+                        })}
+                      >
+                        {t("factoryStructure.machineLayout.open")}
                       </Button>
                       <Button
                         fullWidth
@@ -2164,6 +2190,16 @@ export default function FactoryStructureMaster() {
             </Button>
           </DialogActions>
         </Dialog>
+        {layoutNode ? (
+          <MachineLayoutDialog
+            node={layoutNode}
+            apiBase={API_BASE}
+            requestJson={requestJson}
+            actor={getCurrentUser()?.employee_code || "SYSTEM"}
+            notify={showMessage}
+            onClose={() => setLayoutNode(null)}
+          />
+        ) : null}
         <Snackbar
           open={message.open}
           autoHideDuration={5000}

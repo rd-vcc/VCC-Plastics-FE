@@ -53,6 +53,7 @@ import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
 import PageMeta from "../../../../components/common/PageMeta";
+import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
 import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
 import { API_CONFIG } from "../../../../config/config";
@@ -660,12 +661,9 @@ function MaterialDialog({ open, material, nodes, fieldDefinitions, saving, onClo
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              size="small"
-              label={tx("Image URL")}
-              value={form.image_url || ""}
-              onChange={(e) => set("image_url", e.target.value)}
-            />
+            <Box sx={{ gridColumn: "1 / -1" }}>
+              <ImageUploadField value={form.image_url || ""} category="material" label={tx("Image")} onChange={(v) => set("image_url", v || "")} />
+            </Box>
             <TextField
               size="small"
               multiline
@@ -1854,7 +1852,7 @@ export default function MaterialMaster() {
               {selected ? (
                 <Box>
                   <Stack direction="row" spacing={1.25} sx={{ p: 1.5 }}>
-                    <Avatar variant="rounded" src={selected.image_url || undefined} sx={{ width: 58, height: 58, bgcolor: "action.hover" }}>
+                    <Avatar variant="rounded" src={resolveImageUrl(selected.image_url) || undefined} sx={{ width: 58, height: 58, bgcolor: "action.hover" }}>
                       <ScienceOutlinedIcon />
                     </Avatar>
                     <Box minWidth={0}>

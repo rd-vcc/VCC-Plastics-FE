@@ -1,8 +1,11 @@
 import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import "./BasicTableOne.css";
 import { useTheme } from "../../../context/ThemeContext";
+
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function AgGridTable({
   rowData,
@@ -10,9 +13,9 @@ export default function AgGridTable({
   height = 500,
   loading = false,
   rowSelection = "single",
-  pagination = false,
-  paginationPageSize = 20,
   onRowClicked,
+  onRowDoubleClicked,
+  getRowStyle,
   onGridReady,
   getRowId,
   className = "",
@@ -50,9 +53,11 @@ export default function AgGridTable({
         columnDefs={columnDefs}
         loading={loading}
         rowSelection={rowSelection}
-        pagination={pagination}
-        paginationPageSize={paginationPageSize}
+        /* System-wide rule: tables never paginate; rows scroll inside the fixed-height grid. */
+        pagination={false}
         onRowClicked={onRowClicked}
+        onRowDoubleClicked={onRowDoubleClicked}
+        getRowStyle={getRowStyle}
         onGridReady={onGridReady}
         getRowId={getRowId}
         rowHeight={rowHeight}

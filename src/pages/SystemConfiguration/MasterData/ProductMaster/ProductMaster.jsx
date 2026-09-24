@@ -56,6 +56,7 @@ import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import { getAccessToken, getCurrentUser } from "../../../../auth/auth";
 import usePagePermission from "../../../../auth/usePagePermission";
 import { buttonSystem } from "../../../../components/button/ButtonSystem";
+import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
 import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../../components/common/PageMeta";
 import { KpiCard, KpiCardGroup } from "../../../../components/kpi/KpiCardSystem";
@@ -63,6 +64,7 @@ import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne
 import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
+import { BomManagerDialog, BomOverviewDialog, BomSummary } from "./BomManager";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const API = `${API_BASE}/api/product-master`;
@@ -912,8 +914,9 @@ function ProductDialog({
           name: product.product_name,
           familyId: product.product_family_id,
           status: product.status,
+          image: product.image_url || "",
         }
-      : { code: "", name: "", familyId: "", status: "ACTIVE" },
+      : { code: "", name: "", familyId: "", status: "ACTIVE", image: "" },
   );
   const [fields, setFields] = useState([]);
   const [values, setValues] = useState(() =>
@@ -961,6 +964,7 @@ function ProductDialog({
       product_name: form.name.trim(),
       product_family_id: Number(form.familyId),
       status: form.status,
+      image_url: form.image || null,
       values: fields.map((field) => ({
         field_id: field.id,
         value: values[field.id] ?? null,
@@ -1056,6 +1060,13 @@ function ProductDialog({
               </Select>
             </FormControl>
           </Stack>
+          <ImageUploadField
+            value={form.image}
+            category="product"
+            label={tx("Product Image")}
+            disabled={saving}
+            onChange={(v) => setForm((old) => ({ ...old, image: v || "" }))}
+          />
           {loading && <LinearProgress />}
           {Object.entries(groups).map(([group, items]) => (
             <Paper key={group} variant="outlined" sx={{ p: 1.5 }}>
@@ -1382,6 +1393,8 @@ export default function ProductMaster() {
   const [saving, setSaving] = useState(false);
   const [dialog, setDialog] = useState(null);
   const [settingsAnchor, setSettingsAnchor] = useState(null);
+  const [detailTab, setDetailTab] = useState(0);
+  const [bomRefresh, setBomRefresh] = useState(0);
   const [message, setMessage] = useState({
     open: false,
     type: "success",
@@ -1860,6 +1873,13 @@ export default function ProductMaster() {
             direction="row"
             sx={{ flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}
           >
+            <Button
+              startIcon={<AccountTreeOutlinedIcon />}
+              onClick={() => setDialog({ type: "bomOverview" })}
+              sx={buttonSx("cancel")}
+            >
+              {tx("Product BOM")}
+            </Button>
             <Tooltip title={tx("Settings")}>
               <IconButton
                 onClick={(event) => setSettingsAnchor(event.currentTarget)}
@@ -2173,12 +2193,14 @@ export default function ProductMaster() {
                         bgcolor: "action.hover",
                         display: "grid",
                         placeItems: "center",
+                        overflow: "hidden",
                       }}
                     >
-                      <Inventory2OutlinedIcon
-                        color="primary"
-                        sx={{ fontSize: 30 }}
-                      />
+                      {selectedProduct.image_url ? (
+                        <Box component="img" src={resolveImageUrl(selectedProduct.image_url)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      ) : (
+                        <Inventory2OutlinedIcon color="primary" sx={{ fontSize: 30 }} />
+                      )}
                     </Box>
                     <Box minWidth={0}>
                       <Stack direction="row" spacing={0.75} alignItems="center">
@@ -2194,7 +2216,8 @@ export default function ProductMaster() {
                   </Stack>
                 </Box>
                 <Tabs
-                  value={0}
+                  value={detailTab}
+                  onChange={(_, value) => setDetailTab(value)}
                   variant="fullWidth"
                   sx={{
                     minHeight: 36,
@@ -2209,8 +2232,19 @@ export default function ProductMaster() {
                   }}
                 >
                   <Tab label={tx("General")} />
+                  <Tab label={tx("BOM")} />
                 </Tabs>
                 <Box sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
+                  {detailTab === 1 ? (
+                    <BomSummary
+                      productId={selectedProduct.id}
+                      api={API}
+                      requestJson={requestJson}
+                      tx={tx}
+                      refreshKey={bomRefresh}
+                      onManage={() => setDialog({ type: "bom", item: selectedProduct })}
+                    />
+                  ) : (
                   <Stack spacing={1}>
                     {details.map((item, index) => (
                       <Box
@@ -2241,12 +2275,26 @@ export default function ProductMaster() {
                       </Box>
                     ))}
                   </Stack>
+                  )}
                 </Box>
                 <Divider />
                 <Stack
                   direction="row"
                   sx={{ p: 1.5, justifyContent: "center", gap: 2.5 }}
                 >
+                  <Tooltip title={tx("Product BOM")}>
+                    <IconButton
+                      color="primary"
+                      onClick={() => setDialog({ type: "bom", item: selectedProduct })}
+                      sx={{
+                        border: 1,
+                        borderColor: "primary.light",
+                        borderRadius: 1.5,
+                      }}
+                    >
+                      <AccountTreeOutlinedIcon />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title={tx("Edit Product")}>
                     <span>
                       <IconButton
@@ -2395,6 +2443,30 @@ export default function ProductMaster() {
             saving={saving}
             onClose={() => setDialog(null)}
             onSave={saveProduct}
+          />
+        )}
+        {dialog?.type === "bom" && (
+          <BomManagerDialog
+            product={dialog.item}
+            api={API}
+            requestJson={requestJson}
+            tx={tx}
+            canEdit={canEdit}
+            actor={actor}
+            notify={notify}
+            onClose={() => setDialog(null)}
+            onChanged={() => setBomRefresh((value) => value + 1)}
+          />
+        )}
+        {dialog?.type === "bomOverview" && (
+          <BomOverviewDialog
+            api={API}
+            requestJson={requestJson}
+            tx={tx}
+            products={products}
+            notify={notify}
+            onClose={() => setDialog(null)}
+            onOpen={(product) => setDialog({ type: "bom", item: product })}
           />
         )}
         {dialog?.type === "hierarchy" && (

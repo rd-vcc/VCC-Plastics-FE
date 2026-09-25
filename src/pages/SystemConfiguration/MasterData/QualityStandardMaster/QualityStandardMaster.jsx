@@ -135,6 +135,7 @@ function formatDisplayDate(iso) {
 const emptyCharacteristic = () => ({
   characteristic_name: "", nominal_value: "", lsl: "", usl: "", unit: "",
   inspection_method: "", equipment_type_id: "", inspection_frequency: "",
+  characteristic_type: "VARIABLE", is_spc: false, chart_type: "XBAR_R", subgroup_size: 5, cpk_target: 1.33, is_critical: false,
 });
 
 function CharacteristicsEditor({ rows, equipmentTypes, onChange }) {
@@ -164,6 +165,22 @@ function CharacteristicsEditor({ rows, equipmentTypes, onChange }) {
             <TextField fullWidth size="small" label={tx("Inspection Frequency")} value={row.inspection_frequency} onChange={(e) => update(idx, "inspection_frequency", e.target.value)} />
             <IconButton size="small" color="error" onClick={() => remove(idx)}><DeleteOutlineIcon fontSize="small" /></IconButton>
           </Stack>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} sx={{ mt: 1 }}>
+            <TextField select fullWidth size="small" label={tx("Characteristic Type")} value={row.characteristic_type} onChange={(e) => update(idx, "characteristic_type", e.target.value)}>
+              <MenuItem value="VARIABLE">{tx("Variable (measured)")}</MenuItem><MenuItem value="ATTRIBUTE">{tx("Attribute (OK / NG)")}</MenuItem>
+            </TextField>
+            <TextField select fullWidth size="small" label={tx("SPC Monitoring")} value={row.is_spc ? "1" : "0"} onChange={(e) => update(idx, "is_spc", e.target.value === "1")} disabled={row.characteristic_type === "ATTRIBUTE"}>
+              <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
+            </TextField>
+            <TextField select fullWidth size="small" label={tx("Control Chart")} value={row.chart_type} onChange={(e) => update(idx, "chart_type", e.target.value)} disabled={!row.is_spc}>
+              <MenuItem value="XBAR_R">X̄-R</MenuItem><MenuItem value="IMR">I-MR</MenuItem>
+            </TextField>
+            <TextField fullWidth size="small" type="number" label={tx("Subgroup Size")} value={row.subgroup_size} onChange={(e) => update(idx, "subgroup_size", e.target.value)} disabled={!row.is_spc} slotProps={{ htmlInput: { min: 1, max: 10 } }} />
+            <TextField fullWidth size="small" type="number" label={tx("Cpk Target")} value={row.cpk_target} onChange={(e) => update(idx, "cpk_target", e.target.value)} disabled={!row.is_spc} slotProps={{ htmlInput: { step: 0.01 } }} />
+            <TextField select fullWidth size="small" label={tx("Critical Characteristic")} value={row.is_critical ? "1" : "0"} onChange={(e) => update(idx, "is_critical", e.target.value === "1")}>
+              <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
+            </TextField>
+          </Stack>
         </Paper>
       ))}
       <Button startIcon={<AddIcon fontSize="small" />} onClick={add} sx={{ alignSelf: "flex-start" }}>{tx("Add Characteristic")}</Button>
@@ -189,6 +206,8 @@ function StandardForm({ mode, standard, revision, characteristics, products, equ
           characteristic_name: c.characteristic_name, nominal_value: c.nominal_value ?? "", lsl: c.lsl ?? "",
           usl: c.usl ?? "", unit: c.unit || "", inspection_method: c.inspection_method || "",
           equipment_type_id: c.equipment_type_id || "", inspection_frequency: c.inspection_frequency || "",
+          characteristic_type: c.characteristic_type || "VARIABLE", is_spc: Boolean(c.is_spc), chart_type: c.chart_type || "XBAR_R",
+          subgroup_size: c.subgroup_size ?? 5, cpk_target: c.cpk_target ?? 1.33, is_critical: Boolean(c.is_critical),
         }))
       : [],
   );
@@ -205,6 +224,12 @@ function StandardForm({ mode, standard, revision, characteristics, products, equ
         inspection_method: r.inspection_method.trim() || null,
         equipment_type_id: r.equipment_type_id === "" ? null : Number(r.equipment_type_id),
         inspection_frequency: r.inspection_frequency.trim() || null,
+        characteristic_type: r.characteristic_type || "VARIABLE",
+        is_spc: r.characteristic_type !== "ATTRIBUTE" && Boolean(r.is_spc),
+        chart_type: r.chart_type || "XBAR_R",
+        subgroup_size: Math.min(10, Math.max(1, Number(r.subgroup_size) || 5)),
+        cpk_target: r.cpk_target === "" || r.cpk_target == null ? null : Number(r.cpk_target),
+        is_critical: Boolean(r.is_critical),
         sort_order: i,
       }));
     onSave({
@@ -662,6 +687,10 @@ export default function QualityStandardMaster() {
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                             {c.inspection_method || EMPTY} · {c.equipment_type_name || EMPTY} · {c.inspection_frequency || EMPTY}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {c.characteristic_type === "ATTRIBUTE" ? tx("Attribute (OK / NG)") : tx("Variable (measured)")}
+                            {c.is_spc ? ` · SPC ${c.chart_type === "IMR" ? "I-MR" : "X̄-R"} · n=${c.subgroup_size} · Cpk ≥ ${c.cpk_target ?? EMPTY}` : ""}{c.is_critical ? ` · ${tx("Critical Characteristic")}` : ""}
                           </Typography>
                         </Paper>
                       )) : <Alert severity="info">{tx("No characteristics yet.")}</Alert>}

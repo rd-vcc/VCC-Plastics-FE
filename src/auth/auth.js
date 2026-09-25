@@ -118,6 +118,8 @@ export function hasPermission(permissionCode) {
   return permissions.includes(fixedPermissionCode);
 }
 export function logout() {
+  const leaving = getCurrentUser();  // read before the session is cleared
+  import("./apiIdentity").then((m) => m.auditLogout(leaving)).catch(() => {});
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(MES_ACCESS_KEY);

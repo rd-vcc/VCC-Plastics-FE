@@ -7,6 +7,9 @@ import App from "./App.jsx";
 import { AppWrapper } from "./components/common/PageMeta.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import "./i18n";
+import { installApiIdentity } from "./auth/apiIdentity";
+
+installApiIdentity();
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 createRoot(document.getElementById("root")).render(
   <StrictMode>

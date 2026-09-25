@@ -342,7 +342,7 @@ export default function ProductionResults() {
                 </Box>
               ))}
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", px: 1.5, pb: 1 }}>{tx("Rework is recorded by the Quality module (not live yet).")}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", px: 1.5, pb: 1 }}>{tx("Rework = NG pieces with the Rework disposition in NG Management.")}</Typography>
           </Paper>
           <Paper elevation={0} sx={cardSx}>
             <Head title={tx("Quick Actions")} />

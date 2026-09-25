@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import Chart from "react-apexcharts";
@@ -48,10 +48,15 @@ export function useMaintData(page, url, { interval = 30000, paused } = {}) {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [live, setLive] = useState(true);
   const { request, notify } = page;
+  const latest = useRef(0);
   const load = useCallback(async ({ silent } = {}) => {
     if (!url) return;
+    const id = ++latest.current;  // a slower answer of an older filter must not overwrite the newer one
     if (!silent) setLoading(true);
-    try { setData(await request(url)); setLastUpdate(new Date()); } catch (e) { notify("error", e.message); } finally { setLoading(false); }
+    try {
+      const r = await request(url);
+      if (id === latest.current) { setData(r); setLastUpdate(new Date()); }
+    } catch (e) { if (id === latest.current) notify("error", e.message); } finally { if (id === latest.current) setLoading(false); }
   }, [url, request, notify]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {

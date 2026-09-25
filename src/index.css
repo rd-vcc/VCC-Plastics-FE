@@ -840,3 +840,19 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+/* MUI date / time fields: show the native calendar button again (the template hides it for its own inputs) */
+.MuiInputBase-input[type="date"]::-webkit-calendar-picker-indicator,
+.MuiInputBase-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.MuiInputBase-input[type="month"]::-webkit-calendar-picker-indicator,
+.MuiInputBase-input[type="time"]::-webkit-calendar-picker-indicator {
+  display: block;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.dark .MuiInputBase-input[type="date"]::-webkit-calendar-picker-indicator,
+.dark .MuiInputBase-input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark .MuiInputBase-input[type="month"]::-webkit-calendar-picker-indicator,
+.dark .MuiInputBase-input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}

@@ -112,7 +112,7 @@ export default function StatisticsChart() {
     yaxis: {
       labels: {
         style: {
-          fontSize: "12px", // Adjust font size for y-axis labels
+          fontSize: "11px", // Adjust font size for y-axis labels
           colors: ["#6B7280"], // Color of the labels
         },
       },

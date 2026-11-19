@@ -77,10 +77,10 @@ export default function MoldDocuments({ moldId, apiBase, request, actor, canEdit
       {msg ? <Alert severity={msg.type} sx={{ mb: 1, py: 0 }} onClose={() => setMsg(null)}>{msg.text}</Alert> : null}
       {!docs.length ? <Typography variant="caption" color="text.secondary">{T("empty")}</Typography> : docs.map((d) => (
         <Stack key={d.id} direction="row" spacing={1} sx={{ alignItems: "center", py: 0.6, borderBottom: 1, borderColor: "divider" }}>
-          <InsertDriveFileOutlinedIcon sx={{ fontSize: 20, color: /\.pdf$/i.test(d.file_url) ? "#F04438" : "#1570EF" }} />
+          <InsertDriveFileOutlinedIcon sx={{ fontSize: 16, color: /\.pdf$/i.test(d.file_url) ? "#F04438" : "#1570EF" }} />
           <Box sx={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => window.open(resolveImageUrl(d.file_url), "_blank", "noopener")}>
-            <Typography variant="caption" fontWeight={700} sx={{ display: "block", color: "#1570EF" }} noWrap>{d.title}</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{t(`moldMaster.documents.types.${d.doc_type}`)} · {d.file_size ? `${(d.file_size / 1048576).toFixed(2)} MB` : ""}</Typography>
+            <Typography variant="caption" noWrap sx={{ fontWeight: 700, display: "block", color: "#1570EF" }}>{d.title}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{t(`moldMaster.documents.types.${d.doc_type}`)} · {d.file_size ? `${(d.file_size / 1048576).toFixed(2)} MB` : ""}</Typography>
           </Box>
           {canEdit ? <Tooltip title="Delete"><IconButton size="small" onClick={() => remove(d)}><DeleteOutlineIcon fontSize="small" sx={{ color: "#F04438" }} /></IconButton></Tooltip> : null}
         </Stack>

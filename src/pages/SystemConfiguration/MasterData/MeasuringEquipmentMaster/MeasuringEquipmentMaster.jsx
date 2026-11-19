@@ -1,58 +1,89 @@
 import "./locales";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
-  DialogContent, Divider, FormControl, IconButton, InputAdornment,
-  InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Tab,
-  Tabs, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography, createTheme,
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  Divider,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  ThemeProvider as MuiThemeProvider,
+  Tooltip,
+  Typography,
+  createTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
+import CheckIcon from "@mui/icons-material/Check";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/Delete";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
-import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
-import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircle";
-import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircle";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import SearchIcon from "@mui/icons-material/Search";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import StraightenOutlinedIcon from "@mui/icons-material/StraightenOutlined";
+import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
+import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 
+import PageMeta from "../../../../components/common/PageMeta";
+import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
+import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
+import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
+import { CountBadge, PanelHeader, SettingsMenu, masterGridSx, panelSx } from "../../../../components/masterData/MasterPanels";
+import useFillHeight from "../../../../hooks/useFillHeight";
+import { API_CONFIG } from "../../../../config/config";
 import { getAccessToken, getCurrentUser } from "../../../../auth/auth";
 import usePagePermission from "../../../../auth/usePagePermission";
 import { buttonSystem } from "../../../../components/button/ButtonSystem";
-import ImageUploadField, { resolveImageUrl } from "../../../../components/common/ImageUploadField";
-import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
-import PageMeta from "../../../../components/common/PageMeta";
 import { KpiCard, KpiCardGroup } from "../../../../components/kpi/KpiCardSystem";
-import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
-import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { categoryText, setActiveLanguage, statusText, tx } from "./locales";
 
-const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
-const API = `${BASE}/api/measuring-equipment-master`;
-const FACTORY_API = `${BASE}/api/factory-structure`;
+const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
+const API = `${API_BASE}/api/measuring-equipment-master`;
+const FACTORY_API = `${API_BASE}/api/factory-structure`;
 const EMPTY = "—";
-const STATUSES = ["AVAILABLE", "IN_USE", "OUT_OF_SERVICE", "INACTIVE"];
 const CATEGORIES = ["DIMENSIONAL", "ELECTRICAL", "PHYSICAL_TEST", "VISION_OPTICAL", "OTHER"];
-const CALIBRATION_RESULTS = ["PASS", "FAIL", "ADJUSTED"];
-const cardSx = { border: "1px solid", borderColor: "divider", borderRadius: 2, boxShadow: "0 1px 3px rgba(15,23,42,.06)", overflow: "hidden" };
+const CATEGORY_COLORS = { DIMENSIONAL: "#7A5AF8", ELECTRICAL: "#F79009", PHYSICAL_TEST: "#12B76A", VISION_OPTICAL: "#0BA5EC", OTHER: "#667085" };
+const numOrNull = (v) => (v === "" || v == null ? null : Number(v));
+const person = (name, code) => (name ? `${name} - ${code}` : code || EMPTY);
+const dateText = (value) => {
+  if (!value) return EMPTY;
+  const d = new Date(String(value).replace(" ", "T"));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+};
 
-function btn(type, extra = {}) {
-  const s = buttonSystem[type] || buttonSystem.edit || { base: {} };
-  return { ...(s.base || {}), ...(s.hover ? { "&:hover": s.hover } : {}), ...(s.active ? { "&:active": s.active } : {}), ...extra };
+function buttonSx(type, overrides = {}) {
+  const styles = buttonSystem[type] || {};
+  return { ...(styles.base || {}), ...(styles.hover ? { "&:hover": styles.hover } : {}), ...overrides };
 }
 
-function pageTheme(mode) {
+function createMaterialTheme(mode) {
   const dark = mode === "dark";
   return createTheme({
     palette: {
@@ -68,11 +99,11 @@ function pageTheme(mode) {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            backgroundColor: dark ? "#0F172A" : "#FFFFFF",
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderWidth: "1px !important", borderStyle: "solid !important",
-              borderColor: `${dark ? "#3B4759" : "#CBD3DF"} !important`,
-            },
+            backgroundColor: dark ? "#0F172A" : "#FFF",
+            // Tailwind's preflight resets border-width globally, which can
+            // strip MUI's default notched-outline border on this page — so
+            // it's re-asserted explicitly here.
+            "& .MuiOutlinedInput-notchedOutline": { borderWidth: "1px !important", borderStyle: "solid !important", borderColor: `${dark ? "#3B4759" : "#CBD3DF"} !important` },
             "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: `${dark ? "#5B6B84" : "#98A2B3"} !important` },
             "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderWidth: "2px !important", borderColor: "#005BAB !important" },
             "&.Mui-error .MuiOutlinedInput-notchedOutline": { borderColor: "#EE1B1B !important" },
@@ -83,100 +114,171 @@ function pageTheme(mode) {
   });
 }
 
-function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
-  const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
+function DialogHeader({ icon, title, subtitle, onClose, disabled }) {
   return (
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: 1, borderColor: "divider",
-      bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "rgba(238,27,27,0.10)" : "rgba(0,91,171,0.14)") : (tone === "danger" ? "#FFF3F3" : "#F1F7FF") }}>
-      <Box sx={{ width: 44, height: 44, borderRadius: "50%",
-        bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "#4C1D1D" : "#173A63") : (tone === "danger" ? "#FDECEC" : "#EEF4FF"),
-        color: toneColor, display: "grid", placeItems: "center", flexShrink: 0 }}>
-        {icon}
-      </Box>
+    <Box sx={{ px: 2, py: 1.25, display: "flex", alignItems: "center", gap: 1.25, borderBottom: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "rgba(0,91,171,0.14)" : "#F1F7FF") }}>
+      <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: (th) => (th.palette.mode === "dark" ? "#173A63" : "#EEF4FF"), color: "#005BAB", display: "grid", placeItems: "center", flexShrink: 0 }}>{icon}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>{title}</Typography>
-        {subtitle ? <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{subtitle}</Typography> : null}
+        <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800 }}>{title}</Typography>
+        {subtitle ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>{subtitle}</Typography> : null}
       </Box>
       <IconButton size="small" disabled={disabled} onClick={onClose} sx={{ mr: -0.5 }}><CloseIcon fontSize="small" /></IconButton>
     </Box>
   );
 }
 
-const dialogPaperSx = { borderRadius: 3, overflow: "hidden", boxShadow: (theme) => theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)" };
+const dialogPaperSx = {
+  borderRadius: 3,
+  overflow: "hidden",
+  boxShadow: (theme) => (theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)"),
+};
 
-function Head({ icon, title, action }) {
+// Fixed-width status pill (same width on every page).
+function StatusPill({ active, width = 92 }) {
+  const color = active ? "#12B76A" : "#F04438";
+  const label = statusText(active ? "ACTIVE" : "INACTIVE");
   return (
-    <Box sx={{ minHeight: 34, px: 1.25, bgcolor: (t) => t.palette.mode === "dark" ? "#182235" : "#EAF2FF", borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Stack direction="row" spacing={0.7} alignItems="center">{icon}<Typography variant="subtitle2" fontWeight={800}>{title}</Typography></Stack>
-      {action}
+    <Box component="span" title={label} sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box",
+      width, height: 22, px: 0.5, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden",
+      borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{label}</Box>
+  );
+}
+
+function DetailSection({ title, children }) {
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ display: "block", mb: 0.5, fontWeight: 800, fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "text.secondary" }}>{title}</Typography>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25 }}>{children}</Box>
     </Box>
   );
 }
 
-const STATUS_TONES = { AVAILABLE: "info", IN_USE: "success", OUT_OF_SERVICE: "warning", INACTIVE: "default" };
-function StatusChip({ value }) {
-  return <Chip size="small" variant="outlined" color={STATUS_TONES[value] || "default"} label={statusText(value)} sx={{ height: 21, fontSize: 10, fontWeight: 800 }} />;
-}
-
-const CAL_TONES = { VALID: "success", DUE_SOON: "warning", OVERDUE: "error" };
-function calibrationStatusOf(nextDate) {
-  if (!nextDate) return "VALID";
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const due = new Date(nextDate);
-  const days = Math.round((due - today) / 86400000);
-  if (days < 0) return "OVERDUE";
-  if (days <= 30) return "DUE_SOON";
-  return "VALID";
-}
-function CalibrationChip({ nextDate }) {
-  const value = calibrationStatusOf(nextDate);
-  return <Chip size="small" variant="outlined" color={CAL_TONES[value]} label={statusText(value)} sx={{ height: 21, fontSize: 10, fontWeight: 800 }} />;
-}
-
-function normalNode(n) { return { ...n, id: Number(n.id), parentId: n.parent_id == null ? null : Number(n.parent_id) }; }
-function pathOf(id, nodes) {
-  const names = [], seen = new Set();
-  let n = nodes.find((x) => x.id === Number(id));
-  while (n && !seen.has(n.id)) { seen.add(n.id); names.unshift(n.name); n = nodes.find((x) => x.id === n.parentId); }
-  return names.join(" / ") || EMPTY;
-}
-
-function formatDisplayDate(iso) {
-  if (!iso) return EMPTY;
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
-function CategoryTree({ types, rows, selectedTypeId, onSelect }) {
-  const [expanded, setExpanded] = useState(() => CATEGORIES);
-  const toggle = (cat) => setExpanded((old) => (old.includes(cat) ? old.filter((x) => x !== cat) : [...old, cat]));
-  const byCategory = CATEGORIES.map((cat) => ({
-    category: cat,
-    types: types.filter((t) => t.category === cat),
-  })).filter((g) => g.types.length);
-  const countForType = (typeId) => rows.filter((r) => Number(r.equipment_type_id) === Number(typeId)).length;
+function DetailRow({ label, children, last }) {
   return (
-    <Box sx={{ p: 0.75, overflow: "auto" }}>
-      <Box onClick={() => onSelect(null)} sx={{ p: 0.75, borderRadius: 1, cursor: "pointer", bgcolor: selectedTypeId == null ? "action.selected" : "transparent" }}>
-        <Typography fontSize={11.5} fontWeight={800}>{tx("All equipment")} ({rows.length})</Typography>
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, py: 0.9, borderBottom: last ? 0 : 1, borderColor: "divider" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 700, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{children ?? EMPTY}</Typography>
+    </Box>
+  );
+}
+
+function ActionIcon({ title, icon, onClick, disabled, color = "default" }) {
+  return (
+    <Tooltip title={title}>
+      <span><IconButton disabled={disabled} color={color} onClick={onClick} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{icon}</IconButton></span>
+    </Tooltip>
+  );
+}
+
+function FieldLabel({ children }) {
+  return <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "text.secondary", fontSize: "0.68rem" }}>{children}</Typography>;
+}
+
+const childrenMap = (nodes) => {
+  const map = {};
+  nodes.forEach((n) => { (map[n.parent_id ?? "root"] = map[n.parent_id ?? "root"] || []).push(n); });
+  return map;
+};
+const pathOf = (node, nodes) => {
+  const names = [];
+  let n = node;
+  while (n) { names.unshift(n.name); const pid = n.parent_id; n = nodes.find((x) => x.id === pid); }
+  return names.join(" / ");
+};
+// Category picker drawn as the category tree; the "none" row is allowed.
+function CategoryTreePicker({ nodes, value, onChange, noneLabel, excludeIds, title }) {
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const kids = useMemo(() => childrenMap(nodes), [nodes]);
+  const parents = nodes.filter((n) => kids[n.id]?.length).map((n) => n.id);
+  const toggle = (id) => setCollapsed((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const row = (key, label, selected, onClick, depth, extra) => (
+    <Box key={key} onClick={onClick} sx={{ minHeight: 27, pl: `${depth * 16 + 2}px`, pr: 0.75, display: "flex", alignItems: "center", gap: 0.5, borderRadius: 1, cursor: "pointer",
+      bgcolor: selected ? "action.selected" : "transparent", "&:hover": { bgcolor: selected ? "action.selected" : "action.hover" } }}>
+      {extra}
+      <Typography noWrap title={label} sx={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: selected ? 800 : depth ? 600 : 700 }}>{label}</Typography>
+      {selected ? <CheckIcon color="primary" sx={{ fontSize: 13.5, flexShrink: 0 }} /> : null}
+    </Box>
+  );
+  const renderNode = (node, depth) => {
+    if (excludeIds?.has(node.id)) return null;
+    const list = kids[node.id] || [];
+    const open = !collapsed.has(node.id);
+    const disabled = node.status !== "ACTIVE";
+    return (
+      <Box key={node.id} sx={{ opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? "none" : "auto" }}>
+        {row(node.id, node.name, Number(value) === node.id, () => onChange(node.id), depth, <>
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); if (list.length) toggle(node.id); }} sx={{ width: 22, height: 22, visibility: list.length ? "visible" : "hidden", pointerEvents: "auto" }}>
+            {open ? <ExpandMoreIcon sx={{ fontSize: 14 }} /> : <ChevronRightIcon sx={{ fontSize: 14 }} />}
+          </IconButton>
+          {list.length ? <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13, flexShrink: 0 }} /> : <CategoryOutlinedIcon sx={{ fontSize: 13, flexShrink: 0, color: "text.secondary" }} />}
+        </>)}
+        {list.length && open ? list.map((k) => renderNode(k, depth + 1)) : null}
       </Box>
-      {byCategory.map((group) => {
-        const open = expanded.includes(group.category);
-        const count = group.types.reduce((sum, t) => sum + countForType(t.id), 0);
+    );
+  };
+  return (
+    <Box sx={{ flex: 1, minHeight: 280, display: "flex", flexDirection: "column", border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+      <Box sx={{ px: 1, py: 0.5, display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+        <Typography sx={{ flex: 1, fontSize: 11, fontWeight: 800, pl: 0.5 }}>{title || tx("Category Hierarchy")}</Typography>
+        <Tooltip title={tx("Expand all")}><IconButton size="small" onClick={() => setCollapsed(new Set())}><UnfoldMoreIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+        <Tooltip title={tx("Collapse all")}><IconButton size="small" onClick={() => setCollapsed(new Set(parents))}><UnfoldLessIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: 0.75 }}>
+        {row("none", noneLabel || tx("No category"), value === "" || value == null, () => onChange(""), 0,
+          <Box sx={{ width: 22, display: "grid", placeItems: "center" }}><CategoryOutlinedIcon color="disabled" sx={{ fontSize: 13 }} /></Box>)}
+        {(kids.root || []).map((n) => renderNode(n, 0))}
+      </Box>
+    </Box>
+  );
+}
+
+
+function CategoryPill({ value, width = 132 }) {
+  const color = CATEGORY_COLORS[value] || "#667085";
+  return (
+    <Box component="span" sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box", width, height: 22, px: 0.5,
+      whiteSpace: "nowrap", overflow: "hidden", borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{categoryText(value)}</Box>
+  );
+}
+const categoryIcon = (c) => ({ DIMENSIONAL: StraightenOutlinedIcon, ELECTRICAL: BoltOutlinedIcon, PHYSICAL_TEST: ScienceOutlinedIcon, VISION_OPTICAL: CameraAltOutlinedIcon }[c] || CategoryOutlinedIcon);
+
+// Left tree: equipment category → equipment type, with the number of devices.
+function TypeTree({ types, rows, selected, onSelect }) {
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const count = (fn) => rows.filter(fn).length;
+  const groups = CATEGORIES.map((c) => ({ category: c, types: types.filter((t) => t.category === c) })).filter((g) => g.types.length);
+  const row = (key, label, isSel, onClick, depth, icon, value, toggle) => (
+    <Box key={key} onClick={onClick} sx={{ minHeight: 30, pl: `${depth * 13 + 3}px`, pr: 0.5, display: "flex", alignItems: "center", gap: 0.35, cursor: "pointer", borderRadius: 1,
+      bgcolor: isSel ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
+      <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggle?.(); }} sx={{ width: 19, height: 19, visibility: toggle ? "visible" : "hidden" }}>
+        {toggle && !collapsed.has(key) ? <ExpandMoreIcon sx={{ fontSize: 13.5 }} /> : <ChevronRightIcon sx={{ fontSize: 13.5 }} />}
+      </IconButton>
+      {icon}
+      <Typography noWrap title={label} sx={{ flex: 1, fontSize: 11.5, fontWeight: isSel ? 800 : 600 }}>{label}</Typography>
+      <Box sx={{ mr: 0.5, display: "flex" }}><CountBadge value={value} /></Box>
+    </Box>
+  );
+  const flip = (k) => setCollapsed((old) => { const next = new Set(old); if (next.has(k)) next.delete(k); else next.add(k); return next; });
+  return (
+    <Box sx={{ p: 0.75, flex: 1, minHeight: 0, overflow: "auto" }}>
+      <Box onClick={() => onSelect(null)} sx={{ minHeight: 27, px: 0.75, display: "flex", alignItems: "center", gap: 0.75, borderRadius: 1, cursor: "pointer", bgcolor: selected == null ? "action.selected" : "transparent", "&:hover": { bgcolor: selected == null ? "action.selected" : "action.hover" } }}>
+        <CategoryOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
+        <Typography sx={{ flex: 1, fontSize: 11.5, fontWeight: 800 }}>{tx("All equipment")}</Typography>
+        <Box sx={{ mr: 0.5, display: "flex" }}><CountBadge value={rows.length} /></Box>
+      </Box>
+      {groups.map((g) => {
+        const key = `c:${g.category}`;
+        const Icon = categoryIcon(g.category);
         return (
-          <Box key={group.category}>
-            <Box onClick={() => toggle(group.category)} sx={{ display: "flex", alignItems: "center", gap: 0.4, minHeight: 28, cursor: "pointer", borderRadius: 1, "&:hover": { bgcolor: "action.hover" } }}>
-              <IconButton size="small" sx={{ width: 20, height: 20 }}>{open ? <ExpandMoreIcon sx={{ fontSize: 16 }} /> : <ChevronRightIcon sx={{ fontSize: 16 }} />}</IconButton>
-              <Typography noWrap sx={{ flex: 1, fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "text.secondary" }}>{categoryText(group.category)}</Typography>
-              <Chip label={count} size="small" variant="outlined" sx={{ height: 18, mr: 0.5, "& .MuiChip-label": { px: 0.5, fontSize: 9.5 } }} />
-            </Box>
-            {open && group.types.map((t) => (
-              <Box key={t.id} onClick={() => onSelect(t.id)} sx={{ pl: 3.2, minHeight: 28, display: "flex", alignItems: "center", gap: 0.4, cursor: "pointer", borderRadius: 1, bgcolor: selectedTypeId === t.id ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
-                <StraightenOutlinedIcon color={selectedTypeId === t.id ? "primary" : "inherit"} sx={{ fontSize: 14 }} />
-                <Typography noWrap sx={{ flex: 1, fontSize: 11.5, fontWeight: selectedTypeId === t.id ? 800 : 600 }}>{t.type_name}</Typography>
-                <Chip label={countForType(t.id)} size="small" variant="outlined" color={selectedTypeId === t.id ? "primary" : "default"} sx={{ height: 18, mr: 0.5, "& .MuiChip-label": { px: 0.5, fontSize: 9.5 } }} />
-              </Box>
-            ))}
+          <Box key={key}>
+            {row(key, categoryText(g.category), selected === key, () => onSelect(key), 0, <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />,
+              count((r) => r.category === g.category || g.types.some((t) => Number(t.id) === Number(r.equipment_type_id))), () => flip(key))}
+            {!collapsed.has(key) && g.types.map((t) => row(`t:${t.id}`, t.type_name, selected === `t:${t.id}`, () => onSelect(`t:${t.id}`), 1,
+              <Icon sx={{ fontSize: 13, color: t.is_active ? "text.secondary" : "text.disabled" }} />, count((r) => Number(r.equipment_type_id) === Number(t.id))))}
           </Box>
         );
       })}
@@ -184,227 +286,238 @@ function CategoryTree({ types, rows, selectedTypeId, onSelect }) {
   );
 }
 
-function EquipmentForm({ item, types, nodes, actor, saving, onClose, onSave }) {
-  const [f, setF] = useState(item ? {
-    code: item.equipment_code, name: item.equipment_name, type: item.equipment_type_id, node: item.factory_node_id,
-    maker: item.manufacturer || "", model: item.model || "", serial: item.serial_number || "",
-    range: item.measurement_range || "", resolution: item.resolution || "", accuracy: item.accuracy || "",
-    cycle: item.calibration_cycle_days, status: item.status, note: item.description || "", image: item.image_url || "", version: item.version,
-  } : {
-    code: "", name: "", type: "", node: "", maker: "", model: "", serial: "",
-    range: "", resolution: "", accuracy: "", cycle: 180, status: "AVAILABLE", note: "", image: "", version: 1,
-  });
-  const ch = (k) => (e) => setF((o) => ({ ...o, [k]: e.target.value }));
+const emptyEquipment = { equipment_code: "", equipment_name: "", equipment_type_id: "", factory_node_id: "", manufacturer: "", model: "", serial_number: "",
+  measurement_range: "", resolution: "", accuracy: "", calibration_cycle_days: 180, description: "", image_url: "", active: true };
+
+function EquipmentDialog({ open, item, types, nodes, saving, onClose, onSave }) {
+  const [form, setForm] = useState(emptyEquipment);
+  useEffect(() => {
+    if (!open) return;
+    setForm(item ? { ...emptyEquipment, ...item, factory_node_id: item.factory_node_id ?? "", active: item.status !== "INACTIVE" } : emptyEquipment);
+  }, [open, item]);
+  const set = (key, value) => setForm((old) => ({ ...old, [key]: value }));
+  const g = (cols) => ({ display: "grid", gridTemplateColumns: { xs: "1fr", sm: cols }, gap: 1.5, pt: 0.75 });
+  const text = (v) => (String(v ?? "").trim() ? String(v).trim() : null);
   const submit = () => onSave({
-    equipment_code: f.code.trim().toUpperCase(), equipment_name: f.name.trim(), equipment_type_id: Number(f.type),
-    factory_node_id: Number(f.node), manufacturer: f.maker.trim() || null, model: f.model.trim() || null,
-    serial_number: f.serial.trim() || null, measurement_range: f.range.trim() || null, resolution: f.resolution.trim() || null,
-    accuracy: f.accuracy.trim() || null, calibration_cycle_days: Number(f.cycle), status: f.status, description: f.note.trim() || null,
-    image_url: f.image || null,
-    ...(item ? { version: Number(f.version), updated_by: actor } : { created_by: actor }),
+    equipment_code: form.equipment_code.trim().toUpperCase(),
+    equipment_name: form.equipment_name.trim(),
+    equipment_type_id: Number(form.equipment_type_id),
+    factory_node_id: Number(form.factory_node_id),
+    manufacturer: text(form.manufacturer), model: text(form.model), serial_number: text(form.serial_number),
+    measurement_range: text(form.measurement_range), resolution: text(form.resolution), accuracy: text(form.accuracy),
+    calibration_cycle_days: numOrNull(form.calibration_cycle_days),
+    description: text(form.description), image_url: form.image_url || null,
+    // new equipment starts usable (or inactive); later states come from Quality → calibration
+    status: item ? item.status : form.active ? "AVAILABLE" : "INACTIVE",
   });
+  const valid = form.equipment_code.trim() && form.equipment_name.trim() && form.equipment_type_id && form.factory_node_id && Number(form.calibration_cycle_days) > 0;
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<StraightenOutlinedIcon />} title={tx(item ? "Edit Equipment" : "Add New Measuring Equipment")} disabled={saving} onClose={onClose} />
-      <DialogContent>
-        <Stack spacing={1.7} sx={{ pt: 1 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-            <TextField required fullWidth size="small" disabled={Boolean(item)} label={tx("Equipment Code")} value={f.code} onChange={ch("code")} />
-            <TextField required fullWidth size="small" label={tx("Equipment Name")} value={f.name} onChange={ch("name")} />
-            <FormControl required fullWidth size="small">
-              <InputLabel>{tx("Equipment Type")}</InputLabel>
-              <Select label={tx("Equipment Type")} value={f.type} onChange={ch("type")}>
-                {types.filter((x) => x.is_active).map((x) => <MenuItem key={x.id} value={x.id}>{x.type_name}</MenuItem>)}
-              </Select>
-            </FormControl>
+    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="lg" slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<StraightenOutlinedIcon />} title={item ? tx("Edit Equipment") : tx("Add New Measuring Equipment")}
+        subtitle={tx("Choose the area on the left; fill in the equipment details on the right.")} disabled={saving} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "300px minmax(0,1fr)" }, gap: 2.5, mt: 1, height: { md: 540 } }}>
+          <Stack spacing={0.75} sx={{ minHeight: 0 }}>
+            <FieldLabel>{tx("Location")} *</FieldLabel>
+            <CategoryTreePicker nodes={nodes} value={form.factory_node_id} onChange={(id) => set("factory_node_id", id)} title={tx("Factory Structure")} noneLabel={tx("Not selected")} />
           </Stack>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-            <FormControl required fullWidth size="small">
-              <InputLabel>{tx("Location")}</InputLabel>
-              <Select label={tx("Location")} value={f.node} onChange={ch("node")}>
-                {nodes.filter((x) => x.status === "ACTIVE").map((x) => <MenuItem key={x.id} value={x.id}>{pathOf(x.id, nodes)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Status")}</InputLabel>
-              <Select label={tx("Status")} value={f.status} onChange={ch("status")}>
-                {STATUSES.map((x) => <MenuItem key={x} value={x}>{statusText(x)}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Stack>
-          <Divider><Chip size="small" label={tx("General")} /></Divider>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-            <TextField fullWidth size="small" label={tx("Manufacturer")} value={f.maker} onChange={ch("maker")} />
-            <TextField fullWidth size="small" label={tx("Model")} value={f.model} onChange={ch("model")} />
-            <TextField fullWidth size="small" label={tx("Serial Number")} value={f.serial} onChange={ch("serial")} />
-          </Stack>
-          <Divider><Chip size="small" label={tx("Specification")} /></Divider>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-            <TextField fullWidth size="small" label={tx("Measurement Range")} value={f.range} onChange={ch("range")} />
-            <TextField fullWidth size="small" label={tx("Resolution")} value={f.resolution} onChange={ch("resolution")} />
-            <TextField fullWidth size="small" label={tx("Accuracy")} value={f.accuracy} onChange={ch("accuracy")} />
-            <TextField required fullWidth size="small" type="number" label={tx("Calibration Cycle (days)")} value={f.cycle} onChange={ch("cycle")} />
-          </Stack>
-          <TextField fullWidth multiline minRows={2} label={tx("Description")} value={f.note} onChange={ch("note")} />
-          <ImageUploadField value={f.image} category="measuring_equipment" label={tx("Image")} disabled={saving} onChange={(v) => setF((o) => ({ ...o, image: v || "" }))} />
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        <Button onClick={submit} disabled={saving || !f.code.trim() || !f.name.trim() || !f.type || !f.node || !f.cycle} sx={btn("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
-          {tx("Save")}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
-function CalibrationHistoryDialog({ equipment, actor, request, saving, onClose, onDone, notify }) {
-  const [records, setRecords] = useState(equipment.recent_calibrations || []);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), result: "PASS", by: "", cert: "", remark: "" });
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { setRecords(await request(`${API}/equipment/${equipment.id}/calibration-history`)); }
-    catch (e) { notify("error", e.message); }
-    finally { setLoading(false); }
-  }, [equipment.id, request, notify]);
-  useEffect(() => { load(); }, [load]);
-  const ch = (k) => (e) => setForm((o) => ({ ...o, [k]: e.target.value }));
-  const submit = async () => {
-    try {
-      await request(`${API}/equipment/${equipment.id}/calibration-history`, {
-        method: "POST",
-        body: JSON.stringify({
-          calibration_date: form.date, result: form.result, calibrated_by: form.by.trim() || null,
-          certificate_no: form.cert.trim() || null, remark: form.remark.trim() || null, created_by: actor,
-        }),
-      });
-      await load();
-      notify("success", tx("Calibration record saved."));
-      await onDone();
-    } catch (e) { notify("error", e.message); }
-  };
-  return (
-    <Dialog open fullWidth maxWidth="sm" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<HistoryOutlinedIcon />} title={`${tx("Calibration History")} · ${equipment.equipment_code}`} disabled={saving} onClose={onClose} />
-      <DialogContent>
-        <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField fullWidth size="small" type="date" label={tx("Calibration Date")} value={form.date} onChange={ch("date")} InputLabelProps={{ shrink: true }} />
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Result")}</InputLabel>
-              <Select label={tx("Result")} value={form.result} onChange={ch("result")}>
-                {CALIBRATION_RESULTS.map((x) => <MenuItem key={x} value={x}>{statusText(x)}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField fullWidth size="small" label={tx("Calibrated By")} value={form.by} onChange={ch("by")} />
-            <TextField fullWidth size="small" label={tx("Certificate No.")} value={form.cert} onChange={ch("cert")} />
-          </Stack>
-          <TextField fullWidth size="small" multiline minRows={2} label={tx("Remark")} value={form.remark} onChange={ch("remark")} />
-          <Button onClick={submit} startIcon={<AddIcon />} sx={btn("primary")}>{tx("Add Calibration Record")}</Button>
-          <Divider />
-          {loading ? <Stack alignItems="center" py={2}><CircularProgress size={22} /></Stack> : records.length ? (
-            <Stack divider={<Divider />} sx={{ maxHeight: 260, overflow: "auto" }}>
-              {records.map((r) => (
-                <Stack key={r.id} direction="row" justifyContent="space-between" alignItems="center" py={1}>
-                  <Box minWidth={0}>
-                    <Typography variant="caption" fontWeight={700} display="block">{formatDisplayDate(r.calibration_date)} → {formatDisplayDate(r.next_due_date)}</Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap display="block">{r.calibrated_by || EMPTY} {r.certificate_no ? `· ${r.certificate_no}` : ""}</Typography>
-                  </Box>
-                  <StatusChip value={r.result} />
-                </Stack>
-              ))}
+          <Box sx={{ minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+            <Stack spacing={2.25}>
+              <Stack spacing={0.5}>
+                <FieldLabel>{tx("Basic information")}</FieldLabel>
+                <Box sx={g("1fr 2fr")}>
+                  <TextField size="small" required disabled={Boolean(item)} label={tx("Equipment Code")} placeholder="VD: ME-001" value={form.equipment_code} onChange={(e) => set("equipment_code", e.target.value.toUpperCase())} />
+                  <TextField size="small" required label={tx("Equipment Name")} value={form.equipment_name} onChange={(e) => set("equipment_name", e.target.value)} />
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 1, px: 1.25, py: 0.9, borderRadius: 1.5, bgcolor: (th) => (th.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+                  <LocationOnOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
+                  <Typography variant="caption" color="text.secondary">{tx("Location")}:</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 0, overflowWrap: "anywhere", color: form.factory_node_id ? "text.primary" : "error.main" }}>
+                    {form.factory_node_id ? pathOf(nodes.find((n) => n.id === Number(form.factory_node_id)), nodes) : tx("Choose an area in the factory structure")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Stack spacing={0.5}>
+                <FieldLabel>{tx("Classification")}</FieldLabel>
+                <Box sx={g("2fr 1fr")}>
+                  <TextField select size="small" required label={tx("Equipment Type")} value={form.equipment_type_id} onChange={(e) => set("equipment_type_id", e.target.value)}>
+                    {CATEGORIES.flatMap((c) => {
+                      const list = types.filter((t) => t.category === c && (t.is_active || t.id === form.equipment_type_id));
+                      return list.length ? [<MenuItem key={`h-${c}`} disabled sx={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", opacity: "1 !important", color: "text.secondary" }}>{categoryText(c)}</MenuItem>,
+                        ...list.map((t) => <MenuItem key={t.id} value={t.id} sx={{ pl: 3 }}>{t.type_name}</MenuItem>)] : [];
+                    })}
+                  </TextField>
+                  {item ? (
+                    <TextField size="small" disabled label={tx("Status")} value={statusText(item.status === "INACTIVE" ? "INACTIVE" : "ACTIVE")} helperText={tx("Use the status button in the detail panel")} />
+                  ) : (
+                    <TextField select size="small" label={tx("Status")} value={form.active ? "1" : "0"} onChange={(e) => set("active", e.target.value === "1")}>
+                      <MenuItem value="1">{statusText("ACTIVE")}</MenuItem>
+                      <MenuItem value="0">{statusText("INACTIVE")}</MenuItem>
+                    </TextField>
+                  )}
+                </Box>
+              </Stack>
+              <Stack spacing={0.5}>
+                <FieldLabel>{tx("Manufacturer information")}</FieldLabel>
+                <Box sx={g("1fr 1fr 1fr")}>
+                  <TextField size="small" label={tx("Manufacturer")} value={form.manufacturer || ""} onChange={(e) => set("manufacturer", e.target.value)} />
+                  <TextField size="small" label={tx("Model")} value={form.model || ""} onChange={(e) => set("model", e.target.value)} />
+                  <TextField size="small" label={tx("Serial Number")} value={form.serial_number || ""} onChange={(e) => set("serial_number", e.target.value)} />
+                </Box>
+              </Stack>
+              <Stack spacing={0.5}>
+                <FieldLabel>{tx("Technical Specification")}</FieldLabel>
+                <Box sx={g("1fr 1fr 1fr 1fr")}>
+                  <TextField size="small" label={tx("Measurement Range")} placeholder="VD: 0–150 mm" value={form.measurement_range || ""} onChange={(e) => set("measurement_range", e.target.value)} />
+                  <TextField size="small" label={tx("Resolution")} placeholder="VD: 0,01 mm" value={form.resolution || ""} onChange={(e) => set("resolution", e.target.value)} />
+                  <TextField size="small" label={tx("Accuracy")} placeholder="VD: ±0,02 mm" value={form.accuracy || ""} onChange={(e) => set("accuracy", e.target.value)} />
+                  <TextField size="small" required type="number" label={tx("Calibration Cycle (days)")} value={form.calibration_cycle_days ?? ""} onChange={(e) => set("calibration_cycle_days", e.target.value)} />
+                </Box>
+              </Stack>
+              <ImageUploadField value={form.image_url || ""} category="measuring_equipment" label={tx("Image")} disabled={saving} onChange={(v) => set("image_url", v || "")} />
+              <TextField size="small" multiline minRows={2} label={tx("Description")} value={form.description || ""} onChange={(e) => set("description", e.target.value)} />
             </Stack>
-          ) : <Alert severity="info">{tx("No calibration records yet.")}</Alert>}
-        </Stack>
+          </Box>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
+        <Button disabled={saving || !valid} onClick={submit} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-function TypesManager({ rows, actor, canEdit, request, onClose, onRefresh, notify }) {
-  const [editing, setEditing] = useState(null);
+// Settings → equipment types: table on the left, details or the inline form on the right (Machine & Equipment layout).
+function TypesManager({ open, rows: rawRows, canEdit, request, actor, onClose, onReload, notify }) {
+  const rows = useMemo(() => [...rawRows].sort((a, b) => CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) || (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id), [rawRows]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [mode, setMode] = useState("view");
+  const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
-  const empty = { code: "", name: "", category: "DIMENSIONAL", active: true, sort: 0, description: "" };
-  const [form, setForm] = useState(empty);
-  const beginAdd = () => { setEditing({ isNew: true }); setForm(empty); };
-  const beginEdit = (item) => { setEditing(item); setForm({ code: item.type_code, name: item.type_name, category: item.category, active: Boolean(item.is_active), sort: item.sort_order || 0, description: item.description || "" }); };
-  const change = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }));
-  const save = async () => {
+  useEffect(() => { if (open) setMode("view"); }, [open]);
+  useEffect(() => { if (open && !rows.some((r) => r.id === selectedId)) setSelectedId(rows[0]?.id ?? null); }, [open, rows, selectedId]);
+  const selected = rows.find((r) => r.id === selectedId) || null;
+  const toForm = (it) => ({ code: it?.type_code || "", name: it?.type_name || "", category: it?.category || "DIMENSIONAL", sort: it?.sort_order ?? 0, active: it ? Boolean(it.is_active) : true, description: it?.description || "" });
+  const submit = async (f, isNew, it) => {
     setSaving(true);
     try {
-      const isNew = editing?.isNew;
-      const payload = { ...(isNew ? { type_code: form.code.trim().toUpperCase(), created_by: actor } : { updated_by: actor }),
-        type_name: form.name.trim(), category: form.category, description: form.description.trim() || null,
-        is_active: Boolean(form.active), sort_order: Number(form.sort) };
-      const result = await request(isNew ? `${API}/types` : `${API}/types/${editing.id}`, { method: isNew ? "POST" : "PUT", body: JSON.stringify(payload) });
-      await onRefresh(); setEditing(null); notify("success", result.message || "Saved.");
-    } catch (error) { notify("error", error.message); } finally { setSaving(false); }
+      const payload = { ...(isNew ? { type_code: f.code.trim().toUpperCase(), created_by: actor } : { updated_by: actor }), type_name: f.name.trim(), category: f.category,
+        description: f.description.trim() || null, is_active: Boolean(f.active), sort_order: Number(f.sort || 0) };
+      const result = await request(isNew ? `${API}/types` : `${API}/types/${it.id}`, { method: isNew ? "POST" : "PUT", body: JSON.stringify(payload) });
+      await onReload();
+      if (isNew && result?.id) setSelectedId(result.id);
+      setMode("view");
+      notify("success", tx("Data saved successfully."));
+    } catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
-  const remove = async (item) => {
-    if (!window.confirm(`${tx("Are you sure you want to delete this item?")} (${item.type_name})`)) return;
+  const remove = async (it) => {
+    if (!window.confirm(tx("Are you sure you want to delete this item?"))) return;
     setSaving(true);
-    try { const result = await request(`${API}/types/${item.id}`, { method: "DELETE" }); await onRefresh(); notify("success", result.message || "Deleted."); }
-    catch (error) { notify("error", error.message); } finally { setSaving(false); }
+    try { await request(`${API}/types/${it.id}`, { method: "DELETE" }); await onReload(); setSelectedId(null); notify("success", tx("Data deleted.")); }
+    catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
+  const change = (key) => (e) => setForm((old) => ({ ...old, [key]: e.target.value }));
   const cols = [
     { headerName: tx("Code"), field: "type_code", width: 130, pinned: "left" },
-    { headerName: tx("Name"), field: "type_name", minWidth: 170, flex: 1 },
-    { headerName: tx("Category"), field: "category", width: 160, valueFormatter: (p) => categoryText(p.value) },
-    { headerName: tx("Status"), width: 95, cellRenderer: (p) => <Box height="100%" display="flex" alignItems="center"><StatusChip value={p.data.is_active ? "AVAILABLE" : "INACTIVE"} /></Box> },
-    { headerName: tx("Actions"), width: 100, sortable: false, filter: false, cellRenderer: (p) => (
-      <Stack direction="row" alignItems="center" height="100%">
-        <IconButton size="small" disabled={!canEdit} onClick={() => beginEdit(p.data)}><EditOutlinedIcon fontSize="small" /></IconButton>
-        <IconButton size="small" color="error" disabled={!canEdit || saving} onClick={() => remove(p.data)}><DeleteOutlineIcon fontSize="small" /></IconButton>
-      </Stack>
-    ) },
+    { headerName: tx("Name"), field: "type_name", minWidth: 160, flex: 1.4 },
+    { headerName: tx("Category"), field: "category", minWidth: 150, flex: 1, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><CategoryPill value={p.value} /></Box> },
+    { headerName: tx("Devices"), field: "equipment_count", minWidth: 90, flex: 0.5, cellStyle: { justifyContent: "center" }, valueFormatter: (p) => p.value ?? 0 },
+    { headerName: tx("Status"), field: "is_active", minWidth: 110, flex: 0.6, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusPill active={Boolean(p.value)} /></Box> },
   ];
+  const editing = mode !== "view";
+  const isNew = mode === "new";
+  const valid = form && form.code.trim() && form.name.trim();
+  const inUse = Number(selected?.equipment_count || 0);
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<CategoryOutlinedIcon />} title={tx("Master Data Configuration")} subtitle={tx("Equipment Types")} disabled={saving} onClose={onClose} />
-      <DialogContent sx={{ p: 1.5 }}>
-        {editing ? (
-          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <TextField fullWidth required size="small" label={tx("Code")} disabled={!editing.isNew} value={form.code} onChange={change("code")} />
-              <TextField fullWidth required size="small" label={tx("Name")} value={form.name} onChange={change("name")} />
+    <Dialog open={open} fullWidth maxWidth="lg" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<CategoryOutlinedIcon />} title={tx("Equipment Types")} subtitle={tx("Types of measuring equipment grouped by category; each device belongs to one type.")} disabled={saving} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(0,1fr) 380px" }, gap: 2.5, mt: 1, height: { md: 500 } }}>
+          <Box sx={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <Box sx={{ flex: 1, minHeight: 300 }}>
+              <AgGridTable rowData={rows} columnDefs={cols} height="100%" getRowId={(p) => String(p.data.id)} onRowClicked={(e) => { if (!editing) setSelectedId(e.data.id); }} />
+            </Box>
+            <Stack direction="row" sx={{ minHeight: 66, boxSizing: "border-box", alignItems: "center", flexShrink: 0 }}>
+              <Button variant="contained" disabled={!canEdit || saving || editing} startIcon={<AddIcon />} onClick={() => { setForm(toForm(null)); setMode("new"); }} sx={buttonSx("primary")}>{tx("Add Equipment Type")}</Button>
+              <Box sx={{ flex: 1 }} />
+              <Typography variant="caption" color="text.secondary">{rows.length} {tx("rows")}</Typography>
             </Stack>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Category")}</InputLabel>
-              <Select label={tx("Category")} value={form.category} onChange={change("category")}>
-                {CATEGORIES.map((value) => <MenuItem key={value} value={value}>{categoryText(value)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <Stack direction="row" spacing={1.5}>
-              <TextField fullWidth size="small" type="number" label={tx("Sort Order")} value={form.sort} onChange={change("sort")} />
-              <FormControl fullWidth size="small">
-                <InputLabel>{tx("Status")}</InputLabel>
-                <Select label={tx("Status")} value={form.active} onChange={change("active")}>
-                  <MenuItem value={true}>{statusText("AVAILABLE")}</MenuItem>
-                  <MenuItem value={false}>{statusText("INACTIVE")}</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
-            <TextField fullWidth multiline minRows={2} label={tx("Description")} value={form.description} onChange={change("description")} />
-          </Stack>
-        ) : (
-          <Box sx={{ height: 430 }}>
-            <AgGridTable rowData={rows} columnDefs={cols} height="100%" pagination paginationPageSize={20} getRowId={(p) => String(p.data.id)} />
           </Box>
-        )}
+          <Box sx={{ minHeight: 0, display: "flex", flexDirection: "column", border: 1, borderColor: editing ? "primary.main" : "divider", borderRadius: 1.5, overflow: "hidden" }}>
+            {editing && form ? (
+              <>
+                <Box sx={{ px: 1.5, py: 1.25, flexShrink: 0, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", gap: 1 }}>
+                  {isNew ? <AddIcon color="primary" fontSize="small" /> : <EditOutlinedIcon color="primary" fontSize="small" />}
+                  <Typography noWrap sx={{ fontSize: 12, fontWeight: 800 }}>{isNew ? tx("Add Equipment Type") : `${tx("Edit")} · ${selected?.type_name || ""}`}</Typography>
+                </Box>
+                <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                  <Stack spacing={2}>
+                    <Stack spacing={1.25}>
+                      <FieldLabel>{tx("Basic information")}</FieldLabel>
+                      <TextField fullWidth required size="small" label={tx("Code")} disabled={!isNew} value={form.code} onChange={(e) => setForm((o) => ({ ...o, code: e.target.value.toUpperCase() }))} />
+                      <TextField fullWidth required size="small" label={tx("Name")} value={form.name} onChange={change("name")} />
+                    </Stack>
+                    <Stack spacing={1.25}>
+                      <FieldLabel>{tx("Classification")}</FieldLabel>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>{tx("Category")}</InputLabel>
+                        <Select label={tx("Category")} value={form.category} onChange={change("category")}>
+                          {CATEGORIES.map((c) => <MenuItem key={c} value={c}>{categoryText(c)}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.25 }}>
+                        <TextField fullWidth size="small" type="number" label={tx("Sort Order")} value={form.sort} onChange={change("sort")} />
+                        <FormControl fullWidth size="small">
+                          <InputLabel>{tx("Status")}</InputLabel>
+                          <Select label={tx("Status")} value={form.active} onChange={change("active")}>
+                            <MenuItem value={true}>{statusText("ACTIVE")}</MenuItem><MenuItem value={false}>{statusText("INACTIVE")}</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Stack>
+                    <TextField fullWidth multiline minRows={3} label={tx("Description")} value={form.description} onChange={change("description")} />
+                  </Stack>
+                </Box>
+                <Divider />
+                <Stack direction="row" sx={{ p: 1.5, minHeight: 64, boxSizing: "border-box", justifyContent: "flex-end", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                  <Button disabled={saving} onClick={() => setMode("view")} sx={buttonSx("cancel")}>{tx("Discard")}</Button>
+                  <Button disabled={saving || !valid} onClick={() => submit(form, isNew, selected)} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{tx("Save")}</Button>
+                </Stack>
+              </>
+            ) : selected ? (
+              <>
+                <Box sx={{ p: 1.5, flexShrink: 0, display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: CATEGORY_COLORS[selected.category] || "#005BAB" }}><CategoryOutlinedIcon sx={{ fontSize: 18 }} /></Box>
+                  <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 0.25 }}>
+                    <Typography noWrap sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{selected.type_name}</Typography>
+                    <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selected.type_code}</Typography>
+                  </Box>
+                  <StatusPill active={Boolean(selected.is_active)} />
+                </Box>
+                <Box sx={{ px: 1.5, pb: 1.5, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                  <DetailSection title={tx("General")}>
+                    <DetailRow label={tx("Category")}><CategoryPill value={selected.category} /></DetailRow>
+                    <DetailRow label={tx("Devices")}>{selected.equipment_count ?? 0}</DetailRow>
+                    <DetailRow label={tx("Sort Order")}>{selected.sort_order ?? 0}</DetailRow>
+                    <DetailRow label={tx("Description")} last>{selected.description || EMPTY}</DetailRow>
+                  </DetailSection>
+                </Box>
+                <Divider />
+                <Stack direction="row" sx={{ p: 1.5, minHeight: 64, boxSizing: "border-box", justifyContent: "center", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
+                  <ActionIcon title={tx("Edit")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit || saving} onClick={() => { setForm(toForm(selected)); setMode("edit"); }} />
+                  <ActionIcon title={selected.is_active ? tx("Deactivate") : tx("Activate")} color={selected.is_active ? "warning" : "success"}
+                    icon={selected.is_active ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                    disabled={!canEdit || saving} onClick={() => submit({ ...toForm(selected), active: !selected.is_active }, false, selected)} />
+                  <ActionIcon title={inUse ? tx("Type is in use, deactivate it instead") : tx("Delete")} icon={<DeleteOutlineIcon fontSize="small" />} color="error"
+                    disabled={!canEdit || saving || Boolean(inUse)} onClick={() => remove(selected)} />
+                </Stack>
+              </>
+            ) : (
+              <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}><Typography variant="body2" color="text.secondary">{tx("Select a row to view details.")}</Typography></Box>
+            )}
+          </Box>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 2, pb: 2 }}>
-        <Button disabled={saving} onClick={editing ? () => setEditing(null) : onClose} sx={btn("cancel")}>{tx(editing ? "Back" : "Close")}</Button>
-        {editing
-          ? <Button disabled={saving || !form.code.trim() || !form.name.trim()} onClick={save} sx={btn("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{tx("Save")}</Button>
-          : <Button disabled={!canEdit} onClick={beginAdd} startIcon={<AddIcon />} sx={btn("primary")}>{tx("Add New")}</Button>}
-      </DialogActions>
     </Dialog>
   );
 }
@@ -414,272 +527,263 @@ export default function MeasuringEquipmentMaster() {
   const language = i18n.resolvedLanguage || i18n.language || "en";
   setActiveLanguage(language);
   const { theme } = useAppTheme();
-  const muiTheme = useMemo(() => pageTheme(theme), [theme]);
+  const dark = theme === "dark";
+  const muiTheme = useMemo(() => createMaterialTheme(dark ? "dark" : "light"), [dark]);
   const { canEdit } = usePagePermission();
   const actor = getCurrentUser()?.employee_code || "SYSTEM";
 
   const [rows, setRows] = useState([]);
   const [types, setTypes] = useState([]);
   const [nodes, setNodes] = useState([]);
-  const [stats, setStats] = useState({ total: 0, in_use: 0, available: 0, calibration_due_soon: 0, calibration_overdue: 0, out_of_use: 0 });
   const [selectedId, setSelectedId] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [typeFilterTree, setTypeFilterTree] = useState(null);
-  const [keyword, setKeyword] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [nodeFilter, setNodeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [calFilter, setCalFilter] = useState("all");
-  const [manufacturerFilter, setManufacturerFilter] = useState("all");
-  const [tab, setTab] = useState(0);
-  const [dialog, setDialog] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [detailVersion, setDetailVersion] = useState(0); // bumped after a save so the open detail reloads
+  const [treeKey, setTreeKey] = useState(null); // null | "c:<category>" | "t:<type id>"
+  const [detailTab, setDetailTab] = useState(0);
+  const [filters, setFilters] = useState({ keyword: "", category: "", status: "", manufacturer: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState({ open: false, type: "success", text: "" });
+  const [dialog, setDialog] = useState(null); // null | {} | item
+  const [typesOpen, setTypesOpen] = useState(false);
+  const [message, setMessage] = useState(null);
+  const notify = useCallback((severity, text) => setMessage({ severity, text }), []);
+  const [panelsRef, panelHeight] = useFillHeight();
 
-  const notify = useCallback((type, text) => setMsg({ open: true, type, text }), []);
   const request = useCallback(async (url, options = {}) => {
-    const token = getAccessToken();
+    const token = getAccessToken?.();
     const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
-      const error = new Error(response.status === 409 ? (data?.detail || tx("This record was changed by someone else. Please reload and try again.")) : data?.detail || data?.message || `HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
+      const detail = Array.isArray(data?.detail) ? data.detail.map((d) => d.msg).join("; ") : data?.detail;
+      throw new Error(detail || data?.message || `HTTP ${response.status}`);
     }
     return data;
   }, []);
-
-  const load = useCallback(async () => {
+  const loadTypes = useCallback(async () => setTypes((await request(`${API}/types`)) || []), [request]);
+  const loadRows = useCallback(async () => {
+    const data = await request(`${API}/equipment?limit=2000`);
+    const list = data?.items || [];
+    setRows(list);
+    setSelectedId((old) => (list.some((x) => x.id === old) ? old : list[0]?.id ?? null));
+  }, [request]);
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [statData, equipData, typeData, nodeData] = await Promise.all([
-        request(`${API}/statistics`), request(`${API}/equipment?limit=2000`), request(`${API}/types`), request(`${FACTORY_API}/nodes`),
-      ]);
-      const list = equipData?.items || [];
-      const nodeList = (Array.isArray(nodeData) ? nodeData : nodeData?.items || []).map(normalNode);
-      setStats(statData); setRows(list); setTypes(typeData || []); setNodes(nodeList);
-      setSelectedId((old) => (list.some((x) => x.id === old) ? old : list[0]?.id ?? null));
+      const [, , nodeData] = await Promise.all([loadTypes(), loadRows(), request(`${FACTORY_API}/nodes`)]);
+      setNodes((Array.isArray(nodeData) ? nodeData : nodeData?.items || []).map((n) => ({ ...n, id: Number(n.id), parent_id: n.parent_id == null ? null : Number(n.parent_id) })));
     } catch (e) { notify("error", e.message); } finally { setLoading(false); }
-  }, [notify, request]);
-  useEffect(() => { load(); }, [load]);
+  }, [loadTypes, loadRows, request, notify]);
+  useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => {
-    if (!selectedId) { setDetail(null); return; }
-    request(`${API}/equipment/${selectedId}`).then(setDetail).catch((e) => notify("error", e.message));
-  }, [selectedId, request, notify]);
+    if (!selectedId) { setSelected(null); return; }
+    request(`${API}/equipment/${selectedId}`).then(setSelected).catch((e) => notify("error", e.message));
+  }, [selectedId, request, notify, detailVersion]);
 
-  const selected = detail || rows.find((x) => x.id === selectedId);
+  const isActive = (x) => x.status !== "INACTIVE";
   const manufacturers = useMemo(() => [...new Set(rows.map((x) => x.manufacturer).filter(Boolean))].sort(), [rows]);
-
   const filtered = useMemo(() => {
-    const q = keyword.toLowerCase().trim();
-    return rows.filter((x) => {
-      if (q && !`${x.equipment_code} ${x.equipment_name} ${x.model || ""}`.toLowerCase().includes(q)) return false;
-      if (typeFilter !== "all" && Number(x.equipment_type_id) !== Number(typeFilter)) return false;
-      if (typeFilterTree != null && Number(x.equipment_type_id) !== Number(typeFilterTree)) return false;
-      if (nodeFilter !== "all" && Number(x.factory_node_id) !== Number(nodeFilter)) return false;
-      if (statusFilter !== "all" && x.status !== statusFilter) return false;
-      if (manufacturerFilter !== "all" && x.manufacturer !== manufacturerFilter) return false;
-      if (calFilter !== "all" && calibrationStatusOf(x.next_calibration_date) !== calFilter) return false;
-      return true;
-    });
-  }, [rows, keyword, typeFilter, typeFilterTree, nodeFilter, statusFilter, manufacturerFilter, calFilter]);
+    const q = filters.keyword.trim().toLowerCase();
+    return rows.filter((x) => (!q || `${x.equipment_code} ${x.equipment_name} ${x.model || ""} ${x.serial_number || ""}`.toLowerCase().includes(q))
+      && (!filters.category || x.category === filters.category)
+      && (!filters.status || (filters.status === "ACTIVE" ? isActive(x) : !isActive(x)))
+      && (!filters.manufacturer || x.manufacturer === filters.manufacturer)
+      && (!treeKey || (treeKey.startsWith("c:") ? x.category === treeKey.slice(2) : Number(x.equipment_type_id) === Number(treeKey.slice(2)))));
+  }, [rows, filters, treeKey]);
+  const nodePath = (id) => pathOf(nodes.find((n) => n.id === Number(id)), nodes) || EMPTY;
 
-  const percent = (n) => (stats.total ? `${((n / stats.total) * 100).toFixed(1)}% ${tx("of total")}` : `0% ${tx("of total")}`);
+  const columns = useMemo(() => [
+    { headerName: tx("Equipment Code"), field: "equipment_code", width: 130, pinned: "left" },
+    { headerName: tx("Equipment Name"), field: "equipment_name", minWidth: 180, flex: 1.5 },
+    { headerName: tx("Equipment Type"), field: "type_name", minWidth: 130, flex: 1 },
+    { headerName: tx("Location"), field: "factory_node_name", minWidth: 130, flex: 1, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Manufacturer"), field: "manufacturer", minWidth: 120, flex: 0.9, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Calibration Cycle (days)"), field: "calibration_cycle_days", minWidth: 165, flex: 0.8, cellStyle: { justifyContent: "center" }, valueFormatter: (p) => p.value ?? EMPTY },
+    { headerName: tx("Status"), field: "status", minWidth: 115, flex: 0.7, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusPill active={p.value !== "INACTIVE"} /></Box> },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [language]);
 
-  const openEdit = async (id) => { try { setDialog({ type: "equipment", item: await request(`${API}/equipment/${id}`) }); } catch (e) { notify("error", e.message); } };
   const saveEquipment = async (payload) => {
     setSaving(true);
     try {
-      const item = dialog.item;
-      const result = await request(item ? `${API}/equipment/${item.id}` : `${API}/equipment`, { method: item ? "PUT" : "POST", body: JSON.stringify(payload) });
-      setDialog(null); await load(); if (result.id) setSelectedId(result.id); setDetail(null);
-      notify("success", result.message || tx("Equipment saved."));
+      const item = dialog?.id ? dialog : null;
+      const result = await request(item ? `${API}/equipment/${item.id}` : `${API}/equipment`, {
+        method: item ? "PUT" : "POST",
+        body: JSON.stringify({ ...payload, ...(item ? { version: item.version, updated_by: actor } : { created_by: actor }) }),
+      });
+      setDialog(null);
+      await Promise.all([loadTypes(), loadRows()]);
+      if (!item && result?.id) setSelectedId(result.id);
+      setDetailVersion((v) => v + 1);
+      notify("success", tx("Data saved successfully."));
     } catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
   const toggleStatus = async () => {
     if (!selected) return;
     setSaving(true);
     try {
-      const next = selected.status === "IN_USE" ? "AVAILABLE" : "IN_USE";
-      await request(`${API}/equipment/${selected.id}/status`, { method: "PATCH", body: JSON.stringify({ status: next, version: selected.version, updated_by: actor }) });
-      await load(); setDetail(null); notify("success", tx("Status updated."));
+      await request(`${API}/equipment/${selected.id}/status`, { method: "PATCH", body: JSON.stringify({ status: isActive(selected) ? "INACTIVE" : "AVAILABLE", version: selected.version, updated_by: actor }) });
+      await loadRows(); setDetailVersion((v) => v + 1);
+      notify("success", tx("Status updated."));
     } catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
+  const deleteEquipment = async () => {
+    if (!selected || !window.confirm(tx("Are you sure you want to delete this item?"))) return;
+    setSaving(true);
+    try { await request(`${API}/equipment/${selected.id}`, { method: "DELETE" }); await Promise.all([loadTypes(), loadRows()]); notify("success", tx("Data deleted.")); }
+    catch (e) { notify("error", e.message); } finally { setSaving(false); }
+  };
 
-  const cols = useMemo(() => [
-    { headerName: tx("Equipment Code"), field: "equipment_code", width: 130, pinned: "left" },
-    { headerName: tx("Equipment Name"), field: "equipment_name", minWidth: 170, flex: 1.2 },
-    { headerName: tx("Equipment Type"), field: "type_name", minWidth: 150 },
-    { headerName: tx("Manufacturer"), field: "manufacturer", minWidth: 130, valueFormatter: (p) => p.value || EMPTY },
-    { headerName: tx("Location"), minWidth: 160, valueGetter: (p) => pathOf(p.data.factory_node_id, nodes) },
-    { headerName: tx("Status"), field: "status", width: 120, cellRenderer: (p) => <Box height="100%" display="flex" alignItems="center"><StatusChip value={p.value} /></Box> },
-    { headerName: tx("Next Calibration Date"), field: "next_calibration_date", width: 150, cellRenderer: (p) => <Box height="100%" display="flex" alignItems="center" gap={0.5}><Typography variant="caption">{formatDisplayDate(p.value)}</Typography><CalibrationChip nextDate={p.value} /></Box> },
-    { headerName: tx("Actions"), width: 110, sortable: false, filter: false, cellRenderer: (p) => (
-      <Stack direction="row" alignItems="center" height="100%">
-        <IconButton size="small" onClick={() => setSelectedId(p.data.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton>
-        <IconButton size="small" disabled={!canEdit} onClick={() => openEdit(p.data.id)}><EditOutlinedIcon fontSize="small" /></IconButton>
-      </Stack>
-    ) },
-  ], [nodes, canEdit, language]);
-
-  const general = selected ? [
-    [tx("Equipment Code"), selected.equipment_code], [tx("Equipment Name"), selected.equipment_name],
-    [tx("Equipment Type"), selected.type_name], [tx("Category"), categoryText(selected.category)],
-    [tx("Location"), pathOf(selected.factory_node_id, nodes)], [tx("Manufacturer"), selected.manufacturer],
-    [tx("Model"), selected.model], [tx("Serial Number"), selected.serial_number], [tx("Description"), selected.description],
-  ] : [];
-  const spec = selected ? [
-    [tx("Measurement Range"), selected.measurement_range], [tx("Resolution"), selected.resolution],
-    [tx("Accuracy"), selected.accuracy], [tx("Calibration Cycle (days)"), selected.calibration_cycle_days],
-    [tx("Last Calibration Date"), formatDisplayDate(selected.last_calibration_date)],
-    [tx("Next Calibration Date"), formatDisplayDate(selected.next_calibration_date)],
-  ] : [];
-
+  const byCategory = (c) => rows.filter((x) => x.category === c).length;
+  const percent = (n) => (rows.length ? `${((n / rows.length) * 100).toFixed(1)}% ${tx("of total")}` : `0% ${tx("of total")}`);
   const kpis = [
-    { label: tx("Total Equipment"), value: stats.total, note: tx("All equipment"), icon: StraightenOutlinedIcon, tone: "primary" },
-    { label: tx("In Use"), value: stats.in_use, note: percent(stats.in_use), icon: PlayCircleOutlineIcon, tone: "success" },
-    { label: tx("Available"), value: stats.available, note: percent(stats.available), icon: FactCheckOutlinedIcon, tone: "info" },
-    { label: tx("Calibration Due Soon"), value: stats.calibration_due_soon, note: percent(stats.calibration_due_soon), icon: EventAvailableOutlinedIcon, tone: "warning" },
-    { label: tx("Calibration Overdue"), value: stats.calibration_overdue, note: percent(stats.calibration_overdue), icon: WarningAmberOutlinedIcon, tone: "danger" },
-    { label: tx("Out of Use"), value: stats.out_of_use, note: percent(stats.out_of_use), icon: PauseCircleOutlineIcon, tone: "accent" },
+    { label: tx("Total Equipment"), value: rows.length, note: `${types.filter((t) => t.is_active).length} ${tx("active types")}`, icon: StraightenOutlinedIcon, tone: "primary" },
+    { label: categoryText("DIMENSIONAL"), value: byCategory("DIMENSIONAL"), note: percent(byCategory("DIMENSIONAL")), icon: StraightenOutlinedIcon, tone: "accent" },
+    { label: categoryText("ELECTRICAL"), value: byCategory("ELECTRICAL"), note: percent(byCategory("ELECTRICAL")), icon: BoltOutlinedIcon, tone: "warning" },
+    { label: categoryText("PHYSICAL_TEST"), value: byCategory("PHYSICAL_TEST"), note: percent(byCategory("PHYSICAL_TEST")), icon: ScienceOutlinedIcon, tone: "success" },
+    { label: tx("Vision / Others"), value: byCategory("VISION_OPTICAL") + byCategory("OTHER"), note: tx("Optical, vision and other equipment"), icon: CameraAltOutlinedIcon, tone: "info" },
+    { label: tx("Inactive Equipment"), value: rows.filter((x) => !isActive(x)).length, note: tx("Not used for new data"), icon: BlockOutlinedIcon, tone: "danger" },
   ];
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      <Box sx={dark ? { "& .vcc-ag-grid": { "--ag-background-color": "#111827", "--ag-header-background-color": "#182235", "--ag-foreground-color": "#D0D5DD", "--ag-border-color": "#344054" } } : {}}>
         <PageMeta title={`${tx("Measuring Equipment Master")} | VCC Plastics`} description={tx("Manage all measuring and inspection equipment in the system")} />
         <PageBreadcrumb pageTitle={tx("Measuring Equipment Master")} />
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr auto" }, gap: 1.5, alignItems: "center", mb: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={800}>{tx("Measuring Equipment Master")}</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>{tx("Measuring Equipment Master")}</Typography>
             <Typography variant="body2" color="text.secondary">{tx("Manage all measuring and inspection equipment in the system")}</Typography>
           </Box>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}>
-            <Button disabled={!canEdit} startIcon={<AddIcon />} onClick={() => setDialog({ type: "equipment", item: null })} sx={btn("primary")}>{tx("Add New Equipment")}</Button>
-            <Button startIcon={<SettingsOutlinedIcon />} onClick={() => setDialog({ type: "types" })} sx={btn("edit")}>{tx("Settings")}</Button>
+            <SettingsMenu items={[{ key: "types", label: tx("Equipment Types"), onClick: () => setTypesOpen(true) }]} />
+            <Button variant="contained" startIcon={<AddIcon />} disabled={!canEdit} onClick={() => setDialog({})} sx={buttonSx("primary")}>{tx("Add New Equipment")}</Button>
           </Stack>
         </Box>
 
         <KpiCardGroup>
-          {kpis.map((k) => { const Icon = k.icon; return <KpiCard key={k.label} label={k.label} value={k.value} note={k.note} icon={<Icon />} tone={k.tone} />; })}
+          {kpis.map((item) => { const Icon = item.icon; return <KpiCard key={item.label} label={item.label} value={item.value} note={item.note} icon={<Icon />} tone={item.tone} />; })}
         </KpiCardGroup>
 
-        <Paper elevation={0} sx={{ ...cardSx, my: 1.5, p: 1 }}>
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={1} flexWrap="wrap">
-            <TextField size="small" placeholder={tx("Search by equipment code or name...")} value={keyword} onChange={(e) => setKeyword(e.target.value)} sx={{ minWidth: 230 }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} />
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Equipment Type")}</InputLabel>
-              <Select label={tx("Equipment Type")} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Types")}</MenuItem>
-                {types.map((x) => <MenuItem key={x.id} value={x.id}>{x.type_name}</MenuItem>)}
+        <Paper variant="outlined" sx={{ my: 1.5, p: 1.5, borderRadius: 2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,1.6fr) repeat(3,minmax(145px,1fr)) auto" }, gap: 1 }}>
+            <TextField size="small" placeholder={tx("Search by code, name, model or serial...")} value={filters.keyword} onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+            <FormControl size="small">
+              <InputLabel shrink>{tx("Category")}</InputLabel>
+              <Select displayEmpty notched label={tx("Category")} value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}>
+                <MenuItem value="">{tx("All categories")}</MenuItem>
+                {CATEGORIES.map((x) => <MenuItem key={x} value={x}>{categoryText(x)}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Location")}</InputLabel>
-              <Select label={tx("Location")} value={nodeFilter} onChange={(e) => setNodeFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All locations")}</MenuItem>
-                {nodes.map((x) => <MenuItem key={x.id} value={x.id}>{pathOf(x.id, nodes)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Status")}</InputLabel>
-              <Select label={tx("Status")} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Status")}</MenuItem>
-                {STATUSES.map((x) => <MenuItem key={x} value={x}>{statusText(x)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 170 }}>
-              <InputLabel>{tx("All Calibration Status")}</InputLabel>
-              <Select label={tx("All Calibration Status")} value={calFilter} onChange={(e) => setCalFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Calibration Status")}</MenuItem>
-                <MenuItem value="VALID">{statusText("VALID")}</MenuItem>
-                <MenuItem value="DUE_SOON">{statusText("DUE_SOON")}</MenuItem>
-                <MenuItem value="OVERDUE">{statusText("OVERDUE")}</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>{tx("Manufacturer")}</InputLabel>
-              <Select label={tx("Manufacturer")} value={manufacturerFilter} onChange={(e) => setManufacturerFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Manufacturers")}</MenuItem>
+            <FormControl size="small">
+              <InputLabel shrink>{tx("Manufacturer")}</InputLabel>
+              <Select displayEmpty notched label={tx("Manufacturer")} value={filters.manufacturer} onChange={(e) => setFilters({ ...filters, manufacturer: e.target.value })}>
+                <MenuItem value="">{tx("All Manufacturers")}</MenuItem>
                 {manufacturers.map((x) => <MenuItem key={x} value={x}>{x}</MenuItem>)}
               </Select>
             </FormControl>
-            <Button onClick={() => { setKeyword(""); setTypeFilter("all"); setNodeFilter("all"); setStatusFilter("all"); setCalFilter("all"); setManufacturerFilter("all"); setTypeFilterTree(null); }} sx={btn("cancel")}>{tx("Clear")}</Button>
-          </Stack>
+            <FormControl size="small">
+              <InputLabel shrink>{tx("Status")}</InputLabel>
+              <Select displayEmpty notched label={tx("Status")} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+                <MenuItem value="">{tx("All Status")}</MenuItem>
+                <MenuItem value="ACTIVE">{statusText("ACTIVE")}</MenuItem>
+                <MenuItem value="INACTIVE">{statusText("INACTIVE")}</MenuItem>
+              </Select>
+            </FormControl>
+            <Button startIcon={<FilterListIcon />} onClick={() => { setFilters({ keyword: "", category: "", status: "", manufacturer: "" }); setTreeKey(null); }}
+              sx={buttonSx("cancel", { minHeight: 29, whiteSpace: "nowrap" })}>{tx("Clear")}</Button>
+          </Box>
         </Paper>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "230px minmax(0,1fr) 330px" }, gap: 1.5 }}>
-          <Paper elevation={0} sx={{ ...cardSx, height: 555, display: "flex", flexDirection: "column" }}>
-            <Head icon={<AccountTreeOutlinedIcon color="primary" fontSize="small" />} title={tx("Equipment Hierarchy")} />
-            <CategoryTree types={types} rows={rows} selectedTypeId={typeFilterTree} onSelect={setTypeFilterTree} />
+        <Box ref={panelsRef} sx={masterGridSx}>
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
+            <PanelHeader title={tx("Equipment Hierarchy")} icon={<AccountTreeOutlinedIcon color="primary" fontSize="small" />} />
+            <TypeTree types={types} rows={rows} selected={treeKey} onSelect={setTreeKey} />
           </Paper>
-          <Paper elevation={0} sx={{ ...cardSx, height: 555, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <Head icon={<StraightenOutlinedIcon color="primary" fontSize="small" />} title={`${tx("Equipment List")} (${filtered.length})`} />
+
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <PanelHeader title={`${tx("Equipment List")} (${filtered.length})`} icon={<StraightenOutlinedIcon color="primary" fontSize="small" />} />
             <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
-              <AgGridTable rowData={filtered} columnDefs={cols} loading={loading} pagination paginationPageSize={20} onRowClicked={(e) => setSelectedId(e.data.id)} getRowId={(p) => String(p.data.id)} height="100%" />
+              <AgGridTable rowData={filtered} columnDefs={columns} loading={loading} height="100%" rowSelection="single"
+                getRowId={(p) => String(p.data.id)} onRowClicked={(event) => setSelectedId(event.data.id)} />
             </Box>
           </Paper>
-          <Paper elevation={0} sx={{ ...cardSx, height: 555, display: "flex", flexDirection: "column" }}>
-            <Head icon={<VisibilityOutlinedIcon color="primary" fontSize="small" />} title={tx("Equipment Detail")} />
+
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
+            <PanelHeader title={tx("Equipment Detail")} icon={<VisibilityOutlinedIcon color="primary" fontSize="small" />} />
             {selected ? (
               <>
-                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-                  {selected.image_url ? <Box component="img" src={resolveImageUrl(selected.image_url)} alt="" sx={{ width: "100%", height: 110, objectFit: "contain", bgcolor: "action.hover", borderRadius: 1.5, mb: 1 }} /> : null}
-                  <Stack direction="row" spacing={0.7} alignItems="center">
-                    <Typography fontWeight={800}>{selected.equipment_code}</Typography>
-                    <StatusChip value={selected.status} />
-                    <CalibrationChip nextDate={selected.next_calibration_date} />
-                  </Stack>
-                  <Typography noWrap variant="body2" color="text.secondary">{selected.equipment_name}</Typography>
+                <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: CATEGORY_COLORS[selected.category] || "#005BAB" }}><StraightenOutlinedIcon sx={{ fontSize: 18 }} /></Box>
+                    <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 0.25 }}>
+                      <Typography noWrap title={selected.equipment_name} sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{selected.equipment_name}</Typography>
+                      <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selected.equipment_code}</Typography>
+                    </Box>
+                    <StatusPill active={isActive(selected)} />
+                  </Box>
                 </Box>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ minHeight: 36, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 36, p: 0, fontSize: 10.5, fontWeight: 700 } }}>
-                  <Tab label={tx("General")} /><Tab label={tx("Specification")} />
+                <Tabs value={detailTab} onChange={(_, v) => setDetailTab(v)} variant="fullWidth"
+                  sx={{ minHeight: 27, borderTop: 1, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 27, py: 0, px: 0.5, fontSize: 11, fontWeight: 700, textTransform: "none" } }}>
+                  <Tab label={tx("Information")} />
+                  <Tab label={tx("Specification")} />
                 </Tabs>
-                <Box sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
-                  <Stack spacing={0.85}>
-                    {(tab === 0 ? general : spec).map(([label, value]) => (
-                      <Box key={label} sx={{ display: "grid", gridTemplateColumns: "45% 55%", gap: 1 }}>
-                        <Typography variant="caption" color="text.secondary">{label}</Typography>
-                        <Typography variant="caption" fontWeight={700}>{value || EMPTY}</Typography>
-                      </Box>
-                    ))}
-                  </Stack>
+                <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: "auto" }}>
+                  {detailTab === 0 && (
+                    <Stack spacing={1.5}>
+                      {selected.image_url ? (
+                        <Box component="a" href={resolveImageUrl(selected.image_url)} target="_blank" rel="noreferrer" title={tx("Open full image")}
+                          sx={{ display: "block", borderRadius: 1.5, overflow: "hidden", border: 1, borderColor: "divider", bgcolor: "action.hover", cursor: "zoom-in" }}>
+                          <Box component="img" src={resolveImageUrl(selected.image_url)} alt={selected.equipment_name} sx={{ display: "block", width: "100%", height: 170, objectFit: "contain" }} />
+                        </Box>
+                      ) : null}
+                      <DetailSection title={tx("General")}>
+                        <DetailRow label={tx("Equipment Type")}>{selected.type_name || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Category")}><CategoryPill value={selected.category} /></DetailRow>
+                        <DetailRow label={tx("Location")}>{nodePath(selected.factory_node_id)}</DetailRow>
+                        <DetailRow label={tx("Manufacturer")}>{selected.manufacturer || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Model")}>{selected.model || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Serial Number")}>{selected.serial_number || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Description")} last>{selected.description || EMPTY}</DetailRow>
+                      </DetailSection>
+                      <DetailSection title={tx("Record")}>
+                        <DetailRow label={tx("Created By")}>{person(selected.created_by_name, selected.created_by_code || selected.created_by)}</DetailRow>
+                        <DetailRow label={tx("Created Date")}>{dateText(selected.created_at)}</DetailRow>
+                        <DetailRow label={tx("Updated By")}>{selected.updated_by ? person(selected.updated_by_name, selected.updated_by_code || selected.updated_by) : EMPTY}</DetailRow>
+                        <DetailRow label={tx("Last Modified")} last>{dateText(selected.updated_at)}</DetailRow>
+                      </DetailSection>
+                    </Stack>
+                  )}
+                  {detailTab === 1 && (
+                    <DetailSection title={tx("Technical Specification")}>
+                      <DetailRow label={tx("Measurement Range")}>{selected.measurement_range || EMPTY}</DetailRow>
+                      <DetailRow label={tx("Resolution")}>{selected.resolution || EMPTY}</DetailRow>
+                      <DetailRow label={tx("Accuracy")}>{selected.accuracy || EMPTY}</DetailRow>
+                      <DetailRow label={tx("Calibration Cycle (days)")} last>{selected.calibration_cycle_days ?? EMPTY}</DetailRow>
+                    </DetailSection>
+                  )}
                 </Box>
                 <Divider />
-                <Stack direction="row" sx={{ justifyContent: "center", gap: 2.5, p: 1.5 }}>
-                  <Tooltip title={tx("Edit equipment")}>
-                    <span><IconButton disabled={!canEdit} color="primary" onClick={() => openEdit(selected.id)} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><EditOutlinedIcon /></IconButton></span>
-                  </Tooltip>
-                  <Tooltip title={tx("View calibration history")}>
-                    <span><IconButton color="secondary" onClick={() => setDialog({ type: "calibration", item: selected })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><HistoryOutlinedIcon /></IconButton></span>
-                  </Tooltip>
-                  <Tooltip title={tx("Toggle Available / In Use")}>
-                    <span><IconButton disabled={!canEdit || saving} color={selected.status === "IN_USE" ? "warning" : "success"} onClick={toggleStatus} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>
-                      {selected.status === "IN_USE" ? <PauseCircleOutlineIcon /> : <PlayCircleOutlineIcon />}
-                    </IconButton></span>
-                  </Tooltip>
+                <Stack direction="row" sx={{ p: 1.5, justifyContent: "center", gap: 1.5, flexShrink: 0 }}>
+                  <ActionIcon title={tx("Edit equipment")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit || saving} onClick={() => setDialog(selected)} />
+                  <ActionIcon title={isActive(selected) ? tx("Deactivate equipment") : tx("Activate equipment")}
+                    icon={isActive(selected) ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                    color={isActive(selected) ? "warning" : "success"} disabled={!canEdit || saving} onClick={toggleStatus} />
+                  <ActionIcon title={tx("Delete equipment")} icon={<DeleteOutlineIcon fontSize="small" />} color="error" disabled={!canEdit || saving} onClick={deleteEquipment} />
                 </Stack>
               </>
             ) : (
-              <Box flex={1} display="grid" sx={{ placeItems: "center" }}><Typography color="text.secondary">{tx("Select equipment to view details.")}</Typography></Box>
+              <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>{tx("Select equipment to view details.")}</Typography>
+              </Box>
             )}
           </Paper>
         </Box>
 
-        {dialog?.type === "equipment" && (
-          <EquipmentForm key={dialog.item?.id || "new"} item={dialog.item} types={types} nodes={nodes} actor={actor} saving={saving} onClose={() => setDialog(null)} onSave={saveEquipment} />
-        )}
-        {dialog?.type === "calibration" && (
-          <CalibrationHistoryDialog equipment={dialog.item} actor={actor} request={request} saving={saving} notify={notify} onClose={() => setDialog(null)}
-            onDone={async () => { const d = await request(`${API}/equipment/${dialog.item.id}`); setDetail(d); await load(); }} />
-        )}
-        {dialog?.type === "types" && (
-          <TypesManager rows={types} actor={actor} canEdit={canEdit} request={request} onClose={() => setDialog(null)} onRefresh={load} notify={notify} />
-        )}
-        <Snackbar open={msg.open} autoHideDuration={4500} onClose={() => setMsg((o) => ({ ...o, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-          <Alert severity={msg.type} variant="filled" onClose={() => setMsg((o) => ({ ...o, open: false }))}>{msg.text}</Alert>
+        <EquipmentDialog open={dialog !== null} item={dialog?.id ? dialog : null} types={types} nodes={nodes} saving={saving} onClose={() => setDialog(null)} onSave={saveEquipment} />
+        <TypesManager open={typesOpen} rows={types} canEdit={canEdit} request={request} actor={actor} onClose={() => setTypesOpen(false)} onReload={async () => { await Promise.all([loadTypes(), loadRows()]); }} notify={notify} />
+        <Snackbar open={Boolean(message)} autoHideDuration={4500} onClose={() => setMessage(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+          {message ? <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert> : undefined}
         </Snackbar>
       </Box>
     </MuiThemeProvider>

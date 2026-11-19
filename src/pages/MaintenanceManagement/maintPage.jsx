@@ -38,7 +38,7 @@ export function useMaintPage() {
   return {
     language, dark, muiTheme, navigate, params, setParams, canEdit, actor, request, lookups, msg, setMsg, notify,
     axisColor: dark ? "#A7B0C0" : "#667085", grid: { borderColor: dark ? "#263244" : "#EEF2F6" },
-    tableSx: { "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
+    tableSx: { "& td, & th": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
   };
 }
 
@@ -67,15 +67,18 @@ export function useMaintData(page, url, { interval = 30000, paused } = {}) {
   return { data, loading, lastUpdate, live, setLive, load };
 }
 
-export function MaintFrame({ page, title, loading, ready, lastUpdate, live, setLive, onRefresh, onExport, toolbar, actions, system, children }) {
+// `fit`: the page fills exactly one screen (no page scroll; the children grow into the space left and scroll inside their own tables).
+// `filters`: a second toolbar row, shown under the first one (pages show it behind a Filter toggle).
+export function MaintFrame({ page, title, loading, ready, lastUpdate, live, setLive, onRefresh, onExport, toolbar, actions, filters, fit, system, children }) {
   const toolBtnSx = { ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" };
   const { muiTheme, msg, setMsg } = page;
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
+      <Box sx={fit ? { display: "flex", flexDirection: "column", gap: 1, height: { lg: "calc(var(--app-vh, 100vh) - 74px)" }, minHeight: 0, minWidth: 0, "& > *": { flexShrink: 0 } }
+        : { display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
         <PageMeta title={`${title} | VCC Plastics`} description={title} />
         <PageBreadcrumb pageTitle={title} />
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: fit ? 0.75 : 1, mb: fit ? 0 : 1.5, position: "relative", overflow: "hidden" }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             {toolbar}
             <Button startIcon={<RefreshIcon />} onClick={onRefresh} sx={toolBtnSx}>{tx("Refresh")}</Button>
@@ -84,12 +87,16 @@ export function MaintFrame({ page, title, loading, ready, lastUpdate, live, setL
             {actions}
             <Box sx={{ flex: 1 }} />
             <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
-            {setLive ? <FormControlLabel sx={{ mx: 0.5 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} /> : null}
+            {setLive ? <FormControlLabel sx={{ mx: 0.5, mr: fit ? 0 : 0.5 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} /> : null}
           </Stack>
+          {filters ? <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>{filters}</Stack> : null}
+          {fit && loading ? <LinearProgress sx={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
-        {!ready ? <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box> : <Box sx={{ minWidth: 0 }}>{children}</Box>}
-        {ready && system ? <Box sx={{ mt: 1.5 }}><SystemStatusBar system={system} /></Box> : null}
+        {!fit && loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
+        {!ready ? <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box>
+          : fit ? <Box sx={{ flex: { lg: "1 1 0" }, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", gap: 1, "& > *": { flexShrink: 0 } }}>{children}</Box>
+          : <Box sx={{ minWidth: 0 }}>{children}</Box>}
+        {ready && system ? <Box sx={{ mt: fit ? 0 : 1.5 }}><SystemStatusBar system={system} /></Box> : null}
         <Snackbar open={msg.open} autoHideDuration={5000} onClose={() => setMsg((o) => ({ ...o, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
           <Alert severity={msg.type} variant="filled" onClose={() => setMsg((o) => ({ ...o, open: false }))}>{msg.text}</Alert>
         </Snackbar>
@@ -99,15 +106,15 @@ export function MaintFrame({ page, title, loading, ready, lastUpdate, live, setL
 }
 
 /** Donut + legend: entries [key, value, label]. */
-export function DonutCard({ entries, colors = {}, dark, axisColor, height = 150, centerLabel, formatter }) {
+export function DonutCard({ entries, colors = {}, dark, axisColor, height = 150, size = 130, centerLabel, formatter }) {
   const total = entries.reduce((a, [, n]) => a + n, 0);
   if (!total) return <Typography variant="caption" color="text.secondary" sx={{ px: 1.5 }}>{tx("No data.")}</Typography>;
   return (
-    <Box sx={{ display: "grid", gridTemplateColumns: "130px 1fr", alignItems: "center", px: 1, pb: 1 }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: `${size}px 1fr`, alignItems: "center", px: 1, pb: 1 }}>
       <Chart type="donut" height={height} series={entries.map(([, n]) => n)} options={{
         labels: entries.map(([, , l]) => l), colors: entries.map(([k], i) => colors[k] || CHART_COLORS[i % CHART_COLORS.length]), legend: { show: false }, dataLabels: { enabled: false },
         stroke: { width: 1, colors: [dark ? "#111827" : "#fff"] }, chart: { background: "transparent" }, tooltip: { theme: dark ? "dark" : "light", y: { formatter: formatter || ((v) => num(v, 0)) } },
-        plotOptions: { pie: { donut: { size: "66%", labels: { show: true, name: { color: axisColor, fontSize: "11px" }, value: { fontSize: "16px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: (v) => (formatter ? formatter(Number(v)) : v) },
+        plotOptions: { pie: { donut: { size: "66%", labels: { show: true, name: { color: axisColor, fontSize: "10px" }, value: { fontSize: "13.5px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: (v) => (formatter ? formatter(Number(v)) : v) },
           total: { show: true, label: centerLabel || tx("Total"), color: axisColor, formatter: () => (formatter ? formatter(total) : String(total)) } } } } } }} />
       <DonutLegend items={entries} colors={colors} total={total} formatter={formatter} />
     </Box>

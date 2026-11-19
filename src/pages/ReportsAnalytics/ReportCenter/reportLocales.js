@@ -7,6 +7,7 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const TEXT = {
   vi: {
+    "Audit Log": "Nhật ký hệ thống", "Production Results": "Kết quả sản xuất", "Quality Overview": "Tổng quan CL", "Filter": "Bộ lọc",
     "Report Center": "Trung tâm báo cáo", "Favorites": "Yêu thích", "Scheduled Reports": "Báo cáo tự động", "Report History": "Lịch sử báo cáo", "Create Report": "Tạo báo cáo",
     "Total Reports": "Tổng số báo cáo", "Favorite Reports": "Báo cáo yêu thích", "Reports Generated (MTD)": "Báo cáo đã tạo (tháng)", "Last Generated": "Tạo gần nhất",
     "new this month": "mới trong tháng", "frequently used": "dùng thường xuyên", "vs last month": "so với tháng trước", "active schedules": "lịch đang chạy", "never": "chưa có",

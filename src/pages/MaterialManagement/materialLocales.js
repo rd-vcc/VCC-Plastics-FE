@@ -126,7 +126,7 @@ export const UI_TEXT = {
     "Material Status": "Tình trạng vật tư", "Material Lot History": "Lịch sử Lot vật tư",
     "Plant-wide overview of material stock and status": "Tổng quan trạng thái vật tư toàn nhà máy",
     "Track the history and origin of every material lot": "Theo dõi lịch sử và truy xuất nguồn gốc vật tư theo từng Lot",
-    "Refresh": "Làm mới", "Export": "Xuất báo cáo", "Last Update": "Cập nhật lúc", "Auto Refresh": "Tự làm mới",
+    "Refresh": "Làm mới", "Filter": "Bộ lọc", "Check suggested lots (FEFO)": "Kiểm tra lot gợi ý (FEFO)", "materials": "vật tư", "Planned start": "Bắt đầu KH", "Choose the work order to supply": "Chọn Work Order cần cấp vật tư", "The system lists each material the work order needs (from its BOM) and suggests lots by FEFO. Use Auto allocate, or enter quantities per lot and press Reserve.": "Hệ thống liệt kê từng vật tư WO cần (theo BOM) và gợi ý lot theo FEFO. Bấm Tự động cấp phát, hoặc nhập số lượng từng lot rồi bấm Giữ chỗ.", "This work order has no material requirement yet.": "Work Order này chưa có nhu cầu vật tư.", "All materials of this work order are reserved. Open the allocation in the list and use Issue to Machine when production starts.": "Đã giữ chỗ đủ vật tư cho Work Order này. Khi bắt đầu sản xuất, mở phiếu cấp phát trong danh sách và bấm Cấp ra máy.", "Slip No.": "Số phiếu", "Alloc. time": "Ngày cấp", "In use": "Đang dùng", "Group (short)": "Nhóm", "Need total": "Tổng cần", "Allocated (short)": "Đã cấp", "Need from": "Cần từ", "Total (KG)": "Tổng (KG)", "Operator (short)": "Nhân viên", "Transaction (short)": "Giao dịch", "Expiry (short)": "Hạn SD", "Days left (short)": "Còn (ngày)", "Location (short)": "Vị trí", "From (short)": "Từ", "To (short)": "Đến", "Qty (short)": "SL", "Source (short)": "Nguồn", "Export": "Xuất báo cáo", "Last Update": "Cập nhật lúc", "Auto Refresh": "Tự làm mới",
     "Local inventory mode: stock is kept in MES until a warehouse system (WMS) is connected.": "Chế độ kho nội bộ: tồn kho được quản lý trong MES cho đến khi kết nối phần mềm kho (WMS).",
     "Total Materials": "Tổng số vật tư", "Available Stock": "Tổng tồn kho khả dụng", "Reserved": "Đang giữ chỗ",
     "Low Stock": "Tồn kho thấp", "Materials Short": "Vật tư sắp thiếu", "Lots Near Expiry": "Lot sắp hết hạn",
@@ -145,7 +145,7 @@ export const UI_TEXT = {
     "Create Material Request": "Tạo yêu cầu vật tư", "Allocate Material": "Cấp phát vật tư", "Lot History": "Lịch sử Lot", "Material Report": "Báo cáo vật tư",
     "Stock by Material": "Tồn kho theo vật tư", "Safety Stock": "Tồn an toàn", "Total": "Tổng", "Unit": "ĐVT", "Group": "Nhóm vật tư",
     "Safety stock updated.": "Đã cập nhật tồn an toàn.", "Save": "Lưu", "Cancel": "Hủy bỏ", "Close": "Đóng", "Confirm": "Xác nhận",
-    "No data.": "Không có dữ liệu.", "All": "Tất cả", "Clear": "Xóa lọc", "Search lot no. or material...": "Tìm mã Lot hoặc vật tư...",
+    "No data.": "Không có dữ liệu.", "All": "Tất cả", "Clear": "Xóa bộ lọc", "Search lot no. or material...": "Tìm mã Lot hoặc vật tư...",
     "Total Lots": "Tổng số Lot", "In Stock": "Đang tồn kho", "In IQC": "Đang kiểm tra (IQC)", "On Hold": "Đang Hold", "Expiring (≤{days} days)": "Sắp hết hạn (≤{days} ngày)",
     "Material Lot List": "Danh sách Lot vật tư", "Supplier": "Nhà cung cấp", "Location": "Vị trí hiện tại", "Quantity": "Số lượng",
     "Source": "Nguồn gốc", "Lot Status Distribution": "Phân bố tình trạng Lot", "Lots Expiring (≤{days} days)": "Lot sắp hết hạn (≤{days} ngày)",
@@ -349,7 +349,7 @@ export const UI_TEXT = {
     "Material Status": "材料状況", "Material Lot History": "材料ロット履歴",
     "Plant-wide overview of material stock and status": "工場全体の材料在庫と状態の概要",
     "Track the history and origin of every material lot": "ロットごとの履歴と由来を追跡します",
-    "Refresh": "更新", "Export": "レポート出力", "Last Update": "最終更新", "Auto Refresh": "自動更新",
+    "Refresh": "更新", "Filter": "フィルター", "Check suggested lots (FEFO)": "推奨ロット確認 (FEFO)", "materials": "材料", "Planned start": "計画開始", "Choose the work order to supply": "払出対象の作業オーダーを選択", "The system lists each material the work order needs (from its BOM) and suggests lots by FEFO. Use Auto allocate, or enter quantities per lot and press Reserve.": "BOMから必要材料を一覧表示し、FEFOでロットを推奨します。自動引当、またはロットごとに数量を入力して予約してください。", "This work order has no material requirement yet.": "この作業オーダーには材料所要がありません。", "All materials of this work order are reserved. Open the allocation in the list and use Issue to Machine when production starts.": "この作業オーダーの材料はすべて予約済みです。生産開始時に一覧から引当を開き、機械へ払出してください。", "Slip No.": "伝票番号", "Alloc. time": "払出日時", "In use": "使用中", "Group (short)": "グループ", "Need total": "必要量計", "Allocated (short)": "引当済", "Need from": "必要日", "Total (KG)": "合計 (KG)", "Operator (short)": "担当者", "Transaction (short)": "取引", "Expiry (short)": "期限", "Days left (short)": "残日数", "Location (short)": "位置", "From (short)": "元", "To (short)": "先", "Qty (short)": "数量", "Source (short)": "出所", "Export": "レポート出力", "Last Update": "最終更新", "Auto Refresh": "自動更新",
     "Local inventory mode: stock is kept in MES until a warehouse system (WMS) is connected.": "ローカル在庫モード：WMS接続までMESで在庫を管理します。",
     "Total Materials": "材料総数", "Available Stock": "有効在庫", "Reserved": "引当中",
     "Low Stock": "在庫少", "Materials Short": "不足予定材料", "Lots Near Expiry": "期限間近ロット",
@@ -458,6 +458,11 @@ export function tx(text, params) {
 }
 
 const LABELS = {
+  iqc: {
+    en: { PENDING: "Waiting IQC", PASS: "Pass", FAIL: "Fail", NOT_REQUIRED: "Not required" },
+    vi: { PENDING: "Chờ IQC", PASS: "Đạt", FAIL: "Không đạt", NOT_REQUIRED: "Không cần IQC" },
+    ja: { PENDING: "IQC待ち", PASS: "合格", FAIL: "不合格", NOT_REQUIRED: "不要" },
+  },
   usageStatus: {
     en: { OVER: "Over", WITHIN: "Within", SAVING: "Saving", PENDING: "Not recorded" },
     vi: { OVER: "Vượt", WITHIN: "Đạt", SAVING: "Tiết kiệm", PENDING: "Chưa ghi nhận" },

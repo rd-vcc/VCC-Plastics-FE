@@ -1,4 +1,6 @@
 import "./locales";
+import { PanelHeader, masterGridSx, panelSx, SettingsMenu } from "../../../../components/masterData/MasterPanels";
+import useFillHeight from "../../../../hooks/useFillHeight";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -15,14 +17,15 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Paper,
   Select,
   Snackbar,
   Stack,
   Switch,
-  Tab,
-  Tabs,
   TextField,
   ThemeProvider as MuiThemeProvider,
   Tooltip,
@@ -30,6 +33,8 @@ import {
   createTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -46,7 +51,7 @@ import PrecisionManufacturingOutlinedIcon from "@mui/icons-material/PrecisionMan
 import RefreshIcon from "@mui/icons-material/Refresh";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import SearchIcon from "@mui/icons-material/Search";
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import MachineLayoutDialog from "./MachineLayoutDialog";
 import PageMeta from "../../../../components/common/PageMeta";
@@ -63,12 +68,12 @@ import { useTranslation } from "react-i18next";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const PANEL_HEADER_HEIGHT = 30;
-const CONTENT_HEIGHT = 520;
 
 const TYPE_META = {
   COMPANY: { label: "Company", icon: BusinessOutlinedIcon, tone: "primary" },
   FACTORY: { label: "Factory", icon: FactoryOutlinedIcon, tone: "success" },
   AREA: { label: "Area", icon: DomainOutlinedIcon, tone: "info" },
+  DIVISION: { label: "Division", icon: DomainOutlinedIcon, tone: "info" },
   WORKSHOP: {
     label: "Workshop",
     icon: PrecisionManufacturingOutlinedIcon,
@@ -78,12 +83,7 @@ const TYPE_META = {
   STATION: { label: "Station", icon: LanOutlinedIcon, tone: "info" },
 };
 
-const cardSx = {
-  border: "1px solid",
-  borderColor: "divider",
-  borderRadius: 2,
-  boxShadow: "0 1px 3px rgba(15, 23, 42, 0.05)",
-};
+const cardSx = panelSx;
 
 function buttonSx(type, overrides = {}) {
   const styles = buttonSystem[type];
@@ -166,49 +166,17 @@ function pageSx(isDark) {
   };
 }
 
-function SectionHeader({ icon, title, action }) {
-  return (
-    <Box
-      sx={{
-        height: PANEL_HEADER_HEIGHT,
-        px: 1.25,
-        bgcolor: (theme) =>
-          theme.palette.mode === "dark" ? "#182235" : "#DDEBFF",
-        borderBottom: 1,
-        borderColor: (theme) =>
-          theme.palette.mode === "dark" ? "#344054" : "#AFC7EE",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexShrink: 0,
-      }}
-    >
-      <Stack direction="row" alignItems="center" spacing={0.75} minWidth={0}>
-        {icon}
-        <Typography
-          variant="subtitle2"
-          noWrap
-          sx={{ fontWeight: 700, WebkitTextStroke: "0.22px currentColor" }}
-        >
-          {title}
-        </Typography>
-      </Stack>
-      {action}
-    </Box>
-  );
-}
+const SectionHeader = PanelHeader;
 
 function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
   const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
   return (
     <Box
       sx={{
-        px: 3,
-        pt: 2.5,
-        pb: 2,
+        px: 2, py: 1.25,
         display: "flex",
         alignItems: "center",
-        gap: 1.5,
+        gap: 1.25,
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: (theme) =>
@@ -223,8 +191,7 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
     >
       <Box
         sx={{
-          width: 44,
-          height: 44,
+          width: 28, height: 28,
           borderRadius: "50%",
           bgcolor: (theme) =>
             theme.palette.mode === "dark"
@@ -243,11 +210,11 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
         {icon}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>
+        <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800 }}>
           {title}
         </Typography>
         {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>
             {subtitle}
           </Typography>
         ) : null}
@@ -281,19 +248,47 @@ function FieldGroupLabel({ children }) {
   );
 }
 
-function StatusChip({ status }) {
+function StatusChip({ status, width = 84 }) {
   const { t } = useTranslation();
   const active = status === "ACTIVE";
+  const color = active ? "#12B76A" : "#F04438";
+  const label = active ? t("factoryStructure.active") : t("factoryStructure.inactive");
   return (
-    <Chip
-      size="small"
-      label={
-        active ? t("factoryStructure.active") : t("factoryStructure.inactive")
-      }
-      color={active ? "success" : "error"}
-      variant="outlined"
-      sx={{ height: 20, "& .MuiChip-label": { px: 0.75 } }}
-    />
+    <Box component="span" title={label} sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box",
+      width, height: 20, px: 0.5, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden",
+      borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{label}</Box>
+  );
+}
+
+const TONE_COLORS = { primary: "#005BAB", success: "#12B76A", info: "#0E9384", warning: "#DC6803", accent: "#7A5AF8", danger: "#F04438" };
+
+function DetailSection({ title, children }) {
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ display: "block", mb: 0.5, fontWeight: 800, fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "text.secondary" }}>{title}</Typography>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25 }}>{children}</Box>
+    </Box>
+  );
+}
+
+function DetailRow({ label, children, last }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, py: 0.9, borderBottom: last ? 0 : 1, borderColor: "divider" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 700, textAlign: "right", minWidth: 0, wordBreak: "break-word" }}>{children}</Typography>
+    </Box>
+  );
+}
+
+function ActionIcon({ title, icon, onClick, disabled, color = "default" }) {
+  return (
+    <Tooltip title={title}>
+      <span>
+        <IconButton disabled={disabled} color={color} onClick={onClick} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{icon}</IconButton>
+      </span>
+    </Tooltip>
   );
 }
 
@@ -302,7 +297,9 @@ function normalizeNode(node) {
     ...node,
     type: node.node_type_code,
     parentId: node.parent_id,
-    createdBy: node.created_by,
+    createdBy: node.created_by_name
+      ? `${node.created_by_name} - ${node.created_by_code ?? node.created_by}`
+      : (node.created_by_code ?? node.created_by),
     createdAt: node.created_at,
     updatedAt: node.updated_at,
   };
@@ -364,26 +361,28 @@ function TreeNode({
         >
           {children.length ? (
             open ? (
-              <ExpandMoreIcon sx={{ fontSize: 16 }} />
+              <ExpandMoreIcon sx={{ fontSize: 13.5 }} />
             ) : (
-              <ChevronRightIcon sx={{ fontSize: 16 }} />
+              <ChevronRightIcon sx={{ fontSize: 13.5 }} />
             )
           ) : (
             <Box sx={{ width: 16 }} />
           )}
         </IconButton>
-        <Icon color="primary" sx={{ fontSize: 16 }} />
+        <Icon color="primary" sx={{ fontSize: 13.5 }} />
+        {/* status is shown in the list and the detail panel; inactive units are just dimmed here */}
         <Typography
           noWrap
+          title={node.name}
           sx={{
             flex: 1,
-            fontSize: 11,
-            fontWeight: selectedId === node.id ? 700 : 600,
+            fontSize: 11.5,
+            fontWeight: selectedId === node.id ? 800 : 600,
+            color: node.status === "ACTIVE" ? "text.primary" : "text.disabled",
           }}
         >
           {node.name}
         </Typography>
-        <StatusChip status={node.status} />
       </Box>
       {children.length > 0 && (
         <Collapse in={open} timeout="auto" unmountOnExit>
@@ -448,12 +447,7 @@ function NodeDialog({
       item.id !== node?.id,
   );
   return (
-    <Dialog
-      open={open}
-      onClose={saving ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
-      PaperProps={{
+    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" slotProps={{ paper: {
         sx: {
           borderRadius: 3,
           overflow: "hidden",
@@ -462,8 +456,7 @@ function NodeDialog({
               ? "0 24px 60px rgba(0,0,0,.55)"
               : "0 24px 60px rgba(15,23,42,.18)",
         },
-      }}
-    >
+      } }}>
       <DialogHeader
         icon={<AccountTreeOutlinedIcon />}
         title={
@@ -615,8 +608,6 @@ function NodeTypeDialog({
           code: nodeType.code,
           name: nodeType.name,
           parentTypeId: nodeType.parent_type_id ?? "",
-          color: nodeType.color || "#005BAB",
-          icon: nodeType.icon || "",
           sortOrder: nodeType.sort_order || 0,
           isActive: Boolean(nodeType.is_active),
         }
@@ -624,8 +615,6 @@ function NodeTypeDialog({
           code: "",
           name: "",
           parentTypeId: "",
-          color: "#005BAB",
-          icon: "",
           sortOrder: 0,
           isActive: true,
         },
@@ -636,12 +625,7 @@ function NodeTypeDialog({
     (item) => item.id !== nodeType?.id && Boolean(item.is_active),
   );
   return (
-    <Dialog
-      open={open}
-      onClose={saving ? undefined : onClose}
-      fullWidth
-      maxWidth="sm"
-      PaperProps={{
+    <Dialog open={open} onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" slotProps={{ paper: {
         sx: {
           borderRadius: 3,
           overflow: "hidden",
@@ -650,8 +634,7 @@ function NodeTypeDialog({
               ? "0 24px 60px rgba(0,0,0,.55)"
               : "0 24px 60px rgba(15,23,42,.18)",
         },
-      }}
-    >
+      } }}>
       <DialogHeader
         icon={<DomainOutlinedIcon />}
         title={
@@ -690,63 +673,37 @@ function NodeTypeDialog({
             <FieldGroupLabel>
               {t("factoryStructure.sectionHierarchy")}
             </FieldGroupLabel>
-            <FormControl fullWidth size="small">
-              <InputLabel>{t("factoryStructure.parentType")}</InputLabel>
-              <Select
-                label={t("factoryStructure.parentType")}
-                value={form.parentTypeId}
-                onChange={change("parentTypeId")}
-              >
-                <MenuItem value="">
-                  <em>{t("factoryStructure.rootType")}</em>
-                </MenuItem>
-                {parentOptions.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {item.code} — {item.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
-          <Stack spacing={1.25}>
-            <FieldGroupLabel>
-              {t("factoryStructure.sectionAppearance")}
-            </FieldGroupLabel>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>{t("factoryStructure.parentType")}</InputLabel>
+                <Select
+                  label={t("factoryStructure.parentType")}
+                  value={form.parentTypeId}
+                  onChange={change("parentTypeId")}
+                >
+                  <MenuItem value="">
+                    <em>{t("factoryStructure.rootType")}</em>
+                  </MenuItem>
+                  {parentOptions.map((item) => (
+                    <MenuItem key={item.id} value={item.id}>
+                      {item.code} — {item.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <TextField
-                fullWidth
-                size="small"
-                label={t("factoryStructure.color")}
-                type="color"
-                value={form.color}
-                onChange={change("color")}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                size="small"
-                label={t("factoryStructure.iconName")}
-                value={form.icon}
-                onChange={change("icon")}
-                placeholder={t("factoryStructure.optional")}
-              />
-              <TextField
-                fullWidth
                 size="small"
                 label={t("factoryStructure.sortOrder")}
                 type="number"
                 value={form.sortOrder}
                 onChange={change("sortOrder")}
+                sx={{ width: { xs: "100%", sm: 140 }, flexShrink: 0 }}
               />
             </Stack>
           </Stack>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
             <Box>
-              <Typography variant="subtitle2" fontWeight={700}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 {t("factoryStructure.activeStatus")}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -800,7 +757,8 @@ export default function FactoryStructureMaster() {
   const currentUser = getCurrentUser();
   const actor = currentUser?.employee_code || "SYSTEM";
   const { canEdit } = usePagePermission();
-  const [activeTab, setActiveTab] = useState(0);
+  const [panelsRef, panelHeight] = useFillHeight();
+  const [typeListOpen, setTypeListOpen] = useState(false);
   const [nodes, setNodes] = useState([]);
   const [nodeTypes, setNodeTypes] = useState([]);
   const [selectedTypeId, setSelectedTypeId] = useState(null);
@@ -814,6 +772,7 @@ export default function FactoryStructureMaster() {
   const [typeDialog, setTypeDialog] = useState(null);
   const [layoutNode, setLayoutNode] = useState(null);
   const [deleteType, setDeleteType] = useState(null);
+  const [deleteNode, setDeleteNode] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({
@@ -900,8 +859,7 @@ export default function FactoryStructureMaster() {
     [nodes],
   );
   const selected = nodes.find((item) => item.id === selectedId) || null;
-  const selectedType =
-    nodeTypes.find((item) => item.id === selectedTypeId) || null;
+  const hasChildren = nodes.some((item) => item.parentId === selectedId);
   const factories = nodes.filter((item) => item.type === "FACTORY");
   const roots = nodes.filter((item) => item.parentId == null);
 
@@ -932,18 +890,20 @@ export default function FactoryStructureMaster() {
     () => [
       {
         headerName: t("factoryStructure.columns.code"),
+        width: 130,
         field: "code",
-        width: 145,
         pinned: "left",
       },
       {
         headerName: t("factoryStructure.columns.name"),
+        minWidth: 170,
+        flex: 1.6,
         field: "name",
-        minWidth: 175,
-        flex: 1.2,
       },
       {
         headerName: t("factoryStructure.columns.type"),
+        minWidth: 110,
+        flex: 1,
         valueGetter: (params) =>
           t(
             `factoryStructure.types.${String(params.data?.type || "").toLowerCase()}`,
@@ -952,23 +912,25 @@ export default function FactoryStructureMaster() {
                 TYPE_META[params.data?.type]?.label || params.data?.type,
             },
           ),
-        width: 105,
       },
       {
         headerName: t("factoryStructure.columns.parent"),
+        minWidth: 115,
+        flex: 1.1,
         valueGetter: (params) => getParent(params.data)?.code || "—",
-        width: 115,
       },
       {
         headerName: t("factoryStructure.columns.level"),
+        minWidth: 70,
+        flex: 0.5,
         field: "level_no",
-        width: 80,
         cellStyle: { textAlign: "center" },
       },
       {
         headerName: t("factoryStructure.columns.status"),
+        minWidth: 115,
+        flex: 0.9,
         field: "status",
-        width: 100,
         cellRenderer: (params) => (
           <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}>
             <StatusChip status={params.value} />
@@ -977,49 +939,12 @@ export default function FactoryStructureMaster() {
       },
       {
         headerName: t("factoryStructure.columns.description"),
+        minWidth: 140,
+        flex: 1.3,
         field: "description",
-        minWidth: 150,
-        flex: 1,
-      },
-      {
-        headerName: t("factoryStructure.columns.actions"),
-        width: 100,
-        sortable: false,
-        filter: false,
-        cellRenderer: (params) => (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="center"
-            height="100%"
-          >
-            <Tooltip title={t("common.view")}>
-              <IconButton
-                size="small"
-                onClick={() => setSelectedId(params.data.id)}
-              >
-                <VisibilityOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={t("common.edit")}>
-              <span>
-                <IconButton
-                  size="small"
-                  disabled={!canEdit}
-                  onClick={() => {
-                    setSelectedId(params.data.id);
-                    setDialog({ mode: "edit", node: params.data });
-                  }}
-                >
-                  <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
-        ),
       },
     ],
-    [canEdit, getParent, t],
+    [getParent, t],
   );
 
   const saveNode = async (form) => {
@@ -1141,31 +1066,6 @@ export default function FactoryStructureMaster() {
         cellStyle: { textAlign: "center" },
       },
       {
-        headerName: t("factoryStructure.color"),
-        field: "color",
-        width: 105,
-        cellRenderer: (params) => (
-          <Stack
-            direction="row"
-            spacing={0.75}
-            alignItems="center"
-            height="100%"
-          >
-            <Box
-              sx={{
-                width: 16,
-                height: 16,
-                borderRadius: 0.75,
-                bgcolor: params.value || "#005BAB",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            />
-            <Typography variant="caption">{params.value || "—"}</Typography>
-          </Stack>
-        ),
-      },
-      {
         headerName: t("factoryStructure.columns.status"),
         field: "is_active",
         width: 100,
@@ -1181,12 +1081,7 @@ export default function FactoryStructureMaster() {
         sortable: false,
         filter: false,
         cellRenderer: (params) => (
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="center"
-            height="100%"
-          >
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "center", height: "100%" }}>
             <Tooltip title={t("common.edit")}>
               <span>
                 <IconButton
@@ -1228,8 +1123,8 @@ export default function FactoryStructureMaster() {
       name: form.name.trim(),
       parent_type_id:
         form.parentTypeId === "" ? null : Number(form.parentTypeId),
-      color: form.color || null,
-      icon: form.icon?.trim() || null,
+      color: editingType?.color ?? null,
+      icon: editingType?.icon ?? null,
       sort_order: Number(form.sortOrder || 0),
       is_active: Boolean(form.isActive),
       ...(editingType ? {} : { code: form.code.trim().toUpperCase() }),
@@ -1253,6 +1148,31 @@ export default function FactoryStructureMaster() {
       showMessage(
         "error",
         error.message || t("factoryStructure.errors.saveType"),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDeleteNode = async () => {
+    if (!deleteNode || !canEdit || saving) return;
+    setSaving(true);
+    try {
+      const result = await requestJson(
+        `${API_BASE}/api/factory-structure/nodes/${deleteNode.id}`,
+        { method: "DELETE" },
+      );
+      setDeleteNode(null);
+      setSelectedId(deleteNode.parentId ?? null);
+      await loadData();
+      showMessage(
+        "success",
+        result?.message || t("factoryStructure.success.nodeDeleted"),
+      );
+    } catch (error) {
+      showMessage(
+        "error",
+        error.message || t("factoryStructure.errors.deleteNode"),
       );
     } finally {
       setSaving(false);
@@ -1291,821 +1211,384 @@ export default function FactoryStructureMaster() {
           description={t("factoryStructure.descriptionText")}
         />
         <PageBreadcrumb pageTitle={t("factoryStructure.title")} />
-        <Stack spacing={3} sx={{ pb: 2.5 }}>
+        <Stack spacing={1.5}>
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr auto" },
+              gridTemplateColumns: { xs: "1fr", lg: "1fr auto" },
               gap: 1.5,
-              alignItems: "end",
+              alignItems: "center",
             }}
           >
-            <Box>
-              <Typography variant="h4" fontWeight={700}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>
                 {t("factoryStructure.title")}
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 0.25 }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 {t("factoryStructure.descriptionText")}
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              disabled={!canEdit}
-              onClick={() =>
-                activeTab === 0
-                  ? setDialog({ mode: "add", node: null })
-                  : setTypeDialog({ mode: "add", nodeType: null })
-              }
-              sx={buttonSx("primary")}
-            >
-              {activeTab === 0
-                ? t("factoryStructure.addNewNode")
-                : t("factoryStructure.addNodeType")}
-            </Button>
+            <SettingsMenu items={[{ key: "types", label: t("factoryStructure.typeList"), onClick: () => setTypeListOpen(true) }]} />
           </Box>
 
-          <Paper
-            variant="outlined"
-            sx={{ borderRadius: 2, overflow: "hidden" }}
-          >
-            <Tabs
-              value={activeTab}
-              onChange={(_, value) => setActiveTab(value)}
+          <KpiCardGroup>
+            <KpiCard
+              label={t("factoryStructure.kpi.totalNodes")}
+              value={nodes.length}
+              note={t("factoryStructure.kpi.allLevels")}
+              tone="primary"
+              icon={<AccountTreeOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("factoryStructure.kpi.factories")}
+              value={counts.FACTORY || 0}
+              note={t("factoryStructure.kpi.acrossCompany")}
+              tone="success"
+              icon={<FactoryOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("factoryStructure.kpi.workshops")}
+              value={counts.WORKSHOP || 0}
+              note={t("factoryStructure.kpi.acrossFactories")}
+              tone="warning"
+              icon={<PrecisionManufacturingOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("factoryStructure.kpi.lines")}
+              value={counts.LINE || 0}
+              note={t("factoryStructure.kpi.acrossWorkshops")}
+              tone="accent"
+              icon={<HubOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("factoryStructure.kpi.stations")}
+              value={counts.STATION || 0}
+              note={t("factoryStructure.kpi.acrossLines")}
+              tone="info"
+              icon={<LanOutlinedIcon />}
+            />
+            <KpiCard
+              label={t("factoryStructure.kpi.inactiveNodes")}
+              value={
+                nodes.filter((node) => node.status === "INACTIVE").length
+              }
+              note={t("factoryStructure.kpi.accessDisabled")}
+              tone="danger"
+              icon={<DeleteOutlineIcon />}
+            />
+          </KpiCardGroup>
+
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+            <Box
               sx={{
-                minHeight: 42,
-                "& .MuiTab-root": {
-                  minHeight: 42,
-                  fontWeight: 700,
-                  textTransform: "none",
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "minmax(240px,1.6fr) repeat(3,minmax(145px,1fr)) auto",
                 },
+                gap: 1,
               }}
             >
-              <Tab
-                label={t("factoryStructure.structureNodes", {
-                  count: nodes.length,
+              <TextField size="small" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={t("factoryStructure.searchPlaceholder")} slotProps={{ input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                } }} />
+              <FormControl size="small">
+                <InputLabel>{t("factoryStructure.nodeType")}</InputLabel>
+                <Select
+                  label={t("factoryStructure.nodeType")}
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value)}
+                >
+                  <MenuItem value="all">
+                    {t("factoryStructure.allTypes")}
+                  </MenuItem>
+                  {Object.entries(TYPE_META).map(([key, meta]) => (
+                    <MenuItem key={key} value={key}>
+                      {t(`factoryStructure.types.${key.toLowerCase()}`, {
+                        defaultValue: meta.label,
+                      })}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small">
+                <InputLabel>{t("factoryStructure.status")}</InputLabel>
+                <Select
+                  label={t("factoryStructure.status")}
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                >
+                  <MenuItem value="all">
+                    {t("factoryStructure.allStatuses")}
+                  </MenuItem>
+                  <MenuItem value="ACTIVE">
+                    {t("factoryStructure.active")}
+                  </MenuItem>
+                  <MenuItem value="INACTIVE">
+                    {t("factoryStructure.inactive")}
+                  </MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small">
+                <InputLabel>{t("factoryStructure.factory")}</InputLabel>
+                <Select
+                  label={t("factoryStructure.factory")}
+                  value={factoryFilter}
+                  onChange={(event) => setFactoryFilter(event.target.value)}
+                >
+                  <MenuItem value="all">
+                    {t("factoryStructure.allFactories")}
+                  </MenuItem>
+                  {factories.map((factory) => (
+                    <MenuItem key={factory.id} value={String(factory.id)}>
+                      {factory.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                startIcon={<FilterListIcon />}
+                onClick={() => {
+                  setKeyword("");
+                  setTypeFilter("all");
+                  setStatusFilter("all");
+                  setFactoryFilter("all");
+                }}
+                sx={buttonSx("cancel", {
+                  minHeight: 29,
+                  whiteSpace: "nowrap",
                 })}
-              />
-              <Tab
-                label={t("factoryStructure.nodeTypes", {
-                  count: nodeTypes.length,
-                })}
-              />
-            </Tabs>
+              >
+                {t("factoryStructure.clearFilters")}
+              </Button>
+            </Box>
           </Paper>
 
-          {activeTab === 0 ? (
-            <>
-              <KpiCardGroup>
-                <KpiCard
-                  label={t("factoryStructure.kpi.totalNodes")}
-                  value={nodes.length}
-                  note={t("factoryStructure.kpi.allLevels")}
-                  tone="primary"
-                  icon={<AccountTreeOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.factories")}
-                  value={counts.FACTORY || 0}
-                  note={t("factoryStructure.kpi.acrossCompany")}
-                  tone="success"
-                  icon={<FactoryOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.workshops")}
-                  value={counts.WORKSHOP || 0}
-                  note={t("factoryStructure.kpi.acrossFactories")}
-                  tone="warning"
-                  icon={<PrecisionManufacturingOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.lines")}
-                  value={counts.LINE || 0}
-                  note={t("factoryStructure.kpi.acrossWorkshops")}
-                  tone="accent"
-                  icon={<HubOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.stations")}
-                  value={counts.STATION || 0}
-                  note={t("factoryStructure.kpi.acrossLines")}
-                  tone="info"
-                  icon={<LanOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.inactiveNodes")}
-                  value={
-                    nodes.filter((node) => node.status === "INACTIVE").length
-                  }
-                  note={t("factoryStructure.kpi.accessDisabled")}
-                  tone="danger"
-                  icon={<DeleteOutlineIcon />}
-                />
-              </KpiCardGroup>
-
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      md: "minmax(240px,1.6fr) repeat(3,minmax(145px,1fr)) auto",
-                    },
-                    gap: 1,
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={keyword}
-                    onChange={(event) => setKeyword(event.target.value)}
-                    placeholder={t("factoryStructure.searchPlaceholder")}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <FormControl size="small">
-                    <InputLabel>{t("factoryStructure.nodeType")}</InputLabel>
-                    <Select
-                      label={t("factoryStructure.nodeType")}
-                      value={typeFilter}
-                      onChange={(event) => setTypeFilter(event.target.value)}
-                    >
-                      <MenuItem value="all">
-                        {t("factoryStructure.allTypes")}
-                      </MenuItem>
-                      {Object.entries(TYPE_META).map(([key, meta]) => (
-                        <MenuItem key={key} value={key}>
-                          {t(`factoryStructure.types.${key.toLowerCase()}`, {
-                            defaultValue: meta.label,
-                          })}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small">
-                    <InputLabel>{t("factoryStructure.status")}</InputLabel>
-                    <Select
-                      label={t("factoryStructure.status")}
-                      value={statusFilter}
-                      onChange={(event) => setStatusFilter(event.target.value)}
-                    >
-                      <MenuItem value="all">
-                        {t("factoryStructure.allStatuses")}
-                      </MenuItem>
-                      <MenuItem value="ACTIVE">
-                        {t("factoryStructure.active")}
-                      </MenuItem>
-                      <MenuItem value="INACTIVE">
-                        {t("factoryStructure.inactive")}
-                      </MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small">
-                    <InputLabel>{t("factoryStructure.factory")}</InputLabel>
-                    <Select
-                      label={t("factoryStructure.factory")}
-                      value={factoryFilter}
-                      onChange={(event) => setFactoryFilter(event.target.value)}
-                    >
-                      <MenuItem value="all">
-                        {t("factoryStructure.allFactories")}
-                      </MenuItem>
-                      {factories.map((factory) => (
-                        <MenuItem key={factory.id} value={String(factory.id)}>
-                          {factory.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Button
-                    startIcon={<FilterListIcon />}
-                    onClick={() => {
-                      setKeyword("");
-                      setTypeFilter("all");
-                      setStatusFilter("all");
-                      setFactoryFilter("all");
-                    }}
-                    sx={buttonSx("cancel", {
-                      minHeight: 40,
-                      whiteSpace: "nowrap",
-                    })}
-                  >
-                    {t("factoryStructure.clearFilters")}
-                  </Button>
-                </Box>
-              </Paper>
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    xl: "260px minmax(0,1fr) 290px",
-                  },
-                  gap: 2,
-                }}
-              >
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    ...cardSx,
-                    height: CONTENT_HEIGHT,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  <SectionHeader
-                    icon={<AccountTreeOutlinedIcon fontSize="small" />}
-                    title={t("factoryStructure.tree")}
-                    action={
-                      <Tooltip title={t("factoryStructure.expandAll")}>
+          <Box ref={panelsRef}
+            sx={masterGridSx}
+          >
+            <Paper
+              variant="outlined"
+              sx={{
+                ...cardSx,
+                height: panelHeight,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <SectionHeader
+                icon={<AccountTreeOutlinedIcon fontSize="small" />}
+                title={t("factoryStructure.tree")}
+                action={
+                  <Stack direction="row">
+                    <Tooltip title={t("factoryStructure.addRootNode")}>
+                      <span>
                         <IconButton
                           size="small"
-                          onClick={() =>
-                            setExpanded(nodes.map((node) => node.id))
-                          }
+                          disabled={!canEdit}
+                          onClick={() => setDialog({ mode: "add", node: null })}
                         >
-                          <RefreshIcon fontSize="small" />
+                          <AddIcon fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                    }
-                  />
-                  <Box sx={{ p: 0.75, flex: 1, overflowY: "auto" }}>
-                    {loading ? (
-                      <Box
-                        sx={{
-                          display: "grid",
-                          placeItems: "center",
-                          height: "100%",
-                        }}
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={t("factoryStructure.expandAll")}>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setExpanded(nodes.map((node) => node.id))
+                        }
                       >
-                        <CircularProgress size={24} />
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                }
+              />
+              <Box sx={{ p: 0.75, flex: 1, overflowY: "auto" }}>
+                {loading ? (
+                  <Box
+                    sx={{
+                      display: "grid",
+                      placeItems: "center",
+                      height: "100%",
+                    }}
+                  >
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  roots.map((node) => (
+                    <TreeNode
+                      key={node.id}
+                      node={node}
+                      nodes={nodes}
+                      selectedId={selectedId}
+                      expanded={expanded}
+                      onToggle={(id) =>
+                        setExpanded((old) =>
+                          old.includes(id)
+                            ? old.filter((item) => item !== id)
+                            : [...old, id],
+                        )
+                      }
+                      onSelect={setSelectedId}
+                    />
+                  ))
+                )}
+              </Box>
+            </Paper>
+
+            <Paper
+              variant="outlined"
+              sx={{
+                ...cardSx,
+                height: panelHeight,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <SectionHeader
+                icon={<FactoryOutlinedIcon fontSize="small" />}
+                title={t("factoryStructure.list")}
+                action={
+                  loading ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <Chip
+                      label={t("factoryStructure.nodeCount", {
+                        count: filteredNodes.length,
+                      })}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ height: 22 }}
+                    />
+                  )
+                }
+              />
+              <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
+                <AgGridTable
+                  rowData={filteredNodes}
+                  columnDefs={columnDefs}
+                  loading={loading}
+                  rowSelection="single"
+                  onRowClicked={(event) => setSelectedId(event.data.id)}
+                  getRowId={(params) => String(params.data.id)}
+                  selectedRowId={selectedId}
+                  selectedRowKey="id"
+                  height="100%"
+                />
+              </Box>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ ...cardSx, height: panelHeight, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <SectionHeader icon={<DomainOutlinedIcon fontSize="small" />} title={t("factoryStructure.nodeDetails")} />
+              {selected ? (
+                <>
+                  <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                      <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: TONE_COLORS[TYPE_META[selected.type]?.tone] || "#005BAB" }}>
+                        {(() => { const Icon = TYPE_META[selected.type]?.icon || DomainOutlinedIcon; return <Icon sx={{ fontSize: 18 }} />; })()}
                       </Box>
-                    ) : (
-                      roots.map((node) => (
-                        <TreeNode
-                          key={node.id}
-                          node={node}
-                          nodes={nodes}
-                          selectedId={selectedId}
-                          expanded={expanded}
-                          onToggle={(id) =>
-                            setExpanded((old) =>
-                              old.includes(id)
-                                ? old.filter((item) => item !== id)
-                                : [...old, id],
-                            )
-                          }
-                          onSelect={setSelectedId}
-                        />
-                      ))
-                    )}
-                  </Box>
-                </Paper>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    ...cardSx,
-                    height: CONTENT_HEIGHT,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  <SectionHeader
-                    icon={<FactoryOutlinedIcon fontSize="small" />}
-                    title={t("factoryStructure.list")}
-                    action={
-                      loading ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <Chip
-                          label={t("factoryStructure.nodeCount", {
-                            count: filteredNodes.length,
-                          })}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                          sx={{ height: 22 }}
-                        />
-                      )
-                    }
-                  />
-                  <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
-                    <AgGridTable
-                      rowData={filteredNodes}
-                      columnDefs={columnDefs}
-                      loading={loading}
-                      pagination
-                      paginationPageSize={20}
-                      rowSelection="single"
-                      onRowClicked={(event) => setSelectedId(event.data.id)}
-                      getRowId={(params) => String(params.data.id)}
-                      selectedRowId={selectedId}
-                      selectedRowKey="id"
-                      height="100%"
-                    />
-                  </Box>
-                </Paper>
-
-                <Stack spacing={2} sx={{ height: CONTENT_HEIGHT }}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      ...cardSx,
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: "hidden",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <SectionHeader
-                      icon={<DomainOutlinedIcon fontSize="small" />}
-                      title={t("factoryStructure.nodeDetails")}
-                    />
-                    <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>
-                      {selected ? (
-                        <>
-                          <Stack
-                            direction="row"
-                            spacing={1.25}
-                            alignItems="center"
-                          >
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: "50%",
-                                bgcolor: isDark ? "#173A63" : "#EEF4FF",
-                                color: "#005BAB",
-                                display: "grid",
-                                placeItems: "center",
-                              }}
-                            >
-                              {(() => {
-                                const Icon =
-                                  TYPE_META[selected.type]?.icon ||
-                                  DomainOutlinedIcon;
-                                return <Icon />;
-                              })()}
-                            </Box>
-                            <Box minWidth={0}>
-                              <Typography
-                                variant="subtitle1"
-                                fontWeight={700}
-                                noWrap
-                              >
-                                {selected.name}
-                              </Typography>
-                              <Stack
-                                direction="row"
-                                spacing={0.75}
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {selected.code}
-                                </Typography>
-                                <StatusChip status={selected.status} />
-                              </Stack>
-                            </Box>
-                          </Stack>
-                          <Divider sx={{ my: 1.75 }} />
-                          {selected.image_url ? <Box component="img" src={resolveImageUrl(selected.image_url)} alt="" sx={{ width: "100%", maxHeight: 180, objectFit: "contain", bgcolor: "action.hover", borderRadius: 1.5, mb: 1.5 }} /> : null}
-                          <Stack spacing={1.3}>
-                            {[
-                              [
-                                t("factoryStructure.type"),
-                                t(
-                                  `factoryStructure.types.${String(selected.type).toLowerCase()}`,
-                                  {
-                                    defaultValue:
-                                      TYPE_META[selected.type]?.label ||
-                                      selected.type,
-                                  },
-                                ),
-                              ],
-                              [
-                                t("factoryStructure.parent"),
-                                getParent(selected)?.name || "—",
-                              ],
-                              [
-                                t("factoryStructure.level"),
-                                selected.level_no ?? "—",
-                              ],
-                              [
-                                t("factoryStructure.description"),
-                                selected.description || "—",
-                              ],
-                              [
-                                t("factoryStructure.createdBy"),
-                                selected.createdBy || "—",
-                              ],
-                              [
-                                t("factoryStructure.createdDate"),
-                                formatDateTime(
-                                  selected.createdAt,
-                                  i18n.resolvedLanguage,
-                                ),
-                              ],
-                              [
-                                t("factoryStructure.lastModified"),
-                                formatDateTime(
-                                  selected.updatedAt,
-                                  i18n.resolvedLanguage,
-                                ),
-                              ],
-                            ].map(([label, value]) => (
-                              <Box key={label}>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {label}
-                                </Typography>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {value}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Stack>
-                        </>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          {t("factoryStructure.selectNodeHelp")}
-                        </Typography>
-                      )}
+                      <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 0.25 }}>
+                        <Typography noWrap title={selected.name} sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{selected.name}</Typography>
+                        <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selected.code}</Typography>
+                      </Box>
+                      <StatusChip status={selected.status} width={92} />
                     </Box>
-                  </Paper>
-                  <Paper
-                    variant="outlined"
-                    sx={{ ...cardSx, overflow: "hidden" }}
-                  >
-                    <SectionHeader
-                      icon={<EditOutlinedIcon fontSize="small" />}
-                      title={t("factoryStructure.quickActions")}
-                    />
-                    <Stack spacing={1} sx={{ p: 1.25 }}>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={!canEdit || !selected}
-                        startIcon={<AddIcon />}
-                        onClick={() =>
-                          setDialog({ mode: "add", node: selected })
-                        }
-                        sx={buttonSx("primary", {
-                          justifyContent: "flex-start",
-                        })}
-                      >
-                        {t("factoryStructure.addChild")}
-                      </Button>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={!canEdit || !selected}
-                        startIcon={<EditOutlinedIcon />}
-                        onClick={() =>
-                          setDialog({ mode: "edit", node: selected })
-                        }
-                        sx={buttonSx("edit", {
-                          justifyContent: "flex-start",
-                          minHeight: 40,
-                        })}
-                      >
-                        {t("common.edit")}
-                      </Button>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={!canEdit || !selected}
-                        startIcon={<GridViewOutlinedIcon />}
-                        onClick={() => setLayoutNode(selected)}
-                        sx={buttonSx("edit", {
-                          justifyContent: "flex-start",
-                          minHeight: 40,
-                        })}
-                      >
-                        {t("factoryStructure.machineLayout.open")}
-                      </Button>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={!canEdit || !selected || saving}
-                        startIcon={
-                          selected?.status === "ACTIVE" ? (
-                            <DeleteOutlineIcon />
-                          ) : (
-                            <AddIcon />
-                          )
-                        }
-                        onClick={toggleStatus}
-                        sx={buttonSx(
-                          selected?.status === "ACTIVE" ? "delete" : "primary",
-                          { justifyContent: "flex-start" },
-                        )}
-                      >
-                        {selected?.status === "ACTIVE"
-                          ? t("factoryStructure.deactivate")
-                          : t("factoryStructure.activate")}
-                      </Button>
-                    </Stack>
-                  </Paper>
-                </Stack>
-              </Box>
-            </>
-          ) : (
-            <>
-              <KpiCardGroup>
-                <KpiCard
-                  label={t("factoryStructure.kpi.totalTypes")}
-                  value={nodeTypes.length}
-                  note={t("factoryStructure.kpi.allConfiguredTypes")}
-                  tone="primary"
-                  icon={<AccountTreeOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.activeTypes")}
-                  value={
-                    nodeTypes.filter((item) => Boolean(item.is_active)).length
-                  }
-                  note={t("factoryStructure.kpi.availableNewNodes")}
-                  tone="success"
-                  icon={<FactoryOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.inactiveTypes")}
-                  value={nodeTypes.filter((item) => !item.is_active).length}
-                  note={t("factoryStructure.kpi.notAvailableSelection")}
-                  tone="danger"
-                  icon={<DeleteOutlineIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.rootTypes")}
-                  value={
-                    nodeTypes.filter((item) => item.parent_type_id == null)
-                      .length
-                  }
-                  note={t("factoryStructure.kpi.withoutParent")}
-                  tone="accent"
-                  icon={<BusinessOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.usedTypes")}
-                  value={
-                    nodeTypes.filter((item) => Number(item.node_count) > 0)
-                      .length
-                  }
-                  note={t("factoryStructure.kpi.assignedNodes")}
-                  tone="warning"
-                  icon={<HubOutlinedIcon />}
-                />
-                <KpiCard
-                  label={t("factoryStructure.kpi.unusedTypes")}
-                  value={
-                    nodeTypes.filter((item) => Number(item.node_count) === 0)
-                      .length
-                  }
-                  note={t("factoryStructure.kpi.safeDelete")}
-                  tone="info"
-                  icon={<DomainOutlinedIcon />}
-                />
-              </KpiCardGroup>
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    xl: "minmax(0,1.8fr) minmax(300px,0.7fr)",
-                  },
-                  gap: 2,
-                }}
-              >
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    ...cardSx,
-                    height: CONTENT_HEIGHT,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                  }}
-                >
-                  <SectionHeader
-                    icon={<AccountTreeOutlinedIcon fontSize="small" />}
-                    title={t("factoryStructure.typeList")}
-                    action={
-                      loading ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <Chip
-                          label={t("factoryStructure.typeCount", {
-                            count: nodeTypes.length,
-                          })}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                          sx={{ height: 22 }}
-                        />
-                      )
-                    }
-                  />
-                  <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
-                    <AgGridTable
-                      rowData={nodeTypes}
-                      columnDefs={nodeTypeColumnDefs}
-                      loading={loading}
-                      pagination
-                      paginationPageSize={20}
-                      rowSelection="single"
-                      onRowClicked={(event) => setSelectedTypeId(event.data.id)}
-                      getRowId={(params) => String(params.data.id)}
-                      selectedRowId={selectedTypeId}
-                      selectedRowKey="id"
-                      height="100%"
-                    />
                   </Box>
-                </Paper>
-
-                <Stack spacing={2} sx={{ height: CONTENT_HEIGHT }}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      ...cardSx,
-                      flex: 1,
-                      minHeight: 0,
-                      overflow: "hidden",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <SectionHeader
-                      icon={<DomainOutlinedIcon fontSize="small" />}
-                      title={t("factoryStructure.typeDetails")}
-                    />
-                    <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>
-                      {selectedType ? (
-                        <>
-                          <Stack
-                            direction="row"
-                            spacing={1.25}
-                            alignItems="center"
-                          >
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: "50%",
-                                bgcolor: isDark ? "#173A63" : "#EEF4FF",
-                                color: selectedType.color || "#005BAB",
-                                display: "grid",
-                                placeItems: "center",
-                              }}
-                            >
-                              <AccountTreeOutlinedIcon />
-                            </Box>
-                            <Box minWidth={0}>
-                              <Typography
-                                variant="subtitle1"
-                                fontWeight={700}
-                                noWrap
-                              >
-                                {selectedType.name}
-                              </Typography>
-                              <Stack
-                                direction="row"
-                                spacing={0.75}
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {selectedType.code}
-                                </Typography>
-                                <StatusChip
-                                  status={
-                                    selectedType.is_active
-                                      ? "ACTIVE"
-                                      : "INACTIVE"
-                                  }
-                                />
-                              </Stack>
-                            </Box>
-                          </Stack>
-                          <Divider sx={{ my: 1.75 }} />
-                          <Stack spacing={1.4}>
-                            {[
-                              [
-                                t("factoryStructure.parentType"),
-                                selectedType.parent_type_name ||
-                                  t("factoryStructure.root"),
-                              ],
-                              [
-                                t("factoryStructure.level"),
-                                selectedType.level_order,
-                              ],
-                              [
-                                t("factoryStructure.sortOrder"),
-                                selectedType.sort_order,
-                              ],
-                              [
-                                t("factoryStructure.assignedNodes"),
-                                selectedType.node_count || 0,
-                              ],
-                              [
-                                t("factoryStructure.icon"),
-                                selectedType.icon || "—",
-                              ],
-                              [
-                                t("factoryStructure.color"),
-                                selectedType.color || "—",
-                              ],
-                            ].map(([label, value]) => (
-                              <Box key={label}>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {label}
-                                </Typography>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {value}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Stack>
-                        </>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          {t("factoryStructure.selectTypeHelp")}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Paper>
-                  <Paper
-                    variant="outlined"
-                    sx={{ ...cardSx, overflow: "hidden" }}
-                  >
-                    <SectionHeader
-                      icon={<EditOutlinedIcon fontSize="small" />}
-                      title={t("factoryStructure.quickActions")}
-                    />
-                    <Stack spacing={1} sx={{ p: 1.25 }}>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={!canEdit || !selectedType}
-                        startIcon={<EditOutlinedIcon />}
-                        onClick={() =>
-                          setTypeDialog({
-                            mode: "edit",
-                            nodeType: selectedType,
-                          })
-                        }
-                        sx={buttonSx("edit", {
-                          justifyContent: "flex-start",
-                          minHeight: 40,
-                        })}
-                      >
-                        {t("common.edit")}
-                      </Button>
-                      <Button
-                        fullWidth
-                        size="medium"
-                        disabled={
-                          !canEdit ||
-                          !selectedType ||
-                          Number(selectedType?.node_count) > 0
-                        }
-                        startIcon={<DeleteOutlineIcon />}
-                        onClick={() => setDeleteType(selectedType)}
-                        sx={buttonSx("delete", { justifyContent: "flex-start" })}
-                      >
-                        {t("common.delete")}
-                      </Button>
+                  <Box sx={{ px: 1.5, pb: 1.5, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                    <Stack spacing={1.5}>
+                      {selected.image_url ? (
+                        <Box component="img" src={resolveImageUrl(selected.image_url)} alt="" sx={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 1.5, border: 1, borderColor: "divider" }} />
+                      ) : null}
+                      <DetailSection title={t("factoryStructure.sectionBasicInfo")}>
+                        <DetailRow label={t("factoryStructure.type")}>
+                          {t(`factoryStructure.types.${String(selected.type).toLowerCase()}`, { defaultValue: selected.node_type_name || TYPE_META[selected.type]?.label || selected.type })}
+                        </DetailRow>
+                        <DetailRow label={t("factoryStructure.parent")}>{getParent(selected)?.name || "—"}</DetailRow>
+                        <DetailRow label={t("factoryStructure.level")}>{selected.level_no ?? "—"}</DetailRow>
+                        <DetailRow label={t("factoryStructure.description")} last>{selected.description || "—"}</DetailRow>
+                      </DetailSection>
+                      <DetailSection title={t("factoryStructure.history")}>
+                        <DetailRow label={t("factoryStructure.createdBy")}>{selected.createdBy || "—"}</DetailRow>
+                        <DetailRow label={t("factoryStructure.createdDate")}>{formatDateTime(selected.createdAt, i18n.resolvedLanguage)}</DetailRow>
+                        <DetailRow label={t("factoryStructure.lastModified")} last>{formatDateTime(selected.updatedAt, i18n.resolvedLanguage)}</DetailRow>
+                      </DetailSection>
                     </Stack>
-                  </Paper>
-                </Stack>
-              </Box>
-            </>
-          )}
+                  </Box>
+                  <Divider />
+                  <Stack direction="row" sx={{ justifyContent: "center", gap: 1.5, p: 1.5, flexShrink: 0 }}>
+                    <ActionIcon title={t("factoryStructure.addChild")} icon={<AddIcon fontSize="small" />} color="primary" disabled={!canEdit} onClick={() => setDialog({ mode: "add", node: selected })} />
+                    <ActionIcon title={t("common.edit")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit} onClick={() => setDialog({ mode: "edit", node: selected })} />
+                    <ActionIcon title={t("factoryStructure.machineLayout.open")} icon={<GridViewOutlinedIcon fontSize="small" />} disabled={!canEdit} onClick={() => setLayoutNode(selected)} />
+                    <ActionIcon
+                      title={selected.status === "ACTIVE" ? t("factoryStructure.deactivate") : t("factoryStructure.activate")}
+                      icon={selected.status === "ACTIVE" ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                      color={selected.status === "ACTIVE" ? "warning" : "success"} disabled={!canEdit || saving} onClick={toggleStatus} />
+                    <ActionIcon
+                      title={hasChildren ? t("factoryStructure.deleteNodeHasChildren") : t("common.delete")}
+                      icon={<DeleteOutlineIcon fontSize="small" />} color="error" disabled={!canEdit || saving || hasChildren} onClick={() => setDeleteNode(selected)} />
+                  </Stack>
+                </>
+              ) : (
+                <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">{t("factoryStructure.selectNodeHelp")}</Typography>
+                </Box>
+              )}
+            </Paper>
+          </Box>
         </Stack>
 
+        <Dialog open={typeListOpen} onClose={() => setTypeListOpen(false)} fullWidth maxWidth="lg" slotProps={{ paper: {
+            sx: {
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 24px 60px rgba(0,0,0,.55)"
+                  : "0 24px 60px rgba(15,23,42,.18)",
+            },
+          } }}>
+          <DialogHeader
+            icon={<DomainOutlinedIcon />}
+            title={t("factoryStructure.typeList")}
+            subtitle={t("factoryStructure.typeListHelp")}
+            onClose={() => setTypeListOpen(false)}
+          />
+          <DialogContent sx={{ px: 3, py: 2.5 }}>
+            <Box sx={{ height: 420 }}>
+              <AgGridTable
+                rowData={nodeTypes}
+                columnDefs={nodeTypeColumnDefs}
+                loading={loading}
+                rowSelection="single"
+                onRowClicked={(event) => setSelectedTypeId(event.data.id)}
+                getRowId={(params) => String(params.data.id)}
+                selectedRowId={selectedTypeId}
+                selectedRowKey="id"
+                height="100%"
+              />
+            </Box>
+            <Stack direction="row" sx={{ alignItems: "center", mt: 1.5 }}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                disabled={!canEdit}
+                onClick={() => setTypeDialog({ mode: "add", nodeType: null })}
+                sx={buttonSx("primary", { whiteSpace: "nowrap" })}
+              >
+                {t("factoryStructure.addNodeType")}
+              </Button>
+            </Stack>
+          </DialogContent>
+        </Dialog>
         {dialog && (
           <NodeDialog
             key={`${dialog.mode}-${dialog.node?.id || "new"}`}
@@ -2131,12 +1614,53 @@ export default function FactoryStructureMaster() {
             onSave={saveNodeType}
           />
         )}
-        <Dialog
-          open={Boolean(deleteType)}
-          onClose={saving ? undefined : () => setDeleteType(null)}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{
+        <Dialog open={Boolean(deleteNode)} onClose={saving ? undefined : () => setDeleteNode(null)} maxWidth="xs" fullWidth slotProps={{ paper: {
+            sx: {
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 24px 60px rgba(0,0,0,.55)"
+                  : "0 24px 60px rgba(15,23,42,.18)",
+            },
+          } }}>
+          <DialogHeader
+            icon={<DeleteOutlineIcon />}
+            title={t("factoryStructure.deleteNode")}
+            tone="danger"
+            disabled={saving}
+            onClose={() => setDeleteNode(null)}
+          />
+          <DialogContent sx={{ px: 3, py: 2.5 }}>
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              {t("factoryStructure.deleteNodeConfirmation", {
+                name: deleteNode?.name,
+              })}
+            </Alert>
+          </DialogContent>
+          <DialogActions
+            sx={{
+              px: 3,
+              py: 1.75,
+              borderTop: 1,
+              borderColor: "divider",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
+            }}
+          >
+            <Button
+              disabled={saving}
+              onClick={confirmDeleteNode}
+              sx={buttonSx("delete")}
+              startIcon={
+                saving ? <CircularProgress size={16} color="inherit" /> : null
+              }
+            >
+              {t("common.delete")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog open={Boolean(deleteType)} onClose={saving ? undefined : () => setDeleteType(null)} maxWidth="xs" fullWidth slotProps={{ paper: {
         sx: {
           borderRadius: 3,
           overflow: "hidden",
@@ -2145,8 +1669,7 @@ export default function FactoryStructureMaster() {
               ? "0 24px 60px rgba(0,0,0,.55)"
               : "0 24px 60px rgba(15,23,42,.18)",
         },
-      }}
-        >
+      } }}>
           <DialogHeader
             icon={<DeleteOutlineIcon />}
             title={t("factoryStructure.deleteNodeType")}
@@ -2171,13 +1694,6 @@ export default function FactoryStructureMaster() {
                 theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
             }}
           >
-            <Button
-              disabled={saving}
-              onClick={() => setDeleteType(null)}
-              sx={buttonSx("cancel")}
-            >
-              {t("common.cancel")}
-            </Button>
             <Button
               disabled={saving}
               onClick={confirmDeleteNodeType}

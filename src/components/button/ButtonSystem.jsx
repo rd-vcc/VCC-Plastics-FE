@@ -58,22 +58,23 @@ export const buttonSystem = {
       fontSize: "0.85rem",
       borderRadius: 2,
       px: 2.2,
-      color: "#111827",
-      backgroundColor: "#f3f4f6",
+      // theme-aware so the button stays readable in dark mode (pages often swap the background for the card colour)
+      color: (t) => (t.palette.mode === "dark" ? "#E5E7EB" : "#111827"),
+      backgroundColor: (t) => (t.palette.mode === "dark" ? "#1F2937" : "#f3f4f6"),
     },
     hover: {
-      backgroundColor: "#e5e7eb",
-      color: "#111827",
+      backgroundColor: (t) => (t.palette.mode === "dark" ? "#273449" : "#e5e7eb"),
+      color: (t) => (t.palette.mode === "dark" ? "#F9FAFB" : "#111827"),
     },
     active: {
-      backgroundColor: "#d1d5db",
+      backgroundColor: (t) => (t.palette.mode === "dark" ? "#334155" : "#d1d5db"),
     },
   },
 
   // ===== DELETE: Xoá =====
   delete: {
     base: {
-      height: 40,
+      height: 29,
       px: 3,
       fontFamily:
         '"Bai Jamjuree", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial',
@@ -125,7 +126,7 @@ export const buttonSystem = {
     button: {
       base: {
         minWidth: 220,
-        height: 44,
+        height: 32,
         fontWeight: 800,
         fontSize: "0.95rem",
         borderRadius: 3,

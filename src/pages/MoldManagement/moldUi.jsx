@@ -58,21 +58,21 @@ export const locationText = (m) => (m.location_type === "MACHINE" ? m.machine_co
 
 const pillSx = (color, width) => ({
   display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
-  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
+  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
 });
 export const MoldStatusPill = ({ value }) => (
   <Box component="span" title={label("moldStatus", value)} sx={{ ...pillSx(MOLD_STATUS_COLORS[value] || "#667085", 104), ...(value === "LOCKED" ? { color: "text.primary" } : {}) }}>{label("moldStatus", value)}</Box>
 );
 export const LocationPill = ({ value }) => <Box component="span" title={label("locationType", value)} sx={pillSx(LOCATION_COLORS[value] || "#667085", 104)}>{label("locationType", value)}</Box>;
 export const HealthBadge = ({ value }) => (
-  <Box component="span" sx={{ ...pillSx(healthColor(value), 40), fontSize: 12 }}>{value ?? EMPTY}</Box>
+  <Box component="span" sx={{ ...pillSx(healthColor(value), 40), fontSize: 11 }}>{value ?? EMPTY}</Box>
 );
 export function LifeBar({ value, width = 90 }) {
   if (value == null) return EMPTY;
   const color = lifeColor(value);
   return (
     <Box sx={{ width, display: "inline-block", verticalAlign: "middle" }}>
-      <Typography sx={{ fontSize: 11, fontWeight: 800, color, lineHeight: 1.2, textAlign: "center" }}>{num(value, 1)}%</Typography>
+      <Typography sx={{ fontSize: 10, fontWeight: 800, color, lineHeight: 1.2, textAlign: "center" }}>{num(value, 1)}%</Typography>
       <LinearProgress variant="determinate" value={Math.min(value, 100)} sx={{ height: 5, borderRadius: 3, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: color } }} />
     </Box>
   );
@@ -91,17 +91,17 @@ export function LifeGauge({ value, dark, height = 190, labelText }) {
     <Chart type="radialBar" height={height} series={[Math.min(value || 0, 100)]} options={{
       chart: { background: "transparent", sparkline: { enabled: true } }, colors: [color],
       plotOptions: { radialBar: { startAngle: -125, endAngle: 125, hollow: { size: "64%" }, track: { background: dark ? "#263244" : "#EEF2F6" },
-        dataLabels: { name: { show: true, offsetY: 22, color: dark ? "#A7B0C0" : "#667085", fontSize: "12px" },
-          value: { offsetY: -10, fontSize: "24px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: () => (value != null ? `${num(value, 1)}%` : EMPTY) } } } },
+        dataLabels: { name: { show: true, offsetY: 22, color: dark ? "#A7B0C0" : "#667085", fontSize: "11px" },
+          value: { offsetY: -10, fontSize: "18px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: () => (value != null ? `${num(value, 1)}%` : EMPTY) } } } },
       labels: [labelText || tx("Life Used")] }} />
   );
 }
-export function InfoGrid({ rows, cols = "auto 1fr", gap = 0.4 }) {
+export function InfoGrid({ rows, cols = "auto 1fr", gap = 0.4, nowrap }) {
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 1.5, rowGap: gap, alignItems: "baseline", minWidth: 0 }}>
       {rows.filter(Boolean).map(([a, b, color]) => [
         <Typography key={`${a}k`} variant="caption" color="text.secondary" noWrap>{a}</Typography>,
-        <Typography key={`${a}v`} variant="caption" fontWeight={700} sx={{ color, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{b ?? EMPTY}</Typography>])}
+        <Typography key={`${a}v`} variant="caption" fontWeight={700} noWrap={nowrap} title={nowrap && b != null ? String(b) : undefined} sx={{ color, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{b ?? EMPTY}</Typography>])}
     </Box>
   );
 }
@@ -110,7 +110,7 @@ export function QuickActionGrid({ actions, columns = "repeat(auto-fill, minmax(9
     <Box sx={{ display: "grid", gridTemplateColumns: columns, gap: 0.75 }}>
       {actions.map(([text, Icon, color, onClick, disabled]) => (
         <Button key={text} disabled={disabled} onClick={onClick} sx={{ flexDirection: "column", gap: 0.4, py: 1, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none",
-          fontSize: 11, fontWeight: 700, color: "text.primary", lineHeight: 1.2, minWidth: 0 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
+          fontSize: 10, fontWeight: 700, color: "text.primary", lineHeight: 1.2, minWidth: 0 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
       ))}
     </Box>
   );
@@ -250,7 +250,6 @@ export function MoldActionDialog({ mode, mold, lookups, request, actor, onClose,
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={submit} disabled={saving || !valid} sx={btn(mode === "status" && ["SCRAP", "RETIRE", "LOCK"].includes(f.action) ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>

@@ -53,14 +53,14 @@ export default function PlanningGantt({ rows, rangeStart, rangeEnd, now, tickHou
         </Box>
         <Box sx={{ position: "relative", height: 28, borderLeft: 1, borderColor: "divider" }}>
           <Box sx={{ position: "absolute", inset: TRACK_INSET }}>
-            {ticks.filter((_, i) => i % labelEvery === 0).map((t) => (
+            {ticks.filter((t, i) => i % labelEvery === 0 && !(showNow && Math.abs(pct(t.getTime()) - nowPct) < 5)).map((t) => (
               <Typography key={t.getTime()} variant="caption" color="text.secondary"
-                sx={{ position: "absolute", left: `${pct(t.getTime())}%`, top: 6, transform: "translateX(-50%)", fontSize: 10.5, whiteSpace: "nowrap" }}>
+                sx={{ position: "absolute", left: `${pct(t.getTime())}%`, top: 6, transform: "translateX(-50%)", fontSize: 10, whiteSpace: "nowrap" }}>
                 {hhmm(t)}
               </Typography>
             ))}
             {showNow ? (
-              <Box sx={{ position: "absolute", left: `${nowPct}%`, top: 3, transform: "translateX(-50%)", bgcolor: "#F04438", color: "#fff", px: 0.6, borderRadius: 0.75, fontSize: 10.5, fontWeight: 800, zIndex: 2 }}>
+              <Box sx={{ position: "absolute", left: `${nowPct}%`, top: 3, transform: "translateX(-50%)", bgcolor: "#F04438", color: "#fff", px: 0.6, borderRadius: 0.75, fontSize: 10, fontWeight: 800, zIndex: 2 }}>
                 {hhmm(now)}
               </Box>
             ) : null}

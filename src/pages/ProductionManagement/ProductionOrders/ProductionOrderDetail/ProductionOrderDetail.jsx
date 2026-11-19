@@ -46,7 +46,7 @@ import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { ProgressDialog, WorkOrderForm } from "../../ProductionPlanning/PlanningDialogs";
 import { setActiveLanguage as setPlanningLanguage } from "../../ProductionPlanning/locales";
-import { DialogHeader, Dot, EMPTY, Head, btn, cardSx, ddmmhhmm, dialogPaperSx, fmtDuration, num, pageTheme } from "../../ProductionPlanning/ui";
+import { DialogHeader, Dot, EMPTY, Head, QuickAction, QuickActions, btn, cardSx, ddmmhhmm, dialogPaperSx, fmtDuration, num, pageTheme } from "../../ProductionPlanning/ui";
 import { CopyDialog, OrderForm, PriorityDialog, ReasonDialog } from "../ProductionOrderList/OrderDialogs";
 import { PROGRESS_COLORS, PriorityPill, ProgressBar, ProgressStatePill, StatusPill, WO_STATUS_COLORS, WoStatusPill } from "../orderUi";
 import { activityText, label, localeTag, setActiveLanguage, timelineText, tx, woStatusText } from "./locales";
@@ -67,6 +67,9 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// "Full name - employee code"; falls back to the raw code (e.g. SYSTEM)
+const person = (name, code) => (name ? `${name} - ${code}` : code);
+
 function Row({ name, value, strong, color }) {
   return (
     <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "center", py: 0.45 }}>
@@ -79,11 +82,11 @@ function Row({ name, value, strong, color }) {
 function Metric({ icon, color, name, value, unit, hint }) {
   const Icon = icon;
   return (
-    <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", py: 0.75 }}>
-      <Box sx={{ width: 30, height: 30, borderRadius: 1, border: `1px solid ${color}55`, color, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon sx={{ fontSize: 18 }} /></Box>
+    <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", py: 0.4 }}>
+      <Box sx={{ width: 26, height: 26, borderRadius: 1, border: `1px solid ${color}55`, color, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon sx={{ fontSize: 14.5 }} /></Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="caption" sx={{ display: "block" }}>{name}</Typography>
-        {hint ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5, lineHeight: 1.2 }}>{hint}</Typography> : null}
+        {hint ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10, lineHeight: 1.2 }}>{hint}</Typography> : null}
       </Box>
       <Typography variant="subtitle1" fontWeight={800} sx={{ color: value == null ? "text.disabled" : color, whiteSpace: "nowrap" }}>
         {value == null ? EMPTY : value}{value != null && unit ? <Typography component="span" variant="caption" fontWeight={700} sx={{ ml: 0.5, color: "text.primary" }}>{unit}</Typography> : null}
@@ -92,10 +95,10 @@ function Metric({ icon, color, name, value, unit, hint }) {
   );
 }
 
-function SimpleTable({ columns, rows, onRowClick, empty }) {
+function SimpleTable({ columns, rows, onRowClick, empty, fill }) {
   return (
-    <Box sx={{ overflowX: "auto" }}>
-      <Table size="small" sx={{ "& td, & th": { fontSize: 12, px: 1, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, color: "text.secondary" } }}>
+    <Box sx={fill ? { overflow: "auto", flex: 1, minHeight: 0 } : { overflowX: "auto" }}>
+      <Table size="small" stickyHeader={fill} sx={{ "& td, & th": { fontSize: 11, px: 1, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, color: "text.secondary" } }}>
         <TableHead><TableRow>{columns.map((c) => <TableCell key={c.key} align={c.align}>{c.title}</TableCell>)}</TableRow></TableHead>
         <TableBody>
           {rows.length === 0 ? (
@@ -119,8 +122,7 @@ function NoteDialog({ saving, onClose, onSave }) {
       <DialogContent sx={{ pt: "20px !important" }}>
         <TextField autoFocus fullWidth multiline minRows={4} placeholder={tx("Write a note...")} value={text} onChange={(e) => setText(e.target.value)} inputProps={{ maxLength: 2000 }} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || !text.trim()} onClick={() => onSave(text.trim())} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -274,7 +276,7 @@ export default function ProductionOrderDetail() {
   const orderQuery = order ? `?order=${encodeURIComponent(order.order_no)}` : "";
 
   // ---- render --------------------------------------------------------------------------------
-  const toolBtnSx = btn("cancel", { height: 34, px: 1.5, whiteSpace: "nowrap" });
+  const toolBtnSx = btn("cancel", { height: 29, px: 1.5, whiteSpace: "nowrap" });
   const status = order?.status;
   const finalStatus = ["COMPLETED", "CLOSED", "CANCELLED"].includes(status);
   const picker = (
@@ -294,12 +296,12 @@ export default function ProductionOrderDetail() {
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: { lg: "calc(var(--app-vh, 100vh) - 74px)" }, minHeight: 0, "& > *": { flexShrink: 0 } }}>
         <PageMeta title={`${order ? `${order.order_no} · ` : ""}${tx("Production Order Detail")} | VCC Plastics`} description={tx("Electronic production record of one production order")} />
         <PageBreadcrumb pageTitle={tx("Production Order Detail")} />
 
         {/* ③ Action toolbar */}
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 0.75 }}>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, alignItems: "center" }}>
             <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/production-management/production-orders/list")} sx={toolBtnSx}>{tx("Back to List")}</Button>
             <Button startIcon={<EditOutlinedIcon />} disabled={!order || !canEdit || finalStatus} onClick={() => setDialog({ type: "edit" })} sx={toolBtnSx}>{tx("Edit Order")}</Button>
@@ -313,7 +315,7 @@ export default function ProductionOrderDetail() {
             <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
             <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
           </Stack>
-          {loading ? <LinearProgress sx={{ mt: 1 }} /> : null}
+          {loading ? <LinearProgress sx={{ mt: 0.5, height: 2 }} /> : null}
         </Paper>
         <Menu open={Boolean(menu)} anchorEl={menu} onClose={() => setMenu(null)}>
           {moreItems.map((a) => {
@@ -339,7 +341,7 @@ export default function ProductionOrderDetail() {
         ) : (
           <OrderRecord record={record} tab={tab} setTab={setTab} dark={dark} canEdit={canEdit} saving={saving} orderQuery={orderQuery}
             navigate={navigate} goWorkOrder={goWorkOrder} onAddNote={() => setDialog({ type: "note" })} onAddWorkOrder={openAddWorkOrder}
-            onPrint={printOrder} onProgress={(w) => setDialog({ type: "progress", item: w })} />
+            onProgress={(w) => setDialog({ type: "progress", item: w })} />
         )}
 
         {/* dialogs */}
@@ -380,7 +382,7 @@ export default function ProductionOrderDetail() {
 // RECORD BODY
 // =========================================================
 
-function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, navigate, goWorkOrder, onAddNote, onAddWorkOrder, onPrint, onProgress }) {
+function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, navigate, goWorkOrder, onAddNote, onAddWorkOrder, onProgress }) {
   const { order, output, quality, material, performance, work_orders: workOrders, wo_summary: woSummary, timeline, notes, activity, machines, molds, schedule } = record;
   const textColor = dark ? "#F3F4F6" : "#172033";
   const progressColor = PROGRESS_COLORS[order.progress_state] || "#12B76A";
@@ -390,7 +392,7 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
     options: {
       chart: { type: "radialBar", sparkline: { enabled: true }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: [progressColor],
       plotOptions: { radialBar: { hollow: { size: "62%" }, track: { background: dark ? "#1F2937" : "#EAECF0" },
-        dataLabels: { name: { show: true, offsetY: 22, color: dark ? "#A7B0C0" : "#667085", fontSize: "11px" }, value: { offsetY: -10, fontSize: "24px", fontWeight: 800, color: textColor, formatter: () => `${num(output.progress_pct, 1)}%` } } } },
+        dataLabels: { name: { show: true, offsetY: 22, color: dark ? "#A7B0C0" : "#667085", fontSize: "10px" }, value: { offsetY: -10, fontSize: "18px", fontWeight: 800, color: textColor, formatter: () => `${num(output.progress_pct, 1)}%` } } } },
       labels: [tx("Progress")],
     },
   };
@@ -401,7 +403,7 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
       chart: { type: "donut", background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' },
       labels: woDonutKeys.map(([k]) => woStatusText(k)), colors: woDonutKeys.map(([, c]) => c), legend: { show: false }, dataLabels: { enabled: false },
       stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light" },
-      plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: "WO", color: dark ? "#A7B0C0" : "#667085", formatter: () => String(woSummary.total) }, value: { fontSize: "20px", fontWeight: 800, color: textColor } } } } },
+      plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: "WO", color: dark ? "#A7B0C0" : "#667085", formatter: () => String(woSummary.total) }, value: { fontSize: "16px", fontWeight: 800, color: textColor } } } } },
     },
   };
 
@@ -422,16 +424,15 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
     [tx("Add Work Order"), AddCircleOutlineIcon, "#1570EF", onAddWorkOrder, !canEdit || !["RELEASED", "SCHEDULING", "IN_PRODUCTION"].includes(order.status)],
     [tx("Quality Check"), VerifiedUserOutlinedIcon, "#7A5AF8", () => navigate(`/quality-management/inspection-management${orderQuery}`)],
     [tx("Change Schedule"), EditCalendarOutlinedIcon, "#F79009", () => navigate(`/production-management/planning${orderQuery}`)],
-    [tx("Print Order"), PrintOutlinedIcon, "#1570EF", onPrint],
   ];
 
   const notesCard = (full) => (
-    <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
+    <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Head title={tx("Notes")} action={<Button size="small" disabled={saving} startIcon={<NoteAddOutlinedIcon fontSize="small" />} onClick={onAddNote} sx={{ textTransform: "none" }}>{tx("Add Note")}</Button>} />
-      <Box sx={{ px: 1.5, pb: 1, flex: 1, overflow: "auto", maxHeight: full ? "none" : 210 }}>
+      <Box sx={{ px: 1.5, pb: 1, flex: 1, minHeight: 0, overflow: "auto" }}>
         {notes.length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No notes yet.")}</Typography> : (full ? notes : notes.slice(0, 3)).map((n) => (
           <Box key={n.id} sx={{ py: 0.9, borderBottom: 1, borderColor: "divider" }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{ddmmhhmm(n.created_at)} · {n.created_by || EMPTY}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{ddmmhhmm(n.created_at)} · {person(n.created_by_name, n.created_by_code) || EMPTY}</Typography>
             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{n.note_text}</Typography>
           </Box>
         ))}
@@ -443,19 +444,19 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
   return (
     <>
       {/* ④ Order header */}
-      <Paper elevation={0} sx={{ ...cardSx, p: 1.5, mb: 1.5 }}>
+      <Paper elevation={0} sx={{ ...cardSx, px: 1.5, py: 1 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)", xl: "1.6fr repeat(8, 1fr)" }, gap: 1.5, alignItems: "center" }}>
           <Box sx={{ gridColumn: { xs: "1 / -1", xl: "auto" } }}>
             <Typography variant="caption" color="text.secondary">{tx("Production Order")}</Typography>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-              <Typography variant="h5" fontWeight={800} sx={{ color: "primary.main" }}>{order.order_no}</Typography>
+              <Typography variant="h6" fontWeight={800} sx={{ color: "primary.main", lineHeight: 1.3 }}>{order.order_no}</Typography>
               <ProgressStatePill value={order.progress_state} />
               <StatusPill value={order.status} />
             </Stack>
           </Box>
           {[[tx("Customer"), order.customer_name || EMPTY], [tx("Product"), order.product_name], [tx("Order Quantity"), `${num(order.order_qty)} PCS`],
             [tx("Priority"), <PriorityPill key="p" value={order.priority} />], [tx("Order Type"), label("source", order.source)],
-            [tx("Created By"), order.created_by || EMPTY], [tx("Created Date"), ddmmhhmm(order.created_at)], [tx("Last Update"), ddmmhhmm(order.updated_at)]].map(([k, v]) => (
+            [tx("Created By"), person(order.created_by_name, order.created_by_code) || EMPTY], [tx("Created Date"), ddmmhhmm(order.created_at)], [tx("Last Update"), ddmmhhmm(order.updated_at)]].map(([k, v]) => (
             <Box key={k} sx={{ minWidth: 0 }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{k}</Typography>
               <Typography variant="body2" fontWeight={700} noWrap component="div">{v}</Typography>
@@ -465,51 +466,48 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
       </Paper>
 
       {/* ⑤ Tabs */}
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 1.5, borderBottom: 1, borderColor: "divider", minHeight: 40, "& .MuiTab-root": { minHeight: 40, textTransform: "none", fontWeight: 700, fontSize: 13 } }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ borderBottom: 1, borderColor: "divider", minHeight: 29, "& .MuiTab-root": { minHeight: 29, textTransform: "none", fontWeight: 700, fontSize: 11.5 } }}>
         {TABS.map(([key, text, Icon]) => <Tab key={key} value={key} icon={<Icon fontSize="small" />} iconPosition="start" label={tx(text)} />)}
       </Tabs>
 
+      <Box sx={{ flex: "1 1 0", minHeight: 0, overflow: "auto" }}>
       {tab === "overview" && (
-        <>
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "1.25fr 0.95fr 1.5fr" }, gap: 1.5, mb: 1.5 }}>
+        <Box sx={{ height: { lg: "100%" }, display: "grid", gap: 1, gridTemplateRows: { lg: "auto auto minmax(0, 1fr)" } }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "1.15fr 1fr 1.45fr" }, gap: 1 }}>
             {/* ⑥ Progress */}
             <Paper elevation={0} sx={cardSx}>
               <Head title={tx("Production Progress")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "170px 1fr", alignItems: "center", gap: 1, px: 1.5 }}>
-                <Chart type="radialBar" height={170} series={radial.series} options={radial.options} />
+              <Box sx={{ display: "grid", gridTemplateColumns: "130px 1fr", alignItems: "center", gap: 1.5, px: 1.5 }}>
+                <Chart type="radialBar" height={130} series={radial.series} options={radial.options} />
                 <Box>
                   <Row name={tx("Planned Quantity")} value={`${num(output.order_qty)} PCS`} />
                   <Row name={tx("Good Pieces")} value={`${num(output.good_qty)} PCS`} color="#12B76A" />
                   <Row name={tx("Reject Pieces")} value={`${num(output.reject_qty)} PCS`} color="#F04438" />
                   <Row name={tx("Remaining")} value={`${num(output.remaining_qty)} PCS`} color="#1570EF" />
+                  <Row name={tx("Yield (FPY)")} value={output.yield_pct == null ? EMPTY : `${num(output.yield_pct, 1)}%`} color="#7A5AF8" />
                 </Box>
               </Box>
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                <LinearProgress variant="determinate" value={Math.min(output.progress_pct || 0, 100)} sx={{ height: 10, borderRadius: 5, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: progressColor, borderRadius: 5 } }} />
-                <Stack direction="row" sx={{ justifyContent: "space-between", mt: 0.75 }}>
-                  <Typography variant="caption" color="text.secondary">{tx("Start")}: {ddmmhhmm(order.planned_start)}</Typography>
-                  <Typography variant="caption" color="text.secondary">{tx("End")}: {ddmmhhmm(order.planned_end)}</Typography>
-                </Stack>
+              <Box sx={{ px: 1.5, pb: 1.25, pt: 0.5 }}>
+                <LinearProgress variant="determinate" value={Math.min(output.progress_pct || 0, 100)} sx={{ height: 8, borderRadius: 4, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: progressColor, borderRadius: 4 } }} />
               </Box>
             </Paper>
 
             {/* ⑦ Timeline */}
             <Paper elevation={0} sx={cardSx}>
               <Head title={tx("Status Timeline")} />
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
+              <Box sx={{ px: 1.5, pb: 1.25 }}>
                 {timeline.map((step, i) => {
                   const color = step.status === "CANCELLED" ? "#F04438" : step.current ? "#1570EF" : step.done ? "#12B76A" : "#98A2B3";
                   const Icon = step.status === "CANCELLED" ? HighlightOffOutlinedIcon : step.current ? RadioButtonCheckedIcon : step.done ? CheckCircleOutlineIcon : RadioButtonCheckedIcon;
                   return (
-                    <Stack key={step.status} direction="row" spacing={1.25} sx={{ position: "relative", pb: i === timeline.length - 1 ? 0 : 1.25 }}>
-                      {i < timeline.length - 1 ? <Box sx={{ position: "absolute", left: 11, top: 24, bottom: 0, borderLeft: `2px ${step.done ? "solid" : "dashed"} ${step.done ? "#12B76A" : "#D0D5DD"}` }} /> : null}
-                      <Icon sx={{ color, fontSize: 24, bgcolor: "background.paper", zIndex: 1, opacity: step.done || step.current ? 1 : 0.6 }} />
-                      <Box sx={{ flex: 1, display: "grid", gridTemplateColumns: "1fr auto", gap: 1 }}>
-                        <Typography variant="body2" fontWeight={step.current ? 800 : 700} sx={{ color: step.current ? color : "text.primary" }}>{timelineText(step.status)}</Typography>
-                        <Box sx={{ textAlign: "right" }}>
-                          <Typography variant="caption" sx={{ display: "block", color: step.current ? color : "text.secondary" }}>{step.at ? ddmmhhmm(step.at) : EMPTY}</Typography>
-                          {step.actor ? <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{step.actor}</Typography> : null}
-                        </Box>
+                    <Stack key={step.status} direction="row" sx={{ gap: 1.25, position: "relative", alignItems: "center", pb: i === timeline.length - 1 ? 0 : 0.9 }}>
+                      {i < timeline.length - 1 ? <Box sx={{ position: "absolute", left: 7.5, top: 18, bottom: 0, borderLeft: `2px ${step.done ? "solid" : "dashed"} ${step.done ? "#12B76A" : "#D0D5DD"}` }} /> : null}
+                      <Icon sx={{ color, fontSize: 17, bgcolor: "background.paper", zIndex: 1, opacity: step.done || step.current ? 1 : 0.6 }} />
+                      <Box sx={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "1fr auto", gap: 1, alignItems: "center" }}>
+                        <Typography variant="caption" fontWeight={step.current ? 800 : 700} noWrap sx={{ color: step.current ? color : "text.primary" }}>{timelineText(step.status)}</Typography>
+                        <Typography variant="caption" noWrap sx={{ color: step.current ? color : "text.secondary" }}>
+                          {step.at ? ddmmhhmm(step.at) : EMPTY}{step.actor ? ` · ${person(step.actor_name, step.actor_code)}` : ""}
+                        </Typography>
                       </Box>
                     </Stack>
                   );
@@ -517,44 +515,28 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
               </Box>
             </Paper>
 
-            {/* ⑧ Order information */}
+            {/* ⑧ Order information: only what the header above does not show */}
             <Paper elevation={0} sx={{ ...cardSx, gridColumn: { lg: "1 / -1", xl: "auto" } }}>
               <Head title={tx("Order Information")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, columnGap: 3, px: 1.5, pb: 1.5 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, columnGap: 3, px: 1.5, pb: 1.25 }}>
                 <Box>
-                  <Row name={tx("Order No.")} value={order.order_no} />
-                  <Row name={tx("Customer")} value={order.customer_name} />
-                  <Row name={tx("Product")} value={order.product_name} />
                   <Row name={tx("Product Code")} value={order.product_code} />
-                  <Row name={tx("Order Quantity")} value={`${num(order.order_qty)} PCS`} />
-                  <Row name={tx("UOM")} value="PCS" />
                   <Row name={tx("Order Type")} value={`${label("source", order.source)}${order.source_ref ? ` · ${order.source_ref}` : ""}`} />
+                  <Row name={tx("Plant")} value={order.factory_node_name} />
+                  <Row name={tx("Description")} value={order.remark || EMPTY} />
                 </Box>
                 <Box>
-                  <Row name={tx("Priority")} value={<PriorityPill value={order.priority} />} />
                   <Row name={tx("Plan Start")} value={ddmmhhmm(order.planned_start)} />
                   <Row name={tx("Plan End")} value={ddmmhhmm(order.planned_end)} />
                   <Row name={tx("Due Date")} value={ddmmhhmm(order.due_date)} />
-                  <Row name={tx("Status")} value={<ProgressStatePill value={order.progress_state} />} />
-                  <Row name={tx("Workflow")} value={label("status", order.status)} />
-                  <Row name={tx("Plant")} value={order.factory_node_name} />
-                  <Row name={tx("Description")} value={order.remark || EMPTY} />
+                  <Row name={tx("Unplanned Qty")} value={`${num(schedule.unplanned_qty)} PCS`} color={schedule.unplanned_qty ? "#F79009" : undefined} />
                 </Box>
               </Box>
             </Paper>
           </Box>
 
           {/* ⑨ Summary cards + ⑩ WO donut */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "repeat(4, 1fr) 1.15fr" }, gap: 1.5, mb: 1.5 }}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Output Summary")} />
-              <Box sx={{ px: 1.5, pb: 1 }}>
-                <Metric icon={CheckCircleOutlineIcon} color="#12B76A" name={tx("Good Pieces")} value={num(output.good_qty)} unit="PCS" />
-                <Metric icon={HighlightOffOutlinedIcon} color="#F04438" name={tx("Reject Pieces")} value={num(output.reject_qty)} unit="PCS" />
-                <Metric icon={ViewInArOutlinedIcon} color="#1570EF" name={tx("Total Pieces")} value={num(output.total_qty)} unit="PCS" />
-                <Metric icon={AssessmentOutlinedIcon} color="#7A5AF8" name={tx("Yield (FPY)")} value={output.yield_pct == null ? null : `${num(output.yield_pct, 1)}%`} />
-              </Box>
-            </Paper>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "repeat(3, 1fr) 1.15fr" }, gap: 1 }}>
             <Paper elevation={0} sx={cardSx}>
               <Head title={tx("Quality Summary")} />
               <Box sx={{ px: 1.5, pb: 1 }}>
@@ -578,46 +560,42 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
                 <Metric icon={AssessmentOutlinedIcon} color="#12B76A" name={tx("OEE (Avg.)")} value={performance.oee_pct} />
                 <Metric icon={PrecisionManufacturingOutlinedIcon} color="#1570EF" name={tx("Availability")} value={performance.availability_pct} />
                 <Metric icon={ShowChartOutlinedIcon} color="#F79009" name={tx("Performance")} value={performance.performance_pct} />
-                <Metric icon={VerifiedUserOutlinedIcon} color="#7A5AF8" name={tx("Quality")} value={performance.quality_pct == null ? null : `${num(performance.quality_pct, 1)}%`} />
-                <Tooltip title={performance.reason}><Typography variant="caption" color="text.secondary">{tx("Needs Production Execution / IoT data")}</Typography></Tooltip>
+                <Tooltip title={performance.reason}>
+                  <Box><Metric icon={VerifiedUserOutlinedIcon} color="#7A5AF8" name={tx("Quality")} hint={tx("Needs Production Execution / IoT data")} value={performance.quality_pct == null ? null : `${num(performance.quality_pct, 1)}%`} /></Box>
+                </Tooltip>
               </Box>
             </Paper>
             <Paper elevation={0} sx={cardSx}>
               <Head title={tx("Related Work Orders")} />
               <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1.1fr) minmax(0,1fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1 }}>
-                <Stack spacing={0.75}>
-                  {WO_BUCKETS.map(([k, color]) => (
+                <Stack spacing={0.6}>
+                  {WO_BUCKETS.filter(([k]) => k === "total" || woSummary[k]).map(([k, color]) => (
                     <Stack key={k} direction="row" sx={{ justifyContent: "space-between" }}>
                       <Dot color={color} text={k === "total" ? tx("Total") : woStatusText(k)} />
                       <Typography variant="caption" fontWeight={800}>{woSummary[k] || 0}</Typography>
                     </Stack>
                   ))}
                 </Stack>
-                <Box sx={{ minWidth: 0 }}><Chart type="donut" height={170} series={woDonut.series} options={woDonut.options} /></Box>
+                <Box sx={{ minWidth: 0 }}><Chart type="donut" height={140} series={woDonut.series} options={woDonut.options} /></Box>
               </Box>
             </Paper>
           </Box>
 
           {/* ⑩ WO table | ⑪ Notes | ⑫ Quick actions */}
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "2.2fr 0.9fr 1.2fr" }, gap: 1.5 }}>
-            <Paper elevation={0} sx={cardSx}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "2.2fr 0.9fr 1.2fr" }, gap: 1, minHeight: 0 }}>
+            <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minHeight: { xs: 220, lg: 0 } }}>
               <Head title={tx("Work Orders in This Production Order")} />
-              <Box sx={{ px: 1, pb: 1 }}><SimpleTable columns={woColumns} rows={workOrders} onRowClick={goWorkOrder} /></Box>
+              <Box sx={{ px: 1, pb: 1, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}><SimpleTable fill columns={woColumns} rows={workOrders} onRowClick={goWorkOrder} /></Box>
             </Paper>
             {notesCard(false)}
-            <Paper elevation={0} sx={cardSx}>
+            <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
               <Head title={tx("Quick Actions")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, px: 1.5, pb: 1.5 }}>
-                {quickActions.map(([text, Icon, color, onClick, disabled]) => (
-                  <Button key={text} disabled={disabled} onClick={onClick}
-                    sx={{ flexDirection: "column", gap: 0.75, py: 1.5, px: 0.5, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none", color: "text.primary", fontWeight: 700, fontSize: 12, lineHeight: 1.2 }}>
-                    <Icon sx={{ fontSize: 28, color: disabled ? "inherit" : color }} />{text}
-                  </Button>
-                ))}
-              </Box>
+              <QuickActions columns={3} sx={{ flex: 1, pb: 1 }}>
+                {quickActions.map(([text, Icon, color, onClick, disabled]) => <QuickAction key={text} icon={Icon} text={text} color={color} onClick={onClick} disabled={disabled} />)}
+              </QuickActions>
             </Paper>
           </Box>
-        </>
+        </Box>
       )}
 
       {tab === "plan" && (
@@ -768,7 +746,7 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
                 { key: "source", title: tx("Order"), render: (a) => a.wo_no || tx("Production Order") },
                 { key: "action", title: tx("Event"), render: (a) => activityText(a) },
                 { key: "status", title: tx("Status"), render: (a) => (a.from_status || a.to_status ? `${a.from_status || EMPTY} → ${a.to_status || EMPTY}` : EMPTY) },
-                { key: "actor", title: tx("User") },
+                { key: "actor", title: tx("User"), render: (a) => person(a.actor_name, a.actor_code) || EMPTY },
                 { key: "remark", title: tx("Details"), render: (a) => <Typography variant="caption" sx={{ whiteSpace: "normal" }}>{a.remark || EMPTY}</Typography> },
               ]} />
             </Box>
@@ -776,6 +754,7 @@ function OrderRecord({ record, tab, setTab, dark, canEdit, saving, orderQuery, n
           {notesCard(true)}
         </Box>
       )}
+      </Box>
     </>
   );
 }

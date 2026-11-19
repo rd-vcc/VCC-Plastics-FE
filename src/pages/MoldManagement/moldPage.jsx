@@ -14,6 +14,7 @@ import { useTheme as useAppTheme } from "../../context/ThemeContext";
 import { useRequest } from "../MaterialManagement/materialUi";
 import { EMPTY, btn, cardSx, pageTheme } from "../ProductionManagement/ProductionPlanning/ui";
 import { SystemStatusBar } from "../ProductionManagement/WorkOrders/WorkOrderManagement/WoParts";
+import { fitPageSx } from "../shared/onePage";
 import { localeTag, setActiveLanguage, tx } from "./moldLocales";
 import { MOLD_API, MoldActionDialog } from "./moldUi";
 
@@ -40,20 +41,22 @@ export function useMoldPage() {
     language, dark, muiTheme, navigate, params, setParams, canEdit, actor, request, lookups, loadLookups, dialog, setDialog, msg, setMsg, notify,
     openAction: (mode, mold) => setDialog({ mode, mold }),
     axisColor: dark ? "#A7B0C0" : "#667085", grid: { borderColor: dark ? "#263244" : "#EEF2F6" },
-    tableSx: { "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
+    tableSx: { "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
   };
 }
 
 /** Page chrome: meta, breadcrumb, toolbar (filters + refresh / auto refresh / export / print), children, system bar, dialogs. */
-export function MoldPageFrame({ page, title, subtitle, loading, ready, lastUpdate, live, setLive, onRefresh, onExport, toolbar, system, onChanged, children }) {
+// `fit`: the page fills exactly one screen (children grow into the space left and scroll inside their own cards).
+// `filters`: a second toolbar row (pages show it behind a Filter toggle).
+export function MoldPageFrame({ page, title, subtitle, loading, ready, lastUpdate, live, setLive, onRefresh, onExport, toolbar, filters, fit, system, onChanged, children }) {
   const toolBtnSx = { ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" };
   const { muiTheme, dialog, setDialog, msg, setMsg, lookups, request, actor, notify, loadLookups } = page;
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
+      <Box sx={fit ? fitPageSx : { display: "grid", gridTemplateColumns: "minmax(0, 1fr)", minWidth: 0 }}>
         <PageMeta title={`${title} | VCC Plastics`} description={subtitle || title} />
         <PageBreadcrumb pageTitle={title} />
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: fit ? 0.75 : 1, mb: fit ? 0 : 1.5, position: "relative", overflow: "hidden" }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             {toolbar}
             <Button startIcon={<RefreshIcon />} onClick={onRefresh} sx={toolBtnSx}>{tx("Refresh")}</Button>
@@ -61,12 +64,16 @@ export function MoldPageFrame({ page, title, subtitle, loading, ready, lastUpdat
             <Button startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={toolBtnSx}>{tx("Print")}</Button>
             <Box sx={{ flex: 1 }} />
             <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
-            {setLive ? <FormControlLabel sx={{ mx: 0.5 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} /> : null}
+            {setLive ? <FormControlLabel sx={{ mx: 0.5, mr: fit ? 0 : 0.5 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} /> : null}
           </Stack>
+          {filters ? <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>{filters}</Stack> : null}
+          {fit && loading ? <LinearProgress sx={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
-        {!ready ? <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box> : <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)" }}><Box sx={{ minWidth: 0 }}>{children}</Box></Box>}
-        {ready && system ? <Box sx={{ mt: 1.5 }}><SystemStatusBar system={system} /></Box> : null}
+        {!fit && loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
+        {!ready ? <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box>
+          : fit ? <Box sx={{ flex: { lg: "1 1 0" }, minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", gap: 1, "& > *": { flexShrink: 0 } }}>{children}</Box>
+          : <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)" }}><Box sx={{ minWidth: 0 }}>{children}</Box></Box>}
+        {ready && system ? <Box sx={{ mt: fit ? 0 : 1.5 }}><SystemStatusBar system={system} /></Box> : null}
         {dialog?.mode ? (
           <MoldActionDialog mode={dialog.mode} mold={dialog.mold} presetAction={dialog.action} lookups={lookups} request={request} actor={actor} notify={notify}
             onClose={() => setDialog(null)} onDone={() => { setDialog(null); loadLookups(); onChanged?.(); }} />

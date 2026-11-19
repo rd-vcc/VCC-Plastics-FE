@@ -715,7 +715,7 @@ export default function UserManagement() {
                   setRoleFilter("all");
                   setDepartmentFilter("all");
                 }}
-                sx={buttonSx("cancel", { minHeight: 40, whiteSpace: "nowrap" })}
+                sx={buttonSx("cancel", { minHeight: 29, whiteSpace: "nowrap" })}
               >
                 {t("userManagement.clearFilters")}
               </Button>
@@ -812,8 +812,8 @@ export default function UserManagement() {
                 <Stack direction="row" spacing={1.25} alignItems="center">
                   <Box
                     sx={{
-                      width: 44,
-                      height: 44,
+                      width: 32,
+                      height: 32,
                       borderRadius: "50%",
                       bgcolor: isDark ? "#173A63" : "#EEF4FF",
                       color: "#005BAB",
@@ -1017,8 +1017,8 @@ export default function UserManagement() {
               <Stack direction="row" spacing={1.25} alignItems="center">
                 <Box
                   sx={{
-                    width: 40,
-                    height: 40,
+                    width: 29,
+                    height: 29,
                     borderRadius: 1.5,
                     bgcolor: "primary.main",
                     color: "common.white",
@@ -1043,7 +1043,7 @@ export default function UserManagement() {
                     size="small"
                     disabled={adding}
                     onClick={() => setAddOpen(false)}
-                    sx={buttonSx("cancel", { width: 34, height: 34, p: 0.25 })}
+                    sx={buttonSx("cancel", { width: 29, height: 29, p: 0.25 })}
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>
@@ -1119,13 +1119,6 @@ export default function UserManagement() {
               </Stack>
             </DialogContent>
             <DialogActions sx={{ px: 3, py: 1.5 }}>
-              <Button
-                disabled={adding}
-                onClick={() => setAddOpen(false)}
-                sx={buttonSx("cancel")}
-              >
-                {t("common.cancel")}
-              </Button>
               <Button
                 variant="contained"
                 startIcon={

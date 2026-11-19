@@ -3,6 +3,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { API_CONFIG } from "../../config/config";
 import { EMPTY, ddmmhhmm, num } from "../ProductionManagement/ProductionPlanning/ui";
 import { label, tx } from "./qualityLocales";
+import { who } from "../shared/onePage";
 
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 export const API_BASE = BASE;
@@ -24,8 +25,8 @@ export const PROCESS_COLORS = { INJECTION: "#2E90FA", COOLING: "#0E9384", TRIMMI
 export const CHART_COLORS = ["#F04438", "#F79009", "#12B76A", "#2E90FA", "#7A5AF8", "#0E9384", "#98A2B3"];
 
 const pillSx = (color, width) => ({
-  display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
-  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
+  display: "inline-block", boxSizing: "border-box", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
+  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
 });
 export const Pill = ({ group, value, colors, width = 104 }) => <Box component="span" title={label(group, value)} sx={pillSx(colors[value] || "#667085", width)}>{label(group, value)}</Box>;
 export const PlanStatusPill = ({ value }) => <Pill group="planStatus" value={value} colors={PLAN_STATUS_COLORS} />;
@@ -76,7 +77,7 @@ export function Events({ events, group = "action", colors = NG_STATUS_COLORS }) 
           </Box>
           <Box sx={{ pb: 1, minWidth: 0 }}>
             <Typography variant="caption" fontWeight={700} sx={{ display: "block" }}>{label(group, e.action)}</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5, overflowWrap: "anywhere" }}>{e.actor}{e.note ? ` · ${e.note}` : ""}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, overflowWrap: "anywhere" }}>{who(e.actor)}{e.note ? ` · ${e.note}` : ""}</Typography>
           </Box>
         </Box>
       ))}
@@ -90,7 +91,7 @@ export function Stat({ title, value, color, sub }) {
     <Stack sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 1, minWidth: 0 }}>
       <Typography variant="caption" color="text.secondary" noWrap>{title}</Typography>
       <Typography variant="h6" fontWeight={800} sx={{ color, lineHeight: 1.2 }}>{value ?? EMPTY}</Typography>
-      {sub ? <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{sub}</Typography> : null}
+      {sub ? <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{sub}</Typography> : null}
     </Stack>
   );
 }

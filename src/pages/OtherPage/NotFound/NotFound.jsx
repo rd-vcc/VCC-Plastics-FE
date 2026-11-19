@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 export default function NotFound() {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6 dark:bg-gray-900">
+    <div className="flex min-h-[var(--app-vh,100vh)] items-center justify-center bg-gray-50 px-6 dark:bg-gray-900">
       <PageMeta
         title={`${t("errors.notFoundTitle")} | VCC Plastics`}
         description={t("errors.notFoundDescription")}

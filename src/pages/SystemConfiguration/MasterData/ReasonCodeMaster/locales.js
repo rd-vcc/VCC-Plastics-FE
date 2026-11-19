@@ -26,11 +26,19 @@ export const UI_TEXT = {
     "Reason Code Count": "Số mã nguyên nhân",
     "Reason code saved.": "Đã lưu mã nguyên nhân.", "Status updated.": "Đã cập nhật trạng thái.", "Reason code copied.": "Đã sao chép mã nguyên nhân.",
     "Submitted for approval.": "Đã gửi phê duyệt.", "Approved.": "Đã phê duyệt.", "Rejected.": "Đã từ chối.",
-    "Category saved.": "Đã lưu nhóm.",
+    "Category saved.": "Đã lưu nhóm.", "Settings": "Cài đặt", "Pending Approval": "Chờ phê duyệt", "High Impact": "Ảnh hưởng cao", "Automatic Codes": "Mã tự động", "recorded from machines": "ghi nhận từ máy",
+    "Record": "Thông tin bản ghi", "Created at": "Ngày tạo", "Updated at": "Cập nhật gần nhất", "Basic information": "Thông tin cơ bản", "Classification": "Phân loại",
+    "Reason codes are master data and are active as soon as they are saved.": "Mã nguyên nhân là dữ liệu gốc, có hiệu lực ngay sau khi lưu.", "Category in use cannot be deleted": "Nhóm đang có mã nguyên nhân, không thể xóa",
+    "Groups used to organise reason codes (e.g. Downtime, NG, Scrap).": "Các nhóm dùng để phân loại mã nguyên nhân (VD: Dừng máy, Lỗi NG, Phế phẩm).", "Draft Codes": "Mã nháp", "Inactive Codes": "Mã ngừng dùng",
+    "active categories": "nhóm đang dùng", "Information": "Thông tin", "Approval": "Phê duyệt", "on": "ngày", "LOCALE_TAG": "vi-VN",
+    "Deactivate": "Ngừng dùng", "Activate": "Kích hoạt", "Created by": "Người tạo", "Updated by": "Người sửa", "Submitted by": "Người gửi duyệt",
+    "Approved by": "Người phê duyệt", "Rejected by": "Người từ chối", "Activated by": "Người kích hoạt", "Deactivated by": "Người ngừng dùng", "Deleted by": "Người xóa",
     "Are you sure you want to delete this item?": "Bạn có chắc muốn xóa mục này không?",
     "This record was changed by someone else. Please reload and try again.": "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang và thử lại.",
   },
   ja: {
+    "Settings": "設定", "Pending Approval": "承認待ち", "Draft Codes": "下書き", "Inactive Codes": "停止中コード", "Information": "情報", "Approval": "承認",
+    "on": "", "LOCALE_TAG": "ja-JP", "Deactivate": "無効化", "Activate": "有効化", "Created by": "作成者",
     "Reason Code Master": "理由コードマスター",
     "Manage all reason codes used across the system (Downtime, NG, Scrap, Maintenance, Setup, etc.)": "システム全体で使用される理由コード（停止、不良、スクラップ、保全、段取りなど）を管理します",
     "Add New Reason Code": "理由コードを追加",
@@ -66,7 +74,7 @@ export function tx(text) {
 }
 
 const STATUS_LABELS = {
-  vi: { DRAFT: "Nháp", PENDING_APPROVAL: "Chờ duyệt", ACTIVE: "Đang dùng", INACTIVE: "Ngừng dùng" },
+  vi: { DRAFT: "Nháp", PENDING_APPROVAL: "Chờ duyệt", ACTIVE: "Hoạt động", INACTIVE: "Ngừng dùng" },
   ja: { DRAFT: "下書き", PENDING_APPROVAL: "承認待ち", ACTIVE: "有効", INACTIVE: "無効" },
   en: { DRAFT: "Draft", PENDING_APPROVAL: "Pending Approval", ACTIVE: "Active", INACTIVE: "Inactive" },
 };
@@ -76,7 +84,7 @@ export function statusText(value) {
 }
 
 const CATEGORY_STATUS_LABELS = {
-  vi: { ACTIVE: "Đang dùng", INACTIVE: "Ngừng dùng" },
+  vi: { ACTIVE: "Hoạt động", INACTIVE: "Ngừng dùng" },
   ja: { ACTIVE: "有効", INACTIVE: "無効" },
   en: { ACTIVE: "Active", INACTIVE: "Inactive" },
 };

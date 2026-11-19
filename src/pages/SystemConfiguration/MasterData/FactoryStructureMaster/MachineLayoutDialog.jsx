@@ -12,11 +12,11 @@ import MachineLayoutBoard, { LAYOUT_STATUS_COLORS } from "../../../../components
 import { DialogHeader, btn, dialogPaperSx } from "../../../ProductionManagement/ProductionPlanning/ui";
 
 const TEXT = {
-  vi: { title: "Bố trí thiết bị trên mặt bằng", subtitle: "Kéo thả máy / thiết bị lên ảnh mặt bằng của {{name}}", noImage: "Nút này chưa có ảnh mặt bằng. Hãy sửa nút và tải ảnh mặt bằng lên trước; tạm thời thiết bị được đặt trên lưới.",
-    noEquipment: "Chưa có máy / thiết bị nào được gán vào nút này (hoặc nút con không có ảnh mặt bằng riêng).", hint: "Khung nét đứt = chưa đặt vị trí (đang xếp tự động). Kéo để đặt, bấm nút bỏ vị trí để trả về xếp tự động.",
+  vi: { title: "Bố trí thiết bị trên mặt bằng", subtitle: "Kéo thả máy / thiết bị lên ảnh mặt bằng của {{name}}", noImage: "Đơn vị này chưa có ảnh mặt bằng. Hãy sửa đơn vị và tải ảnh mặt bằng lên trước; tạm thời thiết bị được đặt trên lưới.",
+    noEquipment: "Chưa có máy / thiết bị nào được gán vào đơn vị này (hoặc đơn vị trực thuộc không có ảnh mặt bằng riêng).", hint: "Khung nét đứt = chưa đặt vị trí (đang xếp tự động). Kéo để đặt, bấm nút bỏ vị trí để trả về xếp tự động.",
     equipment: "Thiết bị", placed: "Đã đặt", auto: "Tự động", clearPos: "Bỏ vị trí", resetAll: "Bỏ tất cả vị trí", saved: "Đã lưu bố trí mặt bằng.", unsaved: "Có thay đổi chưa lưu", open: "Bố trí máy trên mặt bằng" },
-  en: { title: "Equipment layout", subtitle: "Drag machines / equipment onto the layout image of {{name}}", noImage: "This node has no layout image yet. Edit the node and upload a layout image first; equipment is shown on a grid for now.",
-    noEquipment: "No machine / equipment is assigned to this node (or to child nodes without their own layout image).", hint: "Dashed frame = no saved position (auto placed). Drag to place; use clear position to return it to auto placement.",
+  en: { title: "Equipment layout", subtitle: "Drag machines / equipment onto the layout image of {{name}}", noImage: "This unit has no layout image yet. Edit the unit and upload a layout image first; equipment is shown on a grid for now.",
+    noEquipment: "No machine / equipment is assigned to this unit (or to sub-units without their own layout image).", hint: "Dashed frame = no saved position (auto placed). Drag to place; use clear position to return it to auto placement.",
     equipment: "Equipment", placed: "Placed", auto: "Auto", clearPos: "Clear position", resetAll: "Clear all positions", saved: "Layout saved.", unsaved: "Unsaved changes", open: "Machine layout" },
   ja: { title: "設備レイアウト", subtitle: "{{name}} のレイアウト図に機械・設備をドラッグして配置", noImage: "このノードにはレイアウト図がありません。先にノードを編集してレイアウト図をアップロードしてください（現在はグリッド表示）。",
     noEquipment: "このノード（または独自のレイアウト図がない子ノード）に割り当てられた設備はありません。", hint: "破線枠 = 位置未設定（自動配置）。ドラッグで配置し、位置クリアで自動配置に戻します。",
@@ -57,7 +57,7 @@ export default function MachineLayoutDialog({ node, apiBase, requestJson, actor,
   };
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} maxWidth="lg" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open onClose={saving ? undefined : onClose} maxWidth="lg" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={<GridViewOutlinedIcon />} title={T("title")} subtitle={T("subtitle", { name: node.name })} onClose={onClose} disabled={saving} />
       <DialogContent sx={{ pt: "16px !important" }}>
         {!data ? <Box sx={{ height: 300, display: "grid", placeItems: "center" }}><CircularProgress /></Box> : (
@@ -70,18 +70,18 @@ export default function MachineLayoutDialog({ node, apiBase, requestJson, actor,
                   <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>{T("hint")}</Typography>
                 </Box>
                 <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, maxHeight: 460, overflow: "auto" }}>
-                  <Typography variant="subtitle2" fontWeight={800} sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: "divider" }}>{T("equipment")} ({items.length})</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, px: 1.5, py: 1, borderBottom: 1, borderColor: "divider" }}>{T("equipment")} ({items.length})</Typography>
                   {items.map((i) => (
                     <Stack key={i.id} direction="row" spacing={1} sx={{ alignItems: "center", px: 1.5, py: 0.6, borderBottom: 1, borderColor: "divider" }}>
                       <Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: LAYOUT_STATUS_COLORS[i.operational_status] || "#98A2B3", flexShrink: 0 }} />
                       <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography variant="caption" fontWeight={800} sx={{ display: "block" }} noWrap>{i.equipment_code}{dirty.has(i.id) ? " •" : ""}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5 }} noWrap>{i.equipment_name}</Typography>
+                        <Typography variant="caption" noWrap sx={{ fontWeight: 800, display: "block" }}>{i.equipment_code}{dirty.has(i.id) ? " •" : ""}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10 }} noWrap>{i.equipment_name}</Typography>
                       </Box>
-                      <Typography variant="caption" sx={{ fontSize: 10.5, color: i.layout_x != null ? "#12B76A" : "text.secondary", whiteSpace: "nowrap" }}>
+                      <Typography variant="caption" sx={{ fontSize: 10, color: i.layout_x != null ? "#12B76A" : "text.secondary", whiteSpace: "nowrap" }}>
                         {i.layout_x != null ? `${Math.round(i.layout_x)}, ${Math.round(i.layout_y)}` : T("auto")}</Typography>
                       <Tooltip title={T("clearPos")}><span>
-                        <IconButton size="small" disabled={i.layout_x == null} onClick={() => setPos(i.id, null, null)}><LocationOffOutlinedIcon sx={{ fontSize: 16 }} /></IconButton>
+                        <IconButton size="small" disabled={i.layout_x == null} onClick={() => setPos(i.id, null, null)}><LocationOffOutlinedIcon sx={{ fontSize: 13.5 }} /></IconButton>
                       </span></Tooltip>
                     </Stack>
                   ))}
@@ -91,11 +91,10 @@ export default function MachineLayoutDialog({ node, apiBase, requestJson, actor,
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button startIcon={<RestartAltOutlinedIcon />} disabled={saving || !items.some((i) => i.layout_x != null)} onClick={() => items.forEach((i) => i.layout_x != null && setPos(i.id, null, null))} sx={btn("cancel")}>{T("resetAll")}</Button>
         <Box sx={{ flex: 1 }} />
-        {dirty.size ? <Typography variant="caption" color="warning.main" fontWeight={700}>{T("unsaved")} ({dirty.size})</Typography> : null}
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{t("common.cancel")}</Button>
+        {dirty.size ? <Typography variant="caption" color="warning.main" sx={{ fontWeight: 700 }}>{T("unsaved")} ({dirty.size})</Typography> : null}
         <Button onClick={save} disabled={saving || !dirty.size} sx={btn("primary")}>{t("common.save")}</Button>
       </DialogActions>
     </Dialog>

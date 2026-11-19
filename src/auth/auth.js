@@ -85,37 +85,9 @@ export function getMesAccess() {
 }
 export function hasPermission(permissionCode) {
   if (!permissionCode) return true;
-  const permissions = getMesAccess().permissions;
-
-  // The backend intentionally exposes a fixed module-level permission set.
-  // Every page permission is mapped to its owning module here.
-  const moduleByPagePrefix = {
-    dashboard: "dashboard",
-    production: "production",
-    machine: "machine_equipment",
-    equipment: "machine_equipment",
-    mold: "mold",
-    material: "material",
-    quality: "quality",
-    maintenance: "maintenance",
-    traceability: "traceability",
-    reports: "reports",
-    administration: "administration",
-    configuration: "system_configuration",
-  };
-
-  const parts = permissionCode.split(".").filter(Boolean);
-  const pagePrefix = parts[0];
-  const pageAction = parts[parts.length - 1];
-  const moduleCode = moduleByPagePrefix[pagePrefix];
-
-  // In the fixed backend permission set, `create` is the write/edit right.
-  const moduleAction = pageAction === "view" ? "view" : "create";
-  const fixedPermissionCode = moduleCode
-    ? `${moduleCode}.${moduleAction}`
-    : permissionCode;
-
-  return permissions.includes(fixedPermissionCode);
+  // Screen-level permissions: the backend seeds exactly the codes listed in
+  // PAGE_PERMISSIONS (scripts/seed_permissions.py), e.g. "material.usage.edit".
+  return getMesAccess().permissions.includes(permissionCode);
 }
 export function logout() {
   const leaving = getCurrentUser();  // read before the session is cleared

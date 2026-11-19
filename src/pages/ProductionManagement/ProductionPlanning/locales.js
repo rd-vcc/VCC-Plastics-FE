@@ -6,6 +6,9 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 export const UI_TEXT = {
   vi: {
     "Production Planning": "Kế hoạch sản xuất",
+    "Capacity": "Năng lực", "Booked in this shift": "Đã xếp lịch trong ca", "Alerts": "Cảnh báo", "More": "Thêm", "Suggested": "Gợi ý",
+    "Capacity (PCS)": "Năng lực (PCS)", "Planned (PCS)": "Kế hoạch (PCS)", "Actual (PCS)": "Thực tế (PCS)", "Cumulative": "Lũy kế", "By machine group": "Theo nhóm máy", "By machine": "Theo từng máy", "Required for this plan": "Vật tư cần cho kế hoạch", "Edit safety stock": "Sửa tồn an toàn", "Mach.": "Máy", "Avail. (h)": "Khả dụng", "Plan (h)": "Kế hoạch", "Util.": "Sử dụng",
+    "No plan for this date, shift and plant yet. Create it, then schedule work orders from the Backlog tab.": "Chưa có kế hoạch cho ngày, ca và nhà máy này. Tạo kế hoạch, rồi xếp Work Order từ tab Backlog.",
     "Build, balance and publish the production plan against real factory capacity": "Lập, cân đối và phát hành kế hoạch sản xuất theo năng lực thực tế của nhà máy",
     "Plant": "Nhà máy", "Area": "Khu vực", "Shift": "Ca", "Business Date": "Ngày sản xuất", "All Plants": "Tất cả nhà máy", "All Areas": "Tất cả khu vực",
     "Refresh": "Làm mới", "Filter": "Bộ lọc", "Save Plan View": "Lưu góc nhìn", "Export Plan": "Xuất kế hoạch", "Simulation": "Mô phỏng",
@@ -63,6 +66,9 @@ export const UI_TEXT = {
   },
   ja: {
     "Production Planning": "生産計画",
+    "Capacity": "能力", "Booked in this shift": "当シフト計画済", "Alerts": "アラート", "More": "その他", "Suggested": "推奨",
+    "Capacity (PCS)": "能力 (PCS)", "Planned (PCS)": "計画 (PCS)", "Actual (PCS)": "実績 (PCS)", "Cumulative": "累計", "By machine group": "機械グループ別", "By machine": "機械別", "Required for this plan": "この計画の必要材料", "Edit safety stock": "安全在庫を編集", "Mach.": "台数", "Avail. (h)": "可能 (h)", "Plan (h)": "計画 (h)", "Util.": "稼働率",
+    "No plan for this date, shift and plant yet. Create it, then schedule work orders from the Backlog tab.": "この日付・シフト・工場の計画はまだありません。計画を作成し、バックログタブから作業オーダーを割付してください。",
     "Build, balance and publish the production plan against real factory capacity": "工場の実能力に基づき生産計画を作成・平準化・発行します",
     "Plant": "工場", "Area": "エリア", "Shift": "シフト", "Business Date": "稼働日", "All Plants": "全工場", "All Areas": "全エリア",
     "Refresh": "更新", "Filter": "フィルター", "Save Plan View": "ビューを保存", "Export Plan": "計画を出力", "Simulation": "シミュレーション",
@@ -153,7 +159,7 @@ const LABELS = {
   },
   machineStatus: {
     en: { UNKNOWN: "Unknown", RUNNING: "Running", IDLE: "Idle", DOWN: "Down", MAINTENANCE: "Maintenance", OFFLINE: "Offline" },
-    vi: { UNKNOWN: "Không rõ", RUNNING: "Đang chạy", IDLE: "Chờ", DOWN: "Dừng máy", MAINTENANCE: "Bảo trì", OFFLINE: "Mất kết nối" },
+    vi: { UNKNOWN: "Không rõ", RUNNING: "Đang chạy", IDLE: "Rảnh", DOWN: "Dừng máy", MAINTENANCE: "Bảo trì", OFFLINE: "Mất kết nối" },
     ja: { UNKNOWN: "不明", RUNNING: "稼働", IDLE: "待機", DOWN: "停止", MAINTENANCE: "保全", OFFLINE: "オフライン" },
   },
 };

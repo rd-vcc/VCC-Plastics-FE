@@ -5,6 +5,9 @@ export function setActiveLanguage(language) { activeLanguage = language; setWoLa
 const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const VI = {
+  "Status & location (short)": "Trạng thái & vị trí", "View detail": "Xem chi tiết",
+  "Verify (short)": "Xác nhận hiệu quả",
+  "Gauge": "Dụng cụ đo", "CAPA (short)": "Khắc phục CAPA", "Root cause (short)": "Nguyên nhân gốc", "Quality overview (short)": "Tổng quan CL",
   "Quality Dashboard": "Tổng quan chất lượng", "Inspection Management": "Quản lý kiểm tra", "SPC Monitoring": "Giám sát SPC", "NG Management": "Quản lý NG",
   "Measuring Equipment": "Thiết bị đo", "Calibration Management": "Quản lý hiệu chuẩn",
   "A failed calibration locks the equipment: it cannot be used for inspection until a passed calibration.": "Hiệu chuẩn không đạt sẽ khóa thiết bị: không được dùng để kiểm tra cho đến khi hiệu chuẩn đạt.",
@@ -92,6 +95,9 @@ const VI = {
 };
 
 const JA = {
+  "Status & location (short)": "状態・場所", "View detail": "詳細",
+  "Verify (short)": "効果確認",
+  "Gauge": "測定具", "CAPA (short)": "是正処置", "Root cause (short)": "根本原因", "Quality overview (short)": "品質概要",
   "Quality Dashboard": "品質ダッシュボード", "Inspection Management": "検査管理", "SPC Monitoring": "SPC監視", "NG Management": "NG管理", "Measuring Equipment": "測定機器", "Calibration Management": "校正管理",
   "All": "すべて", "Back": "戻る", "Save": "保存", "Close": "閉じる", "Confirm": "確認", "Edit": "編集", "Search": "検索", "Status": "状態", "Priority": "優先度", "Time": "時刻", "Type": "種別",
   "Product": "製品", "Machine": "機械", "Mold": "金型", "Work Order": "作業指示", "Shift": "シフト", "Defect": "不良", "Qty": "数量", "Result": "結果", "Owner": "担当者", "Inspector": "検査員",

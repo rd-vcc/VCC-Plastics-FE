@@ -6,6 +6,7 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const TEXT = {
   vi: {
+    "Filter": "Bộ lọc", "New request (short)": "Tạo yêu cầu", "New WO (short)": "Tạo lệnh BT", "Spare parts (short)": "Phụ tùng", "PM calendar (short)": "Lịch PM", "Equipment (short)": "Thiết bị", "Reports (short)": "Báo cáo", "Selected": "Đang chọn", "Select a row in the list.": "Chọn một dòng trong danh sách.", "rows": "dòng", "Request List": "Danh sách yêu cầu", "Technicians (short)": "Kỹ thuật viên", "Plan List": "Danh sách kế hoạch",
     "Maintenance Overview": "Tổng quan bảo trì", "Maintenance Requests": "Yêu cầu bảo trì", "Maintenance Planning": "Kế hoạch bảo trì",
     "Machine & Equipment Maintenance": "Bảo trì máy & thiết bị", "Mold Maintenance": "Bảo trì khuôn", "Production Tool Maintenance": "Bảo trì dụng cụ sản xuất",
     "Maintenance History": "Lịch sử bảo trì", "Refresh": "Làm mới", "Export": "Xuất Excel", "Print": "In", "Auto Refresh": "Tự làm mới", "Last Update": "Cập nhật lúc",
@@ -70,6 +71,7 @@ const TEXT = {
     "Run the whole maintenance process from one screen.": "Thực hiện toàn bộ quy trình bảo trì trên một màn hình.", "Auto": "Tự động", "Source": "Nguồn", "Applied": "Áp dụng", "Active": "Đang áp dụng", "open": "đang mở", "vs previous period": "so với kỳ trước", "Molds in maintenance / repair": "Khuôn đang bảo trì / sửa chữa", "Tools in maintenance": "Dụng cụ đang bảo trì",
   },
   ja: {
+    "Filter": "フィルター", "New request (short)": "依頼作成", "New WO (short)": "作業指示作成", "Spare parts (short)": "予備品", "PM calendar (short)": "PMカレンダー", "Equipment (short)": "設備", "Reports (short)": "レポート", "Selected": "選択中", "Select a row in the list.": "一覧から行を選択してください。", "rows": "行", "Request List": "依頼一覧", "Technicians (short)": "技術者", "Plan List": "計画一覧",
     "Maintenance Overview": "保全概要", "Maintenance Requests": "保全依頼", "Maintenance Planning": "保全計画", "Machine & Equipment Maintenance": "機械・設備保全", "Mold Maintenance": "金型保全",
     "Production Tool Maintenance": "治工具保全", "Maintenance History": "保全履歴", "Refresh": "更新", "Export": "出力", "Print": "印刷", "Auto Refresh": "自動更新", "Last Update": "最終更新",
     "All": "すべて", "Clear": "クリア", "No data.": "データなし。", "Search...": "検索...", "Total": "合計", "View all": "すべて表示", "Quick Actions": "クイック操作",
@@ -194,3 +196,6 @@ export function label(group, value) {
 }
 
 export { localeTag };
+
+/** Short label for a narrow tile ("X (short)" key); English and missing keys fall back to the full text. */
+export const txs = (key, full) => (tx(key) === key ? tx(full) : tx(key));

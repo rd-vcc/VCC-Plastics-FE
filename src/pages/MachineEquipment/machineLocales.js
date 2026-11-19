@@ -7,6 +7,7 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const TEXT = {
   vi: {
+    "Maintenance": "Bảo trì", "Chart": "Biểu đồ", "Table": "Bảng", "Maintenance History": "Lịch sử bảo trì", "Filter": "Bộ lọc",
     "Downtime Management": "Quản lý dừng máy", "Record, classify and analyse machine stops": "Ghi nhận, phân loại và phân tích các sự kiện dừng máy",
     "Alarm History": "Lịch sử cảnh báo", "Alarm lifecycle: raise, acknowledge, shelve, clear and close": "Vòng đời cảnh báo: phát sinh, xác nhận, tạm ẩn, xóa và đóng",
     "Total Downtime": "Tổng thời gian dừng", "Downtime Events": "Sự kiện dừng", "Affected Machines": "Máy bị ảnh hưởng", "Downtime Rate": "Tỷ lệ dừng máy",
@@ -42,6 +43,7 @@ const TEXT = {
     "Alarm Rate (%)": "Tỷ lệ cảnh báo (%)", "Alarms": "Cảnh báo", "Average": "Trung bình",
   },
   ja: {
+    "Maintenance": "保全", "Chart": "グラフ", "Table": "表", "Maintenance History": "保全履歴", "Filter": "フィルター",
     "Downtime Management": "停止管理", "Record, classify and analyse machine stops": "機械停止の記録・分類・分析", "Alarm History": "アラーム履歴",
     "Alarm lifecycle: raise, acknowledge, shelve, clear and close": "アラームのライフサイクル：発生・確認・保留・解除・クローズ",
     "Total Downtime": "総停止時間", "Downtime Events": "停止件数", "Affected Machines": "影響機械", "Downtime Rate": "停止率", "MTTR (Avg)": "MTTR（平均）",

@@ -74,7 +74,7 @@ const CountryMap = ({ mapColor }) => {
         initial: {
           fill: "#35373e",
           fontWeight: 500,
-          fontSize: "13px",
+          fontSize: "11.5px",
           stroke: "none",
         },
         hover: {},

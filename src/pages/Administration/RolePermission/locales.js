@@ -10,6 +10,7 @@ export const translations = {
       "users": "Người dùng",
       "permissions": "quyền",
       "module": "Phân hệ",
+      "screen": "Màn hình",
       "status": "Trạng thái",
       "active": "Hoạt động",
       "inactive": "Không hoạt động",
@@ -53,7 +54,7 @@ export const translations = {
       "activateHelp": "Chỉ vai trò đang hoạt động mới có thể được gán quyền và sử dụng.",
       "actions": {
         "view": "Xem",
-        "edit": "Sửa"
+        "edit": "Thao tác"
       },
       "kpi": {
         "totalRoles": "Tổng vai trò",
@@ -99,6 +100,7 @@ export const translations = {
       "users": "Users",
       "permissions": "Permissions",
       "module": "Module",
+      "screen": "Screen",
       "status": "Status",
       "active": "Active",
       "inactive": "Inactive",
@@ -188,6 +190,7 @@ export const translations = {
       "users": "ユーザー",
       "permissions": "権限",
       "module": "モジュール",
+      "screen": "画面",
       "status": "状態",
       "active": "有効",
       "inactive": "無効",

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 export default function Forbidden() {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+    <div className="flex min-h-[calc(var(--app-vh,100vh)*0.6)] flex-col items-center justify-center gap-4 text-center">
       <div className="text-7xl font-bold text-brand-500">403</div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
         {t("errors.forbiddenTitle")}

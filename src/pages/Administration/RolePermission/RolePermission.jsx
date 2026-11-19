@@ -51,6 +51,7 @@ import { useTheme as useAppTheme } from "../../../context/ThemeContext";
 import usePagePermission from "../../../auth/usePagePermission";
 import { useTranslation } from "react-i18next";
 import { toTranslationSlug } from "../../../i18n";
+import { downloadXlsx } from "../../../utils/xlsxExport";
 const EMPTY_ROLE_FORM = {
   role_code: "",
   role_name: "",
@@ -91,7 +92,8 @@ const MODULE_ORDER = [
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const MAIN_PANEL_HEIGHT = 380;
 const PANEL_HEADER_HEIGHT = 30;
-const MAIN_TABLE_PANEL_HEIGHT = 490;
+// The three panels fill the rest of the screen (never shorter than 490px).
+const MAIN_TABLE_PANEL_HEIGHT = "max(490px, calc(var(--app-vh, 100vh) - 348px))";
 const PANEL_FOOTER_HEIGHT = 32;
 
 function buttonSx(type, overrides = {}) {
@@ -630,26 +632,15 @@ export default function RolePermission() {
       isActive(role.is_active)
         ? t("rolePermission.active")
         : t("rolePermission.inactive"),
-      String(toNumber(role.user_count)),
-      String(toNumber(role.permission_count)),
+      toNumber(role.user_count),
+      toNumber(role.permission_count),
       role.description || "",
     ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map(csvCell).join(","))
-      .join("\r\n");
-    const blob = new Blob(["\uFEFF", csv], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `vcc-plastics-roles-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    downloadXlsx(
+      `vcc-plastics-roles-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      header,
+      rows,
+    );
   }
   return (
     <MuiThemeProvider theme={muiTheme}>
@@ -809,7 +800,7 @@ export default function RolePermission() {
                   setAccessFilter("ALL");
                 }}
                 sx={buttonSx("cancel", {
-                  minHeight: 40,
+                  minHeight: 29,
                   whiteSpace: "nowrap",
                 })}
               >
@@ -1132,9 +1123,8 @@ function PermissionMatrixPanel({
     () => [
       {
         headerName: t("rolePermission.module"),
-        width: 210,
-        minWidth: 190,
-        flex: 1,
+        minWidth: 100,
+        flex: 0.9,
         headerClass: "ag-header-center",
         cellClass: "ag-cell-left",
         valueGetter: (params) =>
@@ -1146,7 +1136,7 @@ function PermissionMatrixPanel({
             : "",
         cellRenderer: (params) =>
           params.data ? (
-            <Typography variant="caption" fontWeight={700} noWrap>
+            <Typography variant="caption" color="text.secondary" noWrap>
               {t(
                 `navigation.${toTranslationSlug(moduleLabel(params.data.moduleCode))}`,
                 { defaultValue: moduleLabel(params.data.moduleCode) },
@@ -1154,11 +1144,25 @@ function PermissionMatrixPanel({
             </Typography>
           ) : null,
       },
+      {
+        headerName: t("rolePermission.screen"),
+        minWidth: 130,
+        flex: 1.3,
+        headerClass: "ag-header-center",
+        cellClass: "ag-cell-left",
+        valueGetter: (params) => (params.data ? screenLabel(params.data, t) : ""),
+        cellRenderer: (params) =>
+          params.data ? (
+            <Typography variant="caption" fontWeight={700} noWrap title={screenLabel(params.data, t)}>
+              {screenLabel(params.data, t)}
+            </Typography>
+          ) : null,
+      },
       ...ACTION_ORDER.map((action) => ({
         headerName: t(`rolePermission.actions.${action}`),
-        width: 92,
-        minWidth: 92,
-        maxWidth: 92,
+        width: 68,
+        minWidth: 68,
+        maxWidth: 68,
         headerClass: "ag-header-center",
         sortable: false,
         filter: false,
@@ -1352,8 +1356,8 @@ function RoleDetailPanel({
     () => [
       {
         headerName: "",
-        width: 42,
-        minWidth: 42,
+        width: 30,
+        minWidth: 30,
         maxWidth: 42,
         sortable: false,
         filter: false,
@@ -1717,8 +1721,8 @@ function RoleModal({
           >
             <Box
               sx={{
-                width: 40,
-                height: 40,
+                width: 29,
+                height: 29,
                 borderRadius: 1.5,
                 bgcolor: "primary.main",
                 color: "common.white",
@@ -1765,8 +1769,8 @@ function RoleModal({
                 onClick={onClose}
                 disabled={saving}
                 sx={{
-                  width: 34,
-                  height: 34,
+                  width: 29,
+                  height: 29,
                   border: 1,
                   borderColor: "divider",
                   bgcolor: "background.paper",
@@ -1907,8 +1911,12 @@ function buildPermissionMatrixRows(permissions, search) {
       moduleCode,
       resourceCode,
       label: resourceLabel(resourceCode, moduleCode),
+      // seed_permissions stores the screen's menu key (navigation.<key>) in description.
+      navKey: permission.description || "",
+      order: Number(permission.id) || 0,
       permissionsByAction: {},
     };
+    current.order = Math.min(current.order, Number(permission.id) || 0);
     const existing = current.permissionsByAction[action];
     if (!existing || backendAction === action) {
       current.permissionsByAction[action] = permission;
@@ -1919,7 +1927,8 @@ function buildPermissionMatrixRows(permissions, search) {
     const moduleDifference =
       moduleOrder(left.moduleCode) - moduleOrder(right.moduleCode);
     if (moduleDifference !== 0) return moduleDifference;
-    return left.resourceCode.localeCompare(right.resourceCode);
+    // Seed order follows the sidebar menu order.
+    return left.order - right.order;
   });
 }
 function permissionAction(permissionCode) {
@@ -1943,6 +1952,11 @@ function resourceLabel(resourceCode, moduleCode) {
     .split(".")
     .map((part) => formatWords(part))
     .join(" / ");
+}
+function screenLabel(row, t) {
+  return row.navKey
+    ? t(`navigation.${row.navKey}`, { defaultValue: row.label })
+    : row.label;
 }
 function moduleLabel(moduleCode) {
   return MODULE_LABELS[moduleCode] || formatWords(moduleCode);
@@ -1974,7 +1988,4 @@ function sameNumberSet(left, right) {
 }
 function errorMessage(error, fallback) {
   return error instanceof Error ? error.message : fallback;
-}
-function csvCell(value) {
-  return `"${value.replaceAll('"', '""')}"`;
 }

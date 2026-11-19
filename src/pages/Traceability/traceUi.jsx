@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
-  Autocomplete, Box, Button, Dialog, DialogContent, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  Autocomplete, Box, Button, Dialog, DialogContent, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 
 import { getCurrentUser } from "../../auth/auth";
@@ -20,6 +21,7 @@ import { useRequest } from "../MaterialManagement/materialUi";
 import { DialogHeader, EMPTY, btn, cardSx, ddmmhhmm, dialogPaperSx, num, pageTheme } from "../ProductionManagement/ProductionPlanning/ui";
 import { setActiveLanguage as setMaintLanguage } from "../MaintenanceManagement/maintLocales";
 import { MaintFrame, useMaintData } from "../MaintenanceManagement/maintPage";
+import { who } from "../shared/onePage";
 import { label, setActiveLanguage, tx } from "./traceLocales";
 
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
@@ -52,7 +54,7 @@ export function useTracePage() {
   return {
     language, dark, muiTheme, navigate, params, setParams, canEdit, actor, request, lookups, msg, setMsg, notify,
     axisColor: dark ? "#A7B0C0" : "#667085", grid: { borderColor: dark ? "#263244" : "#EEF2F6" },
-    tableSx: { "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
+    tableSx: { "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } },
   };
 }
 
@@ -73,7 +75,7 @@ export const StatusPill = ({ value, group = "status", width = 104 }) => {
   const color = STATUS_COLORS[value] || "#667085";
   return (
     <Box component="span" title={label(group, value)} sx={{ display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55` }}>{label(group, value)}</Box>
+      verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55` }}>{label(group, value)}</Box>
   );
 };
 
@@ -106,6 +108,26 @@ export function SearchPanel({ options, by, setBy, value, setValue, suggestions, 
   );
 }
 
+/** Search for the page toolbar: search-by select + key with suggestions + Search; the tips sit behind an info icon. */
+export function SearchInline({ options, by, setBy, value, setValue, suggestions, onSearch, extra, tips }) {
+  return (
+    <>
+      <TextField select size="small" label={tx("Search By")} value={by} onChange={(e) => setBy(e.target.value)} sx={{ width: 160 }}>
+        {options.map((o) => <MenuItem key={o} value={o}>{label("searchBy", o)}</MenuItem>)}
+      </TextField>
+      <Autocomplete freeSolo size="small" options={suggestions || []} value={value} onInputChange={(e, v) => setValue(v)} sx={{ width: 250 }}
+        renderInput={(p) => <TextField {...p} label={tx("Lot / Code / Barcode")} onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }} />} />
+      {extra}
+      <Button startIcon={<SearchIcon />} onClick={onSearch} disabled={!value?.trim()} sx={btn("primary")}>{tx("Search")}</Button>
+      {tips?.length ? (
+        <Tooltip title={<Box>{tips.map((t) => <Box key={t}>• {t}</Box>)}</Box>}>
+          <InfoOutlinedIcon sx={{ fontSize: 18, color: "text.secondary", cursor: "help" }} />
+        </Tooltip>
+      ) : null}
+    </>
+  );
+}
+
 /** Horizontal chain of cards with arrows. nodes: [{key, title, sub, extra, status, ref}] */
 export function Chain({ nodes, icons, navigate }) {
   return (
@@ -116,20 +138,20 @@ export function Chain({ nodes, icons, navigate }) {
         const color = STATUS_COLORS[n.status] || "#12B76A";
         const na = n.status === "NA";
         return (
-          <Box key={n.key} sx={{ display: "flex", alignItems: "center", gap: 0.5, flex: "1 1 0", minWidth: 128 }}>
-            <Box onClick={() => to && navigate(to)} sx={{ flex: 1, border: 1, borderColor: "divider", borderRadius: 2, p: 1, textAlign: "center", minHeight: 150, cursor: to ? "pointer" : "default",
+          <Box key={n.key} sx={{ display: "flex", alignItems: "center", gap: 0.5, flex: "1 1 0", minWidth: 118 }}>
+            <Box onClick={() => to && navigate(to)} sx={{ flex: 1, alignSelf: "stretch", border: 1, borderColor: "divider", borderRadius: 1.5, px: 0.75, py: 0.75, textAlign: "center", cursor: to ? "pointer" : "default",
               opacity: na ? 0.55 : 1, bgcolor: "background.paper", "&:hover": to ? { borderColor: "#1570EF" } : undefined }}>
               <Box sx={{ position: "relative", display: "inline-block" }}>
-                {Icon ? <Icon sx={{ fontSize: 40, color: na ? "#98A2B3" : "#344054" }} /> : null}
-                {!na ? <CheckCircleIcon sx={{ position: "absolute", right: -6, bottom: -2, fontSize: 16, color, bgcolor: "background.paper", borderRadius: "50%" }} /> : null}
+                {Icon ? <Icon sx={{ fontSize: 24, color: na ? "#98A2B3" : "text.primary" }} /> : null}
+                {!na ? <CheckCircleIcon sx={{ position: "absolute", right: -6, bottom: -2, fontSize: 13.5, color, bgcolor: "background.paper", borderRadius: "50%" }} /> : null}
               </Box>
-              <Typography variant="caption" fontWeight={800} sx={{ display: "block", mt: 0.5 }}>{label("node", n.key)}</Typography>
-              <Typography variant="caption" sx={{ display: "block", color: to ? "#1570EF" : "text.primary", fontWeight: 700, overflowWrap: "anywhere", lineHeight: 1.3, mt: 0.5 }}>
+              <Typography variant="caption" fontWeight={800} sx={{ display: "block", mt: 0.25 }}>{label("node", n.key)}</Typography>
+              <Typography variant="caption" sx={{ display: "block", color: to ? "#1570EF" : "text.primary", fontWeight: 700, overflowWrap: "anywhere", lineHeight: 1.3, mt: 0.25 }}>
                 {n.key === "IQC" || n.key === "INSPECTION" ? label("status", n.title) : n.title === "Not integrated" ? tx("Not integrated") : n.title}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5, overflowWrap: "anywhere" }}>{n.sub}</Typography>
-              {n.extra ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5 }}>{n.extra}</Typography> : null}
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10, overflowWrap: "anywhere" }}>{n.sub}</Typography>
+              {n.extra ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10 }}>{n.extra}</Typography> : null}
             </Box>
-            {i < nodes.length - 1 ? <ArrowForwardIcon sx={{ color: "text.secondary", fontSize: 18, flexShrink: 0 }} /> : null}
+            {i < nodes.length - 1 ? <ArrowForwardIcon sx={{ color: "text.secondary", fontSize: 14.5, flexShrink: 0 }} /> : null}
           </Box>
         );
       })}
@@ -147,14 +169,14 @@ export function TraceTimeline({ events, max }) {
         <Box key={i} sx={{ display: "grid", gridTemplateColumns: "88px 14px 1fr auto", gap: 0.75, alignItems: "start" }}>
           <Typography variant="caption" color="text.secondary" sx={{ pt: 0.2 }}>{ddmmhhmm(e.at)}</Typography>
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
-            <FiberManualRecordIcon sx={{ fontSize: 12, mt: 0.4, color: e.result === "NG" || e.kind === "NG" ? "#F04438" : "#12B76A" }} />
+            <FiberManualRecordIcon sx={{ fontSize: 11, mt: 0.4, color: e.result === "NG" || e.kind === "NG" ? "#F04438" : "#12B76A" }} />
             {i < list.length - 1 ? <Box sx={{ flex: 1, width: 2, bgcolor: "divider", minHeight: 14 }} /> : null}
           </Box>
           <Box sx={{ pb: 0.9, minWidth: 0 }}>
             <Typography variant="caption" fontWeight={700} sx={{ display: "block", lineHeight: 1.3 }}>{label("event", e.kind)}</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5, overflowWrap: "anywhere" }}>{e.text}{e.qty ? ` · ${e.qty > 0 ? "+" : ""}${num(e.qty, 3)} ${e.unit || ""}` : ""}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, overflowWrap: "anywhere" }}>{e.text}{e.qty ? ` · ${e.qty > 0 ? "+" : ""}${num(e.qty, 3)} ${e.unit || ""}` : ""}</Typography>
           </Box>
-          <Typography variant="caption" sx={{ fontSize: 10, border: 1, borderColor: "divider", borderRadius: 1, px: 0.5, color: "text.secondary", whiteSpace: "nowrap" }}>{e.actor || "Auto"}</Typography>
+          <Typography variant="caption" sx={{ fontSize: 10, border: 1, borderColor: "divider", borderRadius: 1, px: 0.5, color: "text.secondary", whiteSpace: "nowrap" }}>{e.actor ? who(e.actor) : "Auto"}</Typography>
         </Box>
       ))}
     </Box>
@@ -170,7 +192,7 @@ export function Documents({ docs, navigate }) {
         const open = () => (d.url ? window.open(resolveImageUrl(d.url), "_blank", "noopener") : to ? navigate(to) : null);
         return (
           <Button key={i} disabled={!d.available} onClick={open} title={d.available ? d.title || label("doc", d.kind) : tx("Not available yet")}
-            sx={{ flexDirection: "column", gap: 0.4, py: 1, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none", fontSize: 11, fontWeight: 700, color: "text.primary", minWidth: 0 }}>
+            sx={{ flexDirection: "column", gap: 0.4, py: 1, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none", fontSize: 10, fontWeight: 700, color: "text.primary", minWidth: 0 }}>
             <DescriptionOutlinedIcon sx={{ color: d.available ? "#1570EF" : "action.disabled" }} />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{d.title || label("doc", d.kind)}</span>
           </Button>
@@ -200,14 +222,14 @@ export function HistoryDialog({ rows, onClose, onPick }) {
       <DialogHeader icon={<HistoryOutlinedIcon />} title={tx("Trace History")} onClose={onClose} />
       <DialogContent sx={{ pt: "12px !important" }}>
         <Box sx={{ maxHeight: 460, overflow: "auto" }}>
-          <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5 } }}>
+          <Table size="small" stickyHeader sx={{ "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5 }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
             <TableHead><TableRow><TableCell>{tx("Time")}</TableCell><TableCell>{tx("Search By")}</TableCell><TableCell>{tx("Keyword")}</TableCell><TableCell>{tx("Result")}</TableCell>
               <TableCell align="right">{tx("Time (s)")}</TableCell><TableCell>{tx("User")}</TableCell></TableRow></TableHead>
             <TableBody>{rows.map((r) => (
               <TableRow key={r.id} hover sx={{ cursor: r.found ? "pointer" : "default" }} onClick={() => r.found && onPick(r)}>
                 <TableCell>{ddmmhhmm(r.created_at)}</TableCell><TableCell>{label("searchBy", r.search_by)}</TableCell><TableCell sx={{ fontWeight: 700 }}>{r.keyword}</TableCell>
                 <TableCell sx={{ color: r.found ? "#12B76A" : "#F04438", fontWeight: 700 }}>{r.found ? r.result_ref : tx("Not found")}</TableCell>
-                <TableCell align="right">{num(r.duration_ms / 1000, 2)}</TableCell><TableCell>{r.actor || EMPTY}</TableCell></TableRow>
+                <TableCell align="right">{num(r.duration_ms / 1000, 2)}</TableCell><TableCell>{who(r.actor)}</TableCell></TableRow>
             ))}</TableBody>
           </Table>
           {!rows.length ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : null}

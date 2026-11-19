@@ -1,14 +1,36 @@
 import "./locales";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
-  DialogContent, Divider, FormControl, IconButton, InputAdornment,
-  InputLabel, MenuItem, Paper, Select, Snackbar, Stack, Tab,
-  Tabs, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography, createTheme,
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  Divider,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  ThemeProvider as MuiThemeProvider,
+  Tooltip,
+  Typography,
+  createTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
@@ -16,15 +38,12 @@ import DeleteOutlineIcon from "@mui/icons-material/Delete";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
-import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
-import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import RuleFolderOutlinedIcon from "@mui/icons-material/RuleFolderOutlined";
 import SearchIcon from "@mui/icons-material/Search";
-import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
-import ThumbDownOutlinedIcon from "@mui/icons-material/ThumbDownOutlined";
-import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
+import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 
 import { getAccessToken, getCurrentUser } from "../../../../auth/auth";
 import usePagePermission from "../../../../auth/usePagePermission";
@@ -33,6 +52,8 @@ import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../../components/common/PageMeta";
 import { KpiCard, KpiCardGroup } from "../../../../components/kpi/KpiCardSystem";
 import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
+import { CountBadge, PanelHeader, masterGridSx, panelSx } from "../../../../components/masterData/MasterPanels";
+import useFillHeight from "../../../../hooks/useFillHeight";
 import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
@@ -43,15 +64,27 @@ const API = `${BASE}/api/quality-standard-master`;
 const PRODUCT_API = `${BASE}/api/product-master`;
 const EQUIPMENT_API = `${BASE}/api/measuring-equipment-master`;
 const EMPTY = "—";
-const STATUSES = ["DRAFT", "PENDING_APPROVAL", "APPROVED", "ACTIVE", "OBSOLETE"];
-const cardSx = { border: "1px solid", borderColor: "divider", borderRadius: 2, boxShadow: "0 1px 3px rgba(15,23,42,.06)", overflow: "hidden" };
+const STATUS_COLORS = { ACTIVE: "#005BAB", OBSOLETE: "#F04438" };
+const person = (name, code) => (name ? `${name} - ${code}` : code || EMPTY);
+const dateText = (value) => {
+  if (!value) return EMPTY;
+  const d = new Date(String(value).replace(" ", "T"));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+};
+const dayText = (iso) => {
+  if (!iso) return EMPTY;
+  const [y, m, d] = String(iso).slice(0, 10).split("-");
+  return y && m && d ? `${d}/${m}/${y}` : EMPTY;
+};
+const numText = (v) => (v == null || v === "" ? EMPTY : String(Number(v)).replace(".", ","));
 
-function btn(type, extra = {}) {
-  const s = buttonSystem[type] || buttonSystem.edit || { base: {} };
-  return { ...(s.base || {}), ...(s.hover ? { "&:hover": s.hover } : {}), ...(s.active ? { "&:active": s.active } : {}), ...extra };
+function buttonSx(type, overrides = {}) {
+  const styles = buttonSystem[type] || {};
+  return { ...(styles.base || {}), ...(styles.hover ? { "&:hover": styles.hover } : {}), ...overrides };
 }
 
-function pageTheme(mode) {
+function createMaterialTheme(mode) {
   const dark = mode === "dark";
   return createTheme({
     palette: {
@@ -67,11 +100,11 @@ function pageTheme(mode) {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            backgroundColor: dark ? "#0F172A" : "#FFFFFF",
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderWidth: "1px !important", borderStyle: "solid !important",
-              borderColor: `${dark ? "#3B4759" : "#CBD3DF"} !important`,
-            },
+            backgroundColor: dark ? "#0F172A" : "#FFF",
+            // Tailwind's preflight resets border-width globally, which can
+            // strip MUI's default notched-outline border on this page — so
+            // it's re-asserted explicitly here.
+            "& .MuiOutlinedInput-notchedOutline": { borderWidth: "1px !important", borderStyle: "solid !important", borderColor: `${dark ? "#3B4759" : "#CBD3DF"} !important` },
             "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: `${dark ? "#5B6B84" : "#98A2B3"} !important` },
             "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderWidth: "2px !important", borderColor: "#005BAB !important" },
             "&.Mui-error .MuiOutlinedInput-notchedOutline": { borderColor: "#EE1B1B !important" },
@@ -82,54 +115,66 @@ function pageTheme(mode) {
   });
 }
 
-function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
-  const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
+function DialogHeader({ icon, title, subtitle, onClose, disabled }) {
   return (
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: 1, borderColor: "divider",
-      bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "rgba(238,27,27,0.10)" : "rgba(0,91,171,0.14)") : (tone === "danger" ? "#FFF3F3" : "#F1F7FF") }}>
-      <Box sx={{ width: 44, height: 44, borderRadius: "50%",
-        bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "#4C1D1D" : "#173A63") : (tone === "danger" ? "#FDECEC" : "#EEF4FF"),
-        color: toneColor, display: "grid", placeItems: "center", flexShrink: 0 }}>
-        {icon}
-      </Box>
+    <Box sx={{ px: 2, py: 1.25, display: "flex", alignItems: "center", gap: 1.25, borderBottom: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "rgba(0,91,171,0.14)" : "#F1F7FF") }}>
+      <Box sx={{ width: 28, height: 28, borderRadius: "50%", bgcolor: (th) => (th.palette.mode === "dark" ? "#173A63" : "#EEF4FF"), color: "#005BAB", display: "grid", placeItems: "center", flexShrink: 0 }}>{icon}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>{title}</Typography>
-        {subtitle ? <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{subtitle}</Typography> : null}
+        <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800 }}>{title}</Typography>
+        {subtitle ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>{subtitle}</Typography> : null}
       </Box>
       <IconButton size="small" disabled={disabled} onClick={onClose} sx={{ mr: -0.5 }}><CloseIcon fontSize="small" /></IconButton>
     </Box>
   );
 }
 
-const dialogPaperSx = { borderRadius: 3, overflow: "hidden", boxShadow: (theme) => theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)" };
+const dialogPaperSx = {
+  borderRadius: 3,
+  overflow: "hidden",
+  boxShadow: (theme) => (theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)"),
+};
 
-function Head({ icon, title, action }) {
+function DetailSection({ title, children }) {
   return (
-    <Box sx={{ minHeight: 34, px: 1.25, bgcolor: (t) => t.palette.mode === "dark" ? "#182235" : "#EAF2FF", borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Stack direction="row" spacing={0.7} alignItems="center">{icon}<Typography variant="subtitle2" fontWeight={800}>{title}</Typography></Stack>
-      {action}
+    <Box>
+      <Typography variant="caption" sx={{ display: "block", mb: 0.5, fontWeight: 800, fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "text.secondary" }}>{title}</Typography>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25 }}>{children}</Box>
     </Box>
   );
 }
 
-const STATUS_TONES = { DRAFT: "default", PENDING_APPROVAL: "warning", APPROVED: "info", ACTIVE: "success", OBSOLETE: "error" };
-function StatusChip({ value }) {
-  return <Chip size="small" variant="outlined" color={STATUS_TONES[value] || "default"} label={statusText(value)} sx={{ height: 21, fontSize: 10, fontWeight: 800 }} />;
+function DetailRow({ label, children, last }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, py: 0.9, borderBottom: last ? 0 : 1, borderColor: "divider" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 700, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{children ?? EMPTY}</Typography>
+    </Box>
+  );
 }
 
-function formatDisplayDateTime(iso) {
-  if (!iso) return EMPTY;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return EMPTY;
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}/${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function ActionIcon({ title, icon, onClick, disabled, color = "default" }) {
+  return (
+    <Tooltip title={title}>
+      <span><IconButton disabled={disabled} color={color} onClick={onClick} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{icon}</IconButton></span>
+    </Tooltip>
+  );
 }
-function formatDisplayDate(iso) {
-  if (!iso) return EMPTY;
-  const [y, m, d] = String(iso).slice(0, 10).split("-");
-  if (!y || !m || !d) return EMPTY;
-  return `${d}/${m}/${y}`;
+
+function FieldLabel({ children }) {
+  return <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "text.secondary", fontSize: "0.68rem" }}>{children}</Typography>;
+}
+
+
+// Record status pill: Hoạt động / Ngừng dùng (stored as ACTIVE / OBSOLETE on the current revision).
+function WorkflowPill({ value, width = 92 }) {
+  const active = value === "ACTIVE";
+  const color = active ? "#12B76A" : "#F04438";
+  return (
+    <Box component="span" title={statusText(active ? "ACTIVE" : "OBSOLETE")} sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box", width, height: 22, px: 0.5,
+      whiteSpace: "nowrap", overflow: "hidden", borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{statusText(active ? "ACTIVE" : "OBSOLETE")}</Box>
+  );
 }
 
 const emptyCharacteristic = () => ({
@@ -142,49 +187,57 @@ function CharacteristicsEditor({ rows, equipmentTypes, onChange }) {
   const update = (idx, key, value) => onChange(rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r)));
   const remove = (idx) => onChange(rows.filter((_, i) => i !== idx));
   const add = () => onChange([...rows, emptyCharacteristic()]);
+  const g = (cols) => ({ display: "grid", gridTemplateColumns: { xs: "1fr", md: cols }, gap: 1.25 });
   return (
-    <Stack spacing={1.25}>
-      {rows.map((row, idx) => (
-        <Paper key={idx} variant="outlined" sx={{ p: 1.25 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1} sx={{ mb: 1 }}>
-            <TextField fullWidth size="small" required label={tx("Characteristic Name")} value={row.characteristic_name} onChange={(e) => update(idx, "characteristic_name", e.target.value)} />
-            <TextField fullWidth size="small" type="number" label={tx("Nominal Value")} value={row.nominal_value} onChange={(e) => update(idx, "nominal_value", e.target.value)} />
-            <TextField fullWidth size="small" type="number" label={tx("LSL")} value={row.lsl} onChange={(e) => update(idx, "lsl", e.target.value)} />
-            <TextField fullWidth size="small" type="number" label={tx("USL")} value={row.usl} onChange={(e) => update(idx, "usl", e.target.value)} />
-            <TextField fullWidth size="small" label={tx("Unit")} value={row.unit} onChange={(e) => update(idx, "unit", e.target.value)} />
-          </Stack>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }}>
-            <TextField fullWidth size="small" label={tx("Inspection Method")} value={row.inspection_method} onChange={(e) => update(idx, "inspection_method", e.target.value)} />
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Measuring Equipment Type")}</InputLabel>
-              <Select label={tx("Measuring Equipment Type")} value={row.equipment_type_id} onChange={(e) => update(idx, "equipment_type_id", e.target.value)}>
-                <MenuItem value="">—</MenuItem>
-                {equipmentTypes.map((t) => <MenuItem key={t.id} value={t.id}>{t.type_name}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <TextField fullWidth size="small" label={tx("Inspection Frequency")} value={row.inspection_frequency} onChange={(e) => update(idx, "inspection_frequency", e.target.value)} />
-            <IconButton size="small" color="error" onClick={() => remove(idx)}><DeleteOutlineIcon fontSize="small" /></IconButton>
-          </Stack>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} sx={{ mt: 1 }}>
-            <TextField select fullWidth size="small" label={tx("Characteristic Type")} value={row.characteristic_type} onChange={(e) => update(idx, "characteristic_type", e.target.value)}>
-              <MenuItem value="VARIABLE">{tx("Variable (measured)")}</MenuItem><MenuItem value="ATTRIBUTE">{tx("Attribute (OK / NG)")}</MenuItem>
-            </TextField>
-            <TextField select fullWidth size="small" label={tx("SPC Monitoring")} value={row.is_spc ? "1" : "0"} onChange={(e) => update(idx, "is_spc", e.target.value === "1")} disabled={row.characteristic_type === "ATTRIBUTE"}>
-              <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
-            </TextField>
-            <TextField select fullWidth size="small" label={tx("Control Chart")} value={row.chart_type} onChange={(e) => update(idx, "chart_type", e.target.value)} disabled={!row.is_spc}>
-              <MenuItem value="XBAR_R">X̄-R</MenuItem><MenuItem value="IMR">I-MR</MenuItem>
-            </TextField>
-            <TextField fullWidth size="small" type="number" label={tx("Subgroup Size")} value={row.subgroup_size} onChange={(e) => update(idx, "subgroup_size", e.target.value)} disabled={!row.is_spc} slotProps={{ htmlInput: { min: 1, max: 10 } }} />
-            <TextField fullWidth size="small" type="number" label={tx("Cpk Target")} value={row.cpk_target} onChange={(e) => update(idx, "cpk_target", e.target.value)} disabled={!row.is_spc} slotProps={{ htmlInput: { step: 0.01 } }} />
-            <TextField select fullWidth size="small" label={tx("Critical Characteristic")} value={row.is_critical ? "1" : "0"} onChange={(e) => update(idx, "is_critical", e.target.value === "1")}>
-              <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
-            </TextField>
-          </Stack>
-        </Paper>
-      ))}
-      <Button startIcon={<AddIcon fontSize="small" />} onClick={add} sx={{ alignSelf: "flex-start" }}>{tx("Add Characteristic")}</Button>
-      {!rows.length && <Alert severity="info">{tx("No characteristics yet.")}</Alert>}
+    <Stack spacing={1.5}>
+      {rows.map((row, idx) => {
+        const attribute = row.characteristic_type === "ATTRIBUTE";
+        return (
+          <Box key={idx} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+            <Box sx={{ px: 1.25, py: 0.75, display: "flex", alignItems: "center", gap: 1, borderBottom: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 800, flex: 1, minWidth: 0 }} noWrap>{`${tx("Characteristic")} ${idx + 1}${row.characteristic_name ? ` · ${row.characteristic_name}` : ""}`}</Typography>
+              <Tooltip title={tx("Delete")}><IconButton size="small" color="error" onClick={() => remove(idx)}><DeleteOutlineIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+            </Box>
+            <Stack spacing={1.25} sx={{ p: 1.25 }}>
+              <Box sx={g("2fr 1fr 1fr")}>
+                <TextField size="small" required label={tx("Characteristic Name")} value={row.characteristic_name} onChange={(e) => update(idx, "characteristic_name", e.target.value)} />
+                <TextField select size="small" label={tx("Characteristic Type")} value={row.characteristic_type} onChange={(e) => update(idx, "characteristic_type", e.target.value)}>
+                  <MenuItem value="VARIABLE">{tx("Variable (measured)")}</MenuItem><MenuItem value="ATTRIBUTE">{tx("Attribute (OK / NG)")}</MenuItem>
+                </TextField>
+                <TextField select size="small" label={tx("Critical Characteristic")} value={row.is_critical ? "1" : "0"} onChange={(e) => update(idx, "is_critical", e.target.value === "1")}>
+                  <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
+                </TextField>
+              </Box>
+              <Box sx={g("1fr 1fr 1fr 1fr")}>
+                <TextField size="small" type="number" disabled={attribute} label={tx("Nominal Value")} value={row.nominal_value} onChange={(e) => update(idx, "nominal_value", e.target.value)} />
+                <TextField size="small" type="number" disabled={attribute} label={tx("LSL")} value={row.lsl} onChange={(e) => update(idx, "lsl", e.target.value)} />
+                <TextField size="small" type="number" disabled={attribute} label={tx("USL")} value={row.usl} onChange={(e) => update(idx, "usl", e.target.value)} />
+                <TextField size="small" disabled={attribute} label={tx("Unit")} value={row.unit} onChange={(e) => update(idx, "unit", e.target.value)} />
+              </Box>
+              <Box sx={g("1fr 1fr 1fr")}>
+                <TextField size="small" label={tx("Inspection Method")} placeholder={tx("e.g. Measure / Visual")} value={row.inspection_method} onChange={(e) => update(idx, "inspection_method", e.target.value)} />
+                <TextField select size="small" label={tx("Measuring Equipment Type")} value={row.equipment_type_id} onChange={(e) => update(idx, "equipment_type_id", e.target.value)}>
+                  <MenuItem value=""><em>{tx("Not required (visual)")}</em></MenuItem>
+                  {equipmentTypes.map((t) => <MenuItem key={t.id} value={t.id}>{t.type_name}</MenuItem>)}
+                </TextField>
+                <TextField size="small" label={tx("Inspection Frequency")} placeholder={tx("e.g. 5 pcs / 2 hours")} value={row.inspection_frequency} onChange={(e) => update(idx, "inspection_frequency", e.target.value)} />
+              </Box>
+              <Box sx={g("1fr 1fr 1fr 1fr")}>
+                <TextField select size="small" label={tx("SPC Monitoring")} value={row.is_spc ? "1" : "0"} onChange={(e) => update(idx, "is_spc", e.target.value === "1")} disabled={attribute}>
+                  <MenuItem value="0">{tx("No")}</MenuItem><MenuItem value="1">{tx("Yes")}</MenuItem>
+                </TextField>
+                <TextField select size="small" label={tx("Control Chart")} value={row.chart_type} onChange={(e) => update(idx, "chart_type", e.target.value)} disabled={attribute || !row.is_spc}>
+                  <MenuItem value="XBAR_R">X̄-R</MenuItem><MenuItem value="IMR">I-MR</MenuItem>
+                </TextField>
+                <TextField size="small" type="number" label={tx("Subgroup Size")} value={row.subgroup_size} onChange={(e) => update(idx, "subgroup_size", e.target.value)} disabled={attribute || !row.is_spc} slotProps={{ htmlInput: { min: 1, max: 10 } }} />
+                <TextField size="small" type="number" label={tx("Cpk Target")} value={row.cpk_target} onChange={(e) => update(idx, "cpk_target", e.target.value)} disabled={attribute || !row.is_spc} slotProps={{ htmlInput: { step: 0.01 } }} />
+              </Box>
+            </Stack>
+          </Box>
+        );
+      })}
+      {!rows.length ? <Alert severity="info" sx={{ borderRadius: 2 }}>{tx("No characteristics yet.")}</Alert> : null}
+      <Box><Button variant="outlined" startIcon={<AddIcon />} onClick={add} sx={buttonSx("edit")}>{tx("Add Characteristic")}</Button></Box>
     </Stack>
   );
 }
@@ -212,6 +265,7 @@ function StandardForm({ mode, standard, revision, characteristics, products, equ
       : [],
   );
   const ch = (k) => (e) => setForm((o) => ({ ...o, [k]: e.target.value }));
+  const g = (cols) => ({ display: "grid", gridTemplateColumns: { xs: "1fr", sm: cols }, gap: 1.5, pt: 0.75 });
   const submit = () => {
     const characteristicsPayload = rows
       .filter((r) => r.characteristic_name.trim())
@@ -245,190 +299,167 @@ function StandardForm({ mode, standard, revision, characteristics, products, equ
     });
   };
   return (
-    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<RuleFolderOutlinedIcon />} title={tx(mode === "edit" ? "Edit Standard" : "Add New Standard Dialog")} disabled={saving} onClose={onClose} />
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}>
-        <Tab label={tx("General")} /><Tab label={tx("Characteristics")} />
+    <Dialog open fullWidth maxWidth="lg" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<RuleFolderOutlinedIcon />} title={tx(mode === "edit" ? "Edit Standard" : "Add New Standard Dialog")}
+        subtitle={mode === "edit" ? `${standard?.standard_code} · Rev ${revision?.revision_no}` : tx("The standard is applied as soon as it is saved.")} disabled={saving} onClose={onClose} />
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3, minHeight: 29, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 29, fontSize: 11.5, fontWeight: 700, textTransform: "none" } }}>
+        <Tab label={tx("General")} /><Tab label={`${tx("Characteristics")} (${rows.length})`} />
       </Tabs>
-      <DialogContent sx={{ minHeight: 380 }}>
+      <DialogContent sx={{ px: 3, py: 2.5, height: { md: 520 } }}>
         {tab === 0 && (
-          <Stack spacing={1.7} sx={{ pt: 1 }}>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              <TextField fullWidth required size="small" disabled={mode === "edit"} label={tx("Standard Code")} value={form.code} onChange={ch("code")} />
-              <TextField fullWidth required size="small" label={tx("Standard Name")} value={form.name} onChange={ch("name")} />
+          <Stack spacing={2.25}>
+            <Stack spacing={0.5}>
+              <FieldLabel>{tx("Basic information")}</FieldLabel>
+              <Box sx={g("1fr 2fr")}>
+                <TextField required size="small" disabled={mode === "edit"} label={tx("Standard Code")} placeholder="VD: QS-SP001" value={form.code} onChange={(e) => setForm((o) => ({ ...o, code: e.target.value.toUpperCase() }))} />
+                <TextField required size="small" label={tx("Standard Name")} value={form.name} onChange={ch("name")} />
+              </Box>
             </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              <FormControl fullWidth size="small">
-                <InputLabel>{tx("Product")}</InputLabel>
-                <Select label={tx("Product")} value={form.productId} onChange={ch("productId")}>
-                  <MenuItem value="">—</MenuItem>
+            <Stack spacing={0.5}>
+              <FieldLabel>{tx("Scope")}</FieldLabel>
+              <Box sx={g("2fr 1fr 1fr")}>
+                <TextField select size="small" label={tx("Product")} value={form.productId} onChange={ch("productId")}>
+                  <MenuItem value=""><em>{EMPTY}</em></MenuItem>
                   {products.map((p) => <MenuItem key={p.id} value={p.id}>{p.product_code} · {p.product_name}</MenuItem>)}
-                </Select>
-              </FormControl>
-              <TextField fullWidth size="small" label={tx("Customer")} value={form.customer} onChange={ch("customer")} />
-              <TextField fullWidth size="small" label={tx("Process")} value={form.process} onChange={ch("process")} />
+                </TextField>
+                <TextField size="small" label={tx("Customer")} value={form.customer} onChange={ch("customer")} />
+                <TextField size="small" label={tx("Process")} placeholder="VD: Ép phun" value={form.process} onChange={ch("process")} />
+              </Box>
             </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-              <TextField fullWidth size="small" type="date" label={tx("Effective Date")} value={form.effectiveDate} onChange={ch("effectiveDate")} InputLabelProps={{ shrink: true }} />
+            <Stack spacing={0.5}>
+              <FieldLabel>{tx("Validity")}</FieldLabel>
+              <Box sx={g("1fr 2fr")}>
+                <TextField size="small" type="date" label={tx("Effective Date")} value={form.effectiveDate} onChange={ch("effectiveDate")} slotProps={{ inputLabel: { shrink: true } }} />
+                <Box />
+              </Box>
             </Stack>
-            <TextField fullWidth multiline minRows={2} label={tx("Remark")} value={form.remark} onChange={ch("remark")} />
+            <TextField fullWidth multiline minRows={3} label={tx("Remark")} value={form.remark} onChange={ch("remark")} />
           </Stack>
         )}
-        {tab === 1 && (
-          <Box sx={{ pt: 1 }}>
-            <CharacteristicsEditor rows={rows} equipmentTypes={equipmentTypes} onChange={setRows} />
-          </Box>
-        )}
+        {tab === 1 && <CharacteristicsEditor rows={rows} equipmentTypes={equipmentTypes} onChange={setRows} />}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        <Button onClick={submit} disabled={saving || !form.code.trim() || !form.name.trim()} sx={btn("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
-          {tx("Save")}
-        </Button>
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
+        <Button onClick={submit} disabled={saving || !form.code.trim() || !form.name.trim()} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-function RemarkDialog({ title, icon, requireRemark, saving, onClose, onConfirm }) {
-  const [remark, setRemark] = useState("");
-  return (
-    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={icon} title={title} disabled={saving} onClose={onClose} />
-      <DialogContent>
-        <TextField
-          fullWidth multiline minRows={2} sx={{ mt: 1 }}
-          required={requireRemark}
-          label={requireRemark ? tx("Rejection reason (required)") : tx("Remark")}
-          value={remark} onChange={(e) => setRemark(e.target.value)}
-        />
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        <Button onClick={() => onConfirm(remark)} disabled={saving || (requireRemark && !remark.trim())} sx={btn("primary")}>{tx("Confirm")}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
-function CopyStandardDialog({ saving, onClose, onConfirm }) {
+function CopyStandardDialog({ source, saving, onClose, onConfirm }) {
   const [code, setCode] = useState("");
   return (
-    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<ContentCopyOutlinedIcon />} title={tx("Copy Standard")} disabled={saving} onClose={onClose} />
-      <DialogContent>
+    <Dialog open fullWidth maxWidth="sm" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<ContentCopyOutlinedIcon />} title={tx("Copy Standard")} subtitle={source ? `${tx("Copy from")} ${source}` : null} disabled={saving} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
         <TextField fullWidth required size="small" sx={{ mt: 1 }} label={tx("New Standard Code")} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        <Button onClick={() => onConfirm(code)} disabled={saving || !code.trim()} sx={btn("primary")}>{tx("Save")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (th) => (th.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
+        <Button onClick={() => onConfirm(code)} disabled={saving || !code.trim()} sx={buttonSx("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+// Left tree: product family → product → process, with the number of standards.
+function StandardTree({ families, products, rows, selection, onSelect }) {
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const flip = (k) => setCollapsed((old) => { const next = new Set(old); if (next.has(k)) next.delete(k); else next.add(k); return next; });
+  const kidsOf = (id) => families.filter((f) => f.parentId === id);
+  const productsOf = (id) => products.filter((p) => Number(p.product_family_id) === Number(id));
+  const familyProductIds = (id) => [...productsOf(id).map((p) => Number(p.id)), ...kidsOf(id).flatMap((c) => familyProductIds(c.id))];
+  const same = (a) => selection && a && selection.kind === a.kind && selection.id === a.id && selection.process === a.process;
+  const line = (key, depth, label, count, sel, hasKids, icon, bold) => (
+    <Box key={key} onClick={() => onSelect(sel)} sx={{ minHeight: 30, pl: `${depth * 13 + 3}px`, pr: 0.5, display: "flex", alignItems: "center", gap: 0.35, cursor: "pointer", borderRadius: 1,
+      bgcolor: same(sel) ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
+      <IconButton size="small" onClick={(e) => { e.stopPropagation(); if (hasKids) flip(key); }} sx={{ width: 19, height: 19, visibility: hasKids ? "visible" : "hidden" }}>
+        {collapsed.has(key) ? <ChevronRightIcon sx={{ fontSize: 13.5 }} /> : <ExpandMoreIcon sx={{ fontSize: 13.5 }} />}
+      </IconButton>
+      {icon}
+      <Typography noWrap title={label} sx={{ flex: 1, fontSize: 11.5, fontWeight: same(sel) ? 800 : bold ? 700 : 600 }}>{label}</Typography>
+      <Box sx={{ mr: 0.5, display: "flex" }}><CountBadge value={count} /></Box>
+    </Box>
+  );
+  const renderProduct = (p, depth) => {
+    const key = `p:${p.id}`;
+    const productRows = rows.filter((r) => Number(r.product_id) === Number(p.id));
+    const processes = [...new Set(productRows.map((r) => r.process).filter(Boolean))];
+    return (
+      <Box key={key}>
+        {line(key, depth, p.product_name, productRows.length, { kind: "product", id: Number(p.id) }, processes.length > 0, <Inventory2OutlinedIcon sx={{ fontSize: 13, color: "text.secondary" }} />)}
+        {!collapsed.has(key) && processes.map((proc) => line(`${key}:${proc}`, depth + 1, proc, productRows.filter((r) => r.process === proc).length,
+          { kind: "product", id: Number(p.id), process: proc }, false, <TimelineOutlinedIcon sx={{ fontSize: 13, color: "text.secondary" }} />))}
+      </Box>
+    );
+  };
+  const renderFamily = (f, depth) => {
+    const key = `f:${f.id}`;
+    const ids = familyProductIds(f.id);
+    const count = rows.filter((r) => ids.includes(Number(r.product_id))).length;
+    const children = kidsOf(f.id);
+    const prods = productsOf(f.id);
+    return (
+      <Box key={key}>
+        {line(key, depth, f.family_name, count, { kind: "family", id: f.id }, children.length + prods.length > 0, <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />, depth === 0)}
+        {!collapsed.has(key) && (
+          <>
+            {children.map((c) => renderFamily(c, depth + 1))}
+            {prods.map((p) => renderProduct(p, depth + 1))}
+          </>
+        )}
+      </Box>
+    );
+  };
+  const noProduct = rows.filter((r) => !r.product_id).length;
+  return (
+    <Box sx={{ p: 0.75, flex: 1, minHeight: 0, overflow: "auto" }}>
+      <Box onClick={() => onSelect(null)} sx={{ minHeight: 27, px: 0.75, display: "flex", alignItems: "center", gap: 0.75, borderRadius: 1, cursor: "pointer", bgcolor: selection == null ? "action.selected" : "transparent", "&:hover": { bgcolor: selection == null ? "action.selected" : "action.hover" } }}>
+        <CategoryOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
+        <Typography sx={{ flex: 1, fontSize: 11.5, fontWeight: 800 }}>{tx("All standards")}</Typography>
+        <Box sx={{ mr: 0.5, display: "flex" }}><CountBadge value={rows.length} /></Box>
+      </Box>
+      {families.filter((f) => f.parentId == null).map((f) => renderFamily(f, 0))}
+      {noProduct ? line("none", 0, tx("No product"), noProduct, { kind: "none" }, false, <RuleFolderOutlinedIcon sx={{ fontSize: 13, color: "text.secondary" }} />) : null}
+    </Box>
   );
 }
 
 function normalFamily(f) { return { ...f, id: Number(f.id), parentId: f.parent_id == null ? null : Number(f.parent_id) }; }
-
-function ProcessLeaf({ label, count, selected, onSelect, depth }) {
-  return (
-    <Box onClick={onSelect} sx={{ pl: `${depth * 13 + 38}px`, minHeight: 26, display: "flex", alignItems: "center", gap: 0.4, cursor: "pointer", borderRadius: 1, bgcolor: selected ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
-      <Typography noWrap sx={{ flex: 1, fontSize: 11, fontWeight: selected ? 800 : 500 }}>{label}</Typography>
-      <Chip label={count} size="small" variant="outlined" sx={{ height: 17, mr: 0.5, "& .MuiChip-label": { px: 0.5, fontSize: 9 } }} />
-    </Box>
-  );
-}
-
-function ProductNode({ product, rows, selection, onSelect, depth }) {
-  const [open, setOpen] = useState(true);
-  const productRows = rows.filter((r) => Number(r.product_id) === Number(product.id));
-  const processes = [...new Set(productRows.map((r) => r.process).filter(Boolean))];
-  const selected = selection.productId === product.id && !selection.process;
-  return (
-    <Box>
-      <Box onClick={() => onSelect({ productId: product.id, process: null })} sx={{ pl: `${depth * 13 + 20}px`, minHeight: 27, display: "flex", alignItems: "center", gap: 0.4, cursor: "pointer", borderRadius: 1, bgcolor: selected ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} sx={{ width: 18, height: 18 }}>
-          {processes.length ? (open ? <ExpandMoreIcon sx={{ fontSize: 14 }} /> : <ChevronRightIcon sx={{ fontSize: 14 }} />) : <Box width={14} />}
-        </IconButton>
-        <Typography noWrap sx={{ flex: 1, fontSize: 11.5, fontWeight: selected ? 800 : 600 }}>{product.product_name}</Typography>
-        <Chip label={productRows.length} size="small" variant="outlined" color={selected ? "primary" : "default"} sx={{ height: 18, mr: 0.5, "& .MuiChip-label": { px: 0.5, fontSize: 9.5 } }} />
-      </Box>
-      {open && processes.map((proc) => (
-        <ProcessLeaf key={proc} label={proc} count={productRows.filter((r) => r.process === proc).length}
-          selected={selection.productId === product.id && selection.process === proc}
-          onSelect={() => onSelect({ productId: product.id, process: proc })} depth={depth + 1} />
-      ))}
-    </Box>
-  );
-}
-
-function FamilyNode({ family, families, products, rows, selection, onSelect, depth = 0 }) {
-  const [open, setOpen] = useState(true);
-  const childFamilies = families.filter((f) => f.parentId === family.id);
-  const familyProducts = products.filter((p) => Number(p.product_family_id) === Number(family.id));
-  const familyProductIds = familyProducts.map((p) => p.id);
-  const count = rows.filter((r) => familyProductIds.includes(Number(r.product_id))).length;
-  const hasChildren = childFamilies.length > 0 || familyProducts.length > 0;
-  return (
-    <Box>
-      <Box sx={{ pl: `${depth * 13 + 4}px`, minHeight: 28, display: "flex", alignItems: "center", gap: 0.4 }}>
-        <IconButton size="small" onClick={() => setOpen((o) => !o)} sx={{ width: 18, height: 18 }}>
-          {hasChildren ? (open ? <ExpandMoreIcon sx={{ fontSize: 14 }} /> : <ChevronRightIcon sx={{ fontSize: 14 }} />) : <Box width={14} />}
-        </IconButton>
-        <Typography noWrap sx={{ flex: 1, fontSize: 11, fontWeight: 800, textTransform: "uppercase", color: "text.secondary" }}>{family.family_name}</Typography>
-        <Chip label={count} size="small" variant="outlined" sx={{ height: 18, mr: 0.5, "& .MuiChip-label": { px: 0.5, fontSize: 9.5 } }} />
-      </Box>
-      {open && (
-        <>
-          {childFamilies.map((child) => (
-            <FamilyNode key={child.id} family={child} families={families} products={products} rows={rows} selection={selection} onSelect={onSelect} depth={depth + 1} />
-          ))}
-          {familyProducts.map((product) => (
-            <ProductNode key={product.id} product={product} rows={rows} selection={selection} onSelect={onSelect} depth={depth + 1} />
-          ))}
-        </>
-      )}
-    </Box>
-  );
-}
 
 export default function QualityStandardMaster() {
   const { i18n } = useTranslation();
   const language = i18n.resolvedLanguage || i18n.language || "en";
   setActiveLanguage(language);
   const { theme } = useAppTheme();
-  const muiTheme = useMemo(() => pageTheme(theme), [theme]);
+  const dark = theme === "dark";
+  const muiTheme = useMemo(() => createMaterialTheme(dark ? "dark" : "light"), [dark]);
   const { canEdit } = usePagePermission();
   const actor = getCurrentUser()?.employee_code || "SYSTEM";
+  const [panelsRef, panelHeight] = useFillHeight();
 
   const [rows, setRows] = useState([]);
-  const [stats, setStats] = useState({ total_standards: 0, active: 0, pending_approval: 0, obsolete: 0, new_revision_in_progress: 0 });
+  const [stats, setStats] = useState({ total_standards: 0, active: 0, inactive: 0, products_covered: 0 });
   const [products, setProducts] = useState([]);
   const [families, setFamilies] = useState([]);
   const [equipmentTypes, setEquipmentTypes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [treeSelection, setTreeSelection] = useState({ productId: null, process: null });
-  const [keyword, setKeyword] = useState("");
-  const [productFilter, setProductFilter] = useState("all");
-  const [customerFilter, setCustomerFilter] = useState("all");
-  const [processFilter, setProcessFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [treeSelection, setTreeSelection] = useState(null); // null | {kind:"family"|"product"|"none", id, process}
+  const [filters, setFilters] = useState({ keyword: "", product: "", customer: "", process: "", status: "" });
   const [tab, setTab] = useState(0);
   const [dialog, setDialog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState({ open: false, type: "success", text: "" });
+  const [message, setMessage] = useState(null);
+  const notify = useCallback((severity, text) => setMessage({ severity, text }), []);
 
-  const notify = useCallback((type, text) => setMsg({ open: true, type, text }), []);
   const request = useCallback(async (url, options = {}) => {
     const token = getAccessToken();
     const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
       const detailMsg = Array.isArray(data?.detail) ? data.detail.map((d) => d.msg).join("; ") : data?.detail;
-      const error = new Error(response.status === 409 ? (detailMsg || tx("This record was changed by someone else. Please reload and try again.")) : detailMsg || data?.message || `HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
+      throw new Error(detailMsg || data?.message || `HTTP ${response.status}`);
     }
     return data;
   }, []);
@@ -447,7 +478,7 @@ export default function QualityStandardMaster() {
       setStats(statData); setRows(list);
       setProducts(productData?.items || []);
       setFamilies((Array.isArray(familyData) ? familyData : []).map(normalFamily));
-      setEquipmentTypes(typeData || []);
+      setEquipmentTypes((typeData || []).filter((t) => t.is_active));
       setSelectedId((old) => (list.some((x) => x.id === old) ? old : list[0]?.id ?? null));
     } catch (e) { notify("error", e.message); } finally { setLoading(false); }
   }, [notify, request]);
@@ -466,30 +497,36 @@ export default function QualityStandardMaster() {
   useEffect(() => {
     if (!selectedId || tab !== 2) return;
     request(`${API}/standards/${selectedId}/audit-log`).then(setAuditLog).catch((e) => notify("error", e.message));
-  }, [selectedId, tab, request, notify]);
+  }, [selectedId, tab, request, notify, detail]);
 
   const customers = useMemo(() => [...new Set(rows.map((r) => r.customer).filter(Boolean))].sort(), [rows]);
   const processes = useMemo(() => [...new Set(rows.map((r) => r.process).filter(Boolean))].sort(), [rows]);
-  const roots = useMemo(() => families.filter((f) => f.parentId == null), [families]);
+  const familyProducts = useCallback((fid) => {
+    const out = new Set();
+    const walk = (id) => { products.filter((p) => Number(p.product_family_id) === Number(id)).forEach((p) => out.add(Number(p.id))); families.filter((f) => f.parentId === id).forEach((f) => walk(f.id)); };
+    walk(fid);
+    return out;
+  }, [products, families]);
 
   const filtered = useMemo(() => {
-    const q = keyword.toLowerCase().trim();
+    const q = filters.keyword.toLowerCase().trim();
+    const famSet = treeSelection?.kind === "family" ? familyProducts(treeSelection.id) : null;
     return rows.filter((r) => {
       if (q && !`${r.standard_code} ${r.standard_name}`.toLowerCase().includes(q)) return false;
-      if (productFilter !== "all" && Number(r.product_id) !== Number(productFilter)) return false;
-      if (customerFilter !== "all" && r.customer !== customerFilter) return false;
-      if (processFilter !== "all" && r.process !== processFilter) return false;
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      if (treeSelection.productId != null && Number(r.product_id) !== Number(treeSelection.productId)) return false;
-      if (treeSelection.process != null && r.process !== treeSelection.process) return false;
+      if (filters.product && Number(r.product_id) !== Number(filters.product)) return false;
+      if (filters.customer && r.customer !== filters.customer) return false;
+      if (filters.process && r.process !== filters.process) return false;
+      if (filters.status && (filters.status === "ACTIVE") !== (r.status === "ACTIVE")) return false;
+      if (treeSelection?.kind === "none" && r.product_id) return false;
+      if (famSet && !famSet.has(Number(r.product_id))) return false;
+      if (treeSelection?.kind === "product" && Number(r.product_id) !== treeSelection.id) return false;
+      if (treeSelection?.process && r.process !== treeSelection.process) return false;
       return true;
     });
-  }, [rows, keyword, productFilter, customerFilter, processFilter, statusFilter, treeSelection]);
+  }, [rows, filters, treeSelection, familyProducts]);
 
   const percent = (n) => (stats.total_standards ? `${((n / stats.total_standards) * 100).toFixed(1)}% ${tx("of total")}` : `0% ${tx("of total")}`);
-
   const reloadAll = useCallback(async () => { await load(); await loadDetail(selectedId, viewRevisionId); }, [load, loadDetail, selectedId, viewRevisionId]);
-
   const runAction = async (fn) => {
     setSaving(true);
     try { const result = await fn(); await reloadAll(); notify("success", result?.message || tx("Status updated.")); }
@@ -502,31 +539,14 @@ export default function QualityStandardMaster() {
     return { message: tx("Standard saved.") };
   });
   const saveRevisionEdit = (payload) => runAction(async () => {
-    const revisionId = detail.revision.id;
+    // eslint-disable-next-line no-unused-vars
     const { standard_code, actor: _a, ...rest } = payload;
-    const result = await request(`${API}/standards/${detail.id}/revisions/${revisionId}`, {
-      method: "PUT", body: JSON.stringify({ ...rest, updated_by: actor, version: detail.revision.version }),
-    });
+    const result = await request(`${API}/standards/${detail.id}`, { method: "PUT", body: JSON.stringify({ ...rest, updated_by: actor, version: detail.revision.version }) });
     setDialog(null);
-    return { message: tx("Standard saved.") };
+    setViewRevisionId(null);
+    return { message: result?.message?.startsWith("Saved as revision") ? tx("Saved as a new revision because the previous one is used by inspections.") : tx("Standard saved.") };
   });
-  const newRevision = () => runAction(async () => {
-    const result = await request(`${API}/standards/${detail.id}/revisions`, {
-      method: "POST", body: JSON.stringify({ source_revision_id: detail.revision.id, created_by: actor }),
-    });
-    setDialog(null);
-    setViewRevisionId(result.id);
-    await loadDetail(detail.id, result.id);
-    return { message: tx("New revision created.") };
-  });
-  const submitRevision = () => runAction(() => request(`${API}/standards/${detail.id}/revisions/${detail.revision.id}/submit`, { method: "POST", body: JSON.stringify({ actor }) }));
-  const approveRevision = () => runAction(() => request(`${API}/standards/${detail.id}/revisions/${detail.revision.id}/approve`, { method: "POST", body: JSON.stringify({ actor }) }));
-  const rejectRevision = (remark) => runAction(async () => {
-    const result = await request(`${API}/standards/${detail.id}/revisions/${detail.revision.id}/reject`, { method: "POST", body: JSON.stringify({ actor, remark }) });
-    setDialog(null); return result;
-  });
-  const activateRevision = () => runAction(() => request(`${API}/standards/${detail.id}/revisions/${detail.revision.id}/activate`, { method: "POST", body: JSON.stringify({ actor }) }));
-  const obsoleteRevision = () => runAction(() => request(`${API}/standards/${detail.id}/revisions/${detail.revision.id}/obsolete`, { method: "POST", body: JSON.stringify({ actor }) }));
+  const toggleStatus = () => runAction(() => request(`${API}/standards/${detail.id}/status`, { method: "PATCH", body: JSON.stringify({ status: detail.revision.status === "ACTIVE" ? "INACTIVE" : "ACTIVE", actor }) }));
   const copyStandard = (newCode) => runAction(async () => {
     const result = await request(`${API}/standards/${detail.id}/copy`, { method: "POST", body: JSON.stringify({ new_standard_code: newCode, created_by: actor }) });
     setDialog(null); setSelectedId(result.id);
@@ -535,54 +555,51 @@ export default function QualityStandardMaster() {
   const deleteStandard = async () => {
     if (!window.confirm(tx("Are you sure you want to delete this item?"))) return;
     setSaving(true);
-    try { await request(`${API}/standards/${detail.id}`, { method: "DELETE" }); setSelectedId(null); setDetail(null); await load(); notify("success", "Deleted."); }
+    try { await request(`${API}/standards/${detail.id}`, { method: "DELETE" }); setSelectedId(null); setDetail(null); await load(); notify("success", tx("Data deleted.")); }
     catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
 
   const cols = useMemo(() => [
     { headerName: tx("Standard Code"), field: "standard_code", width: 130, pinned: "left" },
-    { headerName: tx("Standard Name"), field: "standard_name", minWidth: 190, flex: 1.2 },
-    { headerName: tx("Product"), field: "product_name", minWidth: 150, valueFormatter: (p) => p.value || EMPTY },
-    { headerName: tx("Customer"), field: "customer", width: 130, valueFormatter: (p) => p.value || EMPTY },
-    { headerName: tx("Process"), field: "process", width: 140, valueFormatter: (p) => p.value || EMPTY },
-    { headerName: tx("Revision"), field: "revision_no", width: 90, valueFormatter: (p) => `Rev ${p.value}` },
-    { headerName: tx("Status"), field: "status", width: 140, cellRenderer: (p) => <Box height="100%" display="flex" alignItems="center"><StatusChip value={p.value} /></Box> },
-    { headerName: tx("Updated"), field: "updated_at", width: 150, valueFormatter: (p) => formatDisplayDateTime(p.value) },
-    { headerName: tx("Actions"), width: 90, sortable: false, filter: false, cellRenderer: (p) => (
-      <Stack direction="row" alignItems="center" height="100%">
-        <IconButton size="small" onClick={() => setSelectedId(p.data.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton>
-      </Stack>
-    ) },
+    { headerName: tx("Standard Name"), field: "standard_name", minWidth: 190, flex: 1.6 },
+    { headerName: tx("Product"), field: "product_name", minWidth: 150, flex: 1.1, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Customer"), field: "customer", minWidth: 130, flex: 1, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Process"), field: "process", minWidth: 110, flex: 0.8, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Revision"), field: "revision_no", minWidth: 90, flex: 0.5, cellStyle: { justifyContent: "center" }, valueFormatter: (p) => `Rev ${p.value}` },
+    { headerName: tx("Status"), field: "status", minWidth: 125, flex: 0.8, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><WorkflowPill value={p.value} /></Box> },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [language]);
 
   const selected = detail;
   const rev = selected?.revision;
-  const isDraft = rev?.status === "DRAFT";
-  const isPending = rev?.status === "PENDING_APPROVAL";
-  const isApproved = rev?.status === "APPROVED";
+  const currentRevision = selected?.revisions?.find((r) => r.status === "ACTIVE") || selected?.revisions?.[0];
+  const isCurrent = Boolean(rev && currentRevision && rev.id === currentRevision.id);
   const isActive = rev?.status === "ACTIVE";
-  const hasOpenRevision = selected?.revisions?.some((r) => ["DRAFT", "PENDING_APPROVAL"].includes(r.status));
+  const eqName = (id) => equipmentTypes.find((t) => Number(t.id) === Number(id))?.type_name;
 
   const kpis = [
-    { label: tx("Total Standards"), value: stats.total_standards, note: "", icon: RuleFolderOutlinedIcon, tone: "primary" },
+    { label: tx("Total Standards"), value: stats.total_standards, note: tx("All quality standards"), icon: RuleFolderOutlinedIcon, tone: "primary" },
     { label: tx("Active Standards"), value: stats.active, note: percent(stats.active), icon: CheckCircleOutlineIcon, tone: "success" },
-    { label: tx("Pending Approval"), value: stats.pending_approval, note: percent(stats.pending_approval), icon: HourglassEmptyOutlinedIcon, tone: "warning" },
-    { label: tx("Obsolete"), value: stats.obsolete, note: percent(stats.obsolete), icon: WarningAmberOutlinedIcon, tone: "danger" },
-    { label: tx("New Revision"), value: stats.new_revision_in_progress, note: "", icon: PlaylistAddCheckOutlinedIcon, tone: "accent" },
+    { label: tx("Products covered"), value: stats.products_covered, note: `${products.length} ${tx("products in total")}`, icon: Inventory2OutlinedIcon, tone: "accent" },
+    { label: tx("Customers"), value: customers.length, note: tx("Distinct customers"), icon: FactCheckOutlinedIcon, tone: "warning" },
+    { label: tx("Processes"), value: processes.length, note: tx("Distinct processes"), icon: TimelineOutlinedIcon, tone: "info" },
+    { label: tx("Inactive Standards"), value: stats.inactive, note: tx("Not used for inspection"), icon: BlockOutlinedIcon, tone: "danger" },
   ];
+
+  const people = (name, code) => (code ? person(name, code) : EMPTY);
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      <Box sx={dark ? { "& .vcc-ag-grid": { "--ag-background-color": "#111827", "--ag-header-background-color": "#182235", "--ag-foreground-color": "#D0D5DD", "--ag-border-color": "#344054" } } : {}}>
         <PageMeta title={`${tx("Quality Standard Master")} | VCC Plastics`} description={tx("Manage all quality standards, inspection criteria and acceptance rules in the system")} />
         <PageBreadcrumb pageTitle={tx("Quality Standard Master")} />
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr auto" }, gap: 1.5, alignItems: "center", mb: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={800}>{tx("Quality Standard Master")}</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>{tx("Quality Standard Master")}</Typography>
             <Typography variant="body2" color="text.secondary">{tx("Manage all quality standards, inspection criteria and acceptance rules in the system")}</Typography>
           </Box>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}>
-            <Button disabled={!canEdit} startIcon={<AddIcon />} onClick={() => setDialog({ type: "create" })} sx={btn("primary")}>{tx("Add New Standard")}</Button>
+            <Button variant="contained" disabled={!canEdit} startIcon={<AddIcon />} onClick={() => setDialog({ type: "create" })} sx={buttonSx("primary", { height: 29 })}>{tx("Add New Standard")}</Button>
           </Stack>
         </Box>
 
@@ -590,156 +607,133 @@ export default function QualityStandardMaster() {
           {kpis.map((k) => { const Icon = k.icon; return <KpiCard key={k.label} label={k.label} value={k.value} note={k.note} icon={<Icon />} tone={k.tone} />; })}
         </KpiCardGroup>
 
-        <Paper elevation={0} sx={{ ...cardSx, my: 1.5, p: 1 }}>
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={1} flexWrap="wrap">
-            <TextField size="small" placeholder={tx("Search by standard code or name...")} value={keyword} onChange={(e) => setKeyword(e.target.value)} sx={{ minWidth: 230 }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} />
-            <FormControl size="small" sx={{ minWidth: 170 }}>
-              <InputLabel>{tx("Product")}</InputLabel>
-              <Select label={tx("Product")} value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Products")}</MenuItem>
-                {products.map((p) => <MenuItem key={p.id} value={p.id}>{p.product_code}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Customer")}</InputLabel>
-              <Select label={tx("Customer")} value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Customers")}</MenuItem>
-                {customers.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Process")}</InputLabel>
-              <Select label={tx("Process")} value={processFilter} onChange={(e) => setProcessFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Processes")}</MenuItem>
-                {processes.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>{tx("Status")}</InputLabel>
-              <Select label={tx("Status")} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <MenuItem value="all">{tx("All Status")}</MenuItem>
-                {STATUSES.map((s) => <MenuItem key={s} value={s}>{statusText(s)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <Button onClick={() => { setKeyword(""); setProductFilter("all"); setCustomerFilter("all"); setProcessFilter("all"); setStatusFilter("all"); setTreeSelection({ productId: null, process: null }); }} sx={btn("cancel")}>{tx("Clear")}</Button>
-          </Stack>
+        <Paper variant="outlined" sx={{ my: 1.5, p: 1.5, borderRadius: 2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,1.6fr) repeat(4,minmax(145px,1fr)) auto" }, gap: 1 }}>
+            <TextField size="small" placeholder={tx("Search by standard code or name...")} value={filters.keyword} onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+            {[
+              ["product", tx("Product"), tx("All Products"), products.map((p) => [p.id, p.product_code])],
+              ["customer", tx("Customer"), tx("All Customers"), customers.map((c) => [c, c])],
+              ["process", tx("Process"), tx("All Processes"), processes.map((p) => [p, p])],
+              ["status", tx("Status"), tx("All Status"), [["ACTIVE", statusText("ACTIVE")], ["INACTIVE", statusText("OBSOLETE")]]],
+            ].map(([key, label, all, options]) => (
+              <FormControl key={key} size="small">
+                <InputLabel shrink>{label}</InputLabel>
+                <Select displayEmpty notched label={label} value={filters[key]} onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}>
+                  <MenuItem value="">{all}</MenuItem>
+                  {options.map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
+                </Select>
+              </FormControl>
+            ))}
+            <Button startIcon={<FilterListIcon />} onClick={() => { setFilters({ keyword: "", product: "", customer: "", process: "", status: "" }); setTreeSelection(null); }}
+              sx={buttonSx("cancel", { minHeight: 29, whiteSpace: "nowrap" })}>{tx("Clear")}</Button>
+          </Box>
         </Paper>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "250px minmax(0,1fr) 360px" }, gap: 1.5 }}>
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column" }}>
-            <Head icon={<AccountTreeOutlinedIcon color="primary" fontSize="small" />} title={tx("Standard Hierarchy")} />
-            <Box sx={{ p: 0.75, overflow: "auto" }}>
-              <Box onClick={() => setTreeSelection({ productId: null, process: null })} sx={{ p: 0.75, borderRadius: 1, cursor: "pointer", bgcolor: treeSelection.productId == null ? "action.selected" : "transparent" }}>
-                <Typography fontSize={11.5} fontWeight={800}>{tx("All standards")} ({rows.length})</Typography>
-              </Box>
-              {roots.map((f) => <FamilyNode key={f.id} family={f} families={families} products={products} rows={rows} selection={treeSelection} onSelect={setTreeSelection} />)}
-            </Box>
+        <Box ref={panelsRef} sx={masterGridSx}>
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
+            <PanelHeader title={tx("Standard Hierarchy")} icon={<AccountTreeOutlinedIcon color="primary" fontSize="small" />} />
+            <StandardTree families={families} products={products} rows={rows} selection={treeSelection} onSelect={setTreeSelection} />
           </Paper>
 
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <Head icon={<RuleFolderOutlinedIcon color="primary" fontSize="small" />} title={`${tx("Standard List")} (${filtered.length})`} />
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <PanelHeader title={`${tx("Standard List")} (${filtered.length})`} icon={<RuleFolderOutlinedIcon color="primary" fontSize="small" />} />
             <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
-              <AgGridTable rowData={filtered} columnDefs={cols} loading={loading} pagination paginationPageSize={20} onRowClicked={(e) => setSelectedId(e.data.id)} getRowId={(p) => String(p.data.id)} height="100%" />
+              <AgGridTable rowData={filtered} columnDefs={cols} loading={loading} height="100%" rowSelection="single"
+                getRowId={(p) => String(p.data.id)} onRowClicked={(e) => setSelectedId(e.data.id)} />
             </Box>
           </Paper>
 
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column" }}>
-            <Head icon={<VisibilityOutlinedIcon color="primary" fontSize="small" />} title={tx("Standard Detail")} />
+          <Paper sx={{ ...panelSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
+            <PanelHeader title={tx("Standard Detail")} icon={<VisibilityOutlinedIcon color="primary" fontSize="small" />} />
             {selected && rev ? (
               <>
-                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-                  <Stack direction="row" spacing={0.7} alignItems="center">
-                    <Typography fontWeight={800}>{selected.standard_code}</Typography>
-                    <StatusChip value={rev.status} />
-                    <Chip size="small" label={`Rev ${rev.revision_no}`} sx={{ height: 20, fontSize: 10 }} />
-                  </Stack>
-                  <Typography noWrap variant="body2" color="text.secondary">{rev.standard_name}</Typography>
+                <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: STATUS_COLORS[rev.status] || "#F04438" }}><RuleFolderOutlinedIcon sx={{ fontSize: 18 }} /></Box>
+                    <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 0.25 }}>
+                      <Typography noWrap title={rev.standard_name} sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{rev.standard_name}</Typography>
+                      <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selected.standard_code} · Rev {rev.revision_no}</Typography>
+                    </Box>
+                    <WorkflowPill value={rev.status} />
+                  </Box>
                 </Box>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ minHeight: 36, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 36, p: 0, fontSize: 10, fontWeight: 700 } }}>
-                  <Tab label={tx("General")} /><Tab label={tx("Characteristics")} /><Tab label={tx("History")} />
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth"
+                  sx={{ minHeight: 27, borderTop: 1, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 27, py: 0, px: 0.5, fontSize: 11, fontWeight: 700, textTransform: "none" } }}>
+                  <Tab label={tx("Information")} /><Tab label={`${tx("Characteristics")} (${(selected.characteristics || []).length})`} /><Tab label={tx("History")} />
                 </Tabs>
-                <Box sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
+                <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: "auto" }}>
                   {tab === 0 && (
-                    <Stack spacing={0.85}>
-                      {[
-                        [tx("Standard Code"), selected.standard_code], [tx("Standard Name"), rev.standard_name],
-                        [tx("Product"), rev.product_name ? `${rev.product_code} · ${rev.product_name}` : null],
-                        [tx("Customer"), rev.customer], [tx("Process"), rev.process],
-                        [tx("Effective Date"), formatDisplayDate(rev.effective_date)], [tx("Remark"), rev.remark],
-                        [tx("Submitted By"), rev.submitted_by], [tx("Submitted At"), formatDisplayDateTime(rev.submitted_at)],
-                        [tx("Approved By"), rev.approved_by], [tx("Approved At"), formatDisplayDateTime(rev.approved_at)],
-                      ].map(([label, value]) => (
-                        <Box key={label} sx={{ display: "grid", gridTemplateColumns: "42% 58%", gap: 1 }}>
-                          <Typography variant="caption" color="text.secondary">{label}</Typography>
-                          <Typography variant="caption" fontWeight={700}>{value || EMPTY}</Typography>
-                        </Box>
-                      ))}
+                    <Stack spacing={1.5}>
+                      <DetailSection title={tx("General")}>
+                        <DetailRow label={tx("Product")}>{rev.product_name ? `${rev.product_code} · ${rev.product_name}` : EMPTY}</DetailRow>
+                        <DetailRow label={tx("Customer")}>{rev.customer || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Process")}>{rev.process || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Effective Date")}>{dayText(rev.effective_date)}</DetailRow>
+                        <DetailRow label={tx("Remark")} last>{rev.remark || EMPTY}</DetailRow>
+                      </DetailSection>
+                      <DetailSection title={tx("Record")}>
+                        <DetailRow label={tx("Created By")}>{people(rev.created_by_name, rev.created_by_code || rev.created_by)}</DetailRow>
+                        <DetailRow label={tx("Created Date")}>{dateText(rev.created_at)}</DetailRow>
+                        <DetailRow label={tx("Updated By")}>{people(rev.updated_by_name, rev.updated_by_code || rev.updated_by)}</DetailRow>
+                        <DetailRow label={tx("Last Modified")} last>{dateText(rev.updated_at)}</DetailRow>
+                      </DetailSection>
                     </Stack>
                   )}
                   {tab === 1 && (
-                    <Stack spacing={1}>
-                      {(selected.characteristics || []).length ? selected.characteristics.map((c) => (
-                        <Paper key={c.id} variant="outlined" sx={{ p: 1 }}>
-                          <Typography variant="caption" fontWeight={800} sx={{ display: "block", mb: 0.5 }}>{c.characteristic_name}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.3 }}>
-                            {tx("Nominal Value")}: {c.nominal_value ?? EMPTY} &nbsp;|&nbsp; LSL: {c.lsl ?? EMPTY} &nbsp;|&nbsp; USL: {c.usl ?? EMPTY} {c.unit || ""}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                            {c.inspection_method || EMPTY} · {c.equipment_type_name || EMPTY} · {c.inspection_frequency || EMPTY}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                            {c.characteristic_type === "ATTRIBUTE" ? tx("Attribute (OK / NG)") : tx("Variable (measured)")}
-                            {c.is_spc ? ` · SPC ${c.chart_type === "IMR" ? "I-MR" : "X̄-R"} · n=${c.subgroup_size} · Cpk ≥ ${c.cpk_target ?? EMPTY}` : ""}{c.is_critical ? ` · ${tx("Critical Characteristic")}` : ""}
-                          </Typography>
-                        </Paper>
-                      )) : <Alert severity="info">{tx("No characteristics yet.")}</Alert>}
+                    <Stack spacing={1.5}>
+                      {(selected.characteristics || []).length ? selected.characteristics.map((c) => {
+                        const attr = c.characteristic_type === "ATTRIBUTE";
+                        return (
+                          <DetailSection key={c.id} title={`${c.characteristic_name}${c.is_critical ? ` · ${tx("Critical")}` : ""}`}>
+                            <DetailRow label={tx("Characteristic Type")}>{attr ? tx("Attribute (OK / NG)") : tx("Variable (measured)")}</DetailRow>
+                            {!attr ? <DetailRow label={tx("Nominal / LSL / USL")}>{`${numText(c.nominal_value)} / ${numText(c.lsl)} / ${numText(c.usl)}${c.unit ? ` ${c.unit}` : ""}`}</DetailRow> : null}
+                            <DetailRow label={tx("Measuring Equipment Type")}>{c.equipment_type_name || eqName(c.equipment_type_id) || tx("Not required (visual)")}</DetailRow>
+                            <DetailRow label={tx("Inspection Method")}>{c.inspection_method || EMPTY}</DetailRow>
+                            <DetailRow label={tx("Inspection Frequency")}>{c.inspection_frequency || EMPTY}</DetailRow>
+                            <DetailRow label={tx("SPC Monitoring")} last>{c.is_spc ? `${c.chart_type === "IMR" ? "I-MR" : "X̄-R"} · n=${c.subgroup_size} · Cpk ≥ ${numText(c.cpk_target)}` : tx("No")}</DetailRow>
+                          </DetailSection>
+                        );
+                      }) : <Alert severity="info" sx={{ borderRadius: 2 }}>{tx("No characteristics yet.")}</Alert>}
                     </Stack>
                   )}
                   {tab === 2 && (
                     <Stack spacing={1.5}>
-                      <Box>
-                        <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("All Revisions")}</Typography>
-                        <Stack divider={<Divider />} sx={{ mt: 0.5 }}>
-                          {(selected.revisions || []).map((r) => (
-                            <Stack key={r.id} direction="row" justifyContent="space-between" alignItems="center" py={0.6}
-                              onClick={() => setViewRevisionId(r.id)}
-                              sx={{ cursor: "pointer", px: 0.5, borderRadius: 1, bgcolor: rev.id === r.id ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
-                              <Typography variant="caption" fontWeight={rev.id === r.id ? 800 : 400}>Rev {r.revision_no}</Typography>
-                              <StatusChip value={r.status} />
-                            </Stack>
-                          ))}
-                        </Stack>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("Audit Log")}</Typography>
-                        <Stack divider={<Divider />} sx={{ mt: 0.5 }}>
-                          {auditLog.map((a) => (
-                            <Box key={a.id} py={0.6}>
-                              <Typography variant="caption" fontWeight={700} display="block">{a.action} — {a.from_status || EMPTY} → {a.to_status || EMPTY}</Typography>
-                              <Typography variant="caption" color="text.secondary" display="block">{a.actor} · {formatDisplayDateTime(a.acted_at)}{a.remark ? ` · ${a.remark}` : ""}</Typography>
+                      <DetailSection title={tx("All Revisions")}>
+                        {(selected.revisions || []).map((r, idx, arr) => (
+                          <Box key={r.id} onClick={() => setViewRevisionId(r.id)} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, py: 0.8, mx: -1.25, px: 1.25, cursor: "pointer",
+                            borderBottom: idx === arr.length - 1 ? 0 : 1, borderColor: "divider", bgcolor: rev.id === r.id ? "action.selected" : "transparent", "&:hover": { bgcolor: "action.hover" } }}>
+                            <Typography variant="caption" sx={{ fontWeight: rev.id === r.id ? 800 : 600 }}>Rev {r.revision_no}</Typography>
+                            <WorkflowPill value={r.status} />
+                          </Box>
+                        ))}
+                      </DetailSection>
+                      <DetailSection title={tx("Audit Log")}>
+                        {auditLog.length ? auditLog.map((a, idx) => (
+                          <Box key={a.id} sx={{ py: 0.9, borderBottom: idx === auditLog.length - 1 ? 0 : 1, borderColor: "divider" }}>
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 800 }}>{tx(`ACTION_${a.action}`) === `ACTION_${a.action}` ? a.action : tx(`ACTION_${a.action}`)}</Typography>
+                              {a.to_status ? <WorkflowPill value={a.to_status} /> : null}
                             </Box>
-                          ))}
-                        </Stack>
-                      </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{people(a.actor_name, a.actor_code || a.actor)} · {dateText(a.acted_at)}</Typography>
+                            {a.remark ? <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{a.remark}</Typography> : null}
+                          </Box>
+                        )) : <Typography variant="caption" color="text.secondary" sx={{ display: "block", py: 0.9 }}>{EMPTY}</Typography>}
+                      </DetailSection>
                     </Stack>
                   )}
                 </Box>
                 <Divider />
-                <Stack direction="row" sx={{ justifyContent: "center", gap: 1, p: 1, flexWrap: "wrap" }}>
-                  {isDraft && <Tooltip title={tx("Edit")}><span><IconButton disabled={!canEdit} onClick={() => setDialog({ type: "edit" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {isDraft && <Tooltip title={tx("Submit for Approval")}><span><IconButton disabled={!canEdit || saving} color="warning" onClick={submitRevision} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><SendOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {isPending && <Tooltip title={tx("Approve")}><span><IconButton disabled={!canEdit || saving} color="success" onClick={approveRevision} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ThumbUpOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {isPending && <Tooltip title={tx("Reject")}><span><IconButton disabled={!canEdit || saving} color="error" onClick={() => setDialog({ type: "reject" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ThumbDownOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {isApproved && <Tooltip title={tx("Activate")}><span><IconButton disabled={!canEdit || saving} color="success" onClick={activateRevision} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><CheckCircleOutlineIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {isActive && <Tooltip title={tx("Mark Obsolete")}><span><IconButton disabled={!canEdit || saving} color="error" onClick={obsoleteRevision} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><WarningAmberOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  {!isDraft && !isPending && !hasOpenRevision && <Tooltip title={tx("New Revision Action")}><span><IconButton disabled={!canEdit || saving} onClick={() => setDialog({ type: "newRevision" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><FactCheckOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>}
-                  <Tooltip title={tx("Copy Standard")}><span><IconButton disabled={!canEdit} onClick={() => setDialog({ type: "copy" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ContentCopyOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-                  <Tooltip title={tx("Delete")}><span><IconButton disabled={!canEdit || saving} color="error" onClick={deleteStandard} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+                <Stack direction="row" sx={{ p: 1.5, justifyContent: "center", gap: 1.5, flexShrink: 0, flexWrap: "wrap" }}>
+                  <ActionIcon title={isCurrent ? tx("Edit") : tx("Old revision, view only")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit || !isCurrent} onClick={() => setDialog({ type: "edit" })} />
+                  <ActionIcon title={isActive ? tx("Deactivate") : tx("Activate")} icon={isActive ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                    color={isActive ? "warning" : "success"} disabled={!canEdit || saving || !isCurrent} onClick={toggleStatus} />
+                  <ActionIcon title={tx("Copy Standard")} icon={<ContentCopyOutlinedIcon fontSize="small" />} disabled={!canEdit} onClick={() => setDialog({ type: "copy" })} />
+                  <ActionIcon title={tx("Delete")} icon={<DeleteOutlineIcon fontSize="small" />} color="error" disabled={!canEdit || saving} onClick={deleteStandard} />
                 </Stack>
               </>
             ) : (
-              <Box flex={1} display="grid" sx={{ placeItems: "center" }}><Typography color="text.secondary">{tx("Select a standard to view details.")}</Typography></Box>
+              <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}><Typography variant="body2" color="text.secondary">{tx("Select a standard to view details.")}</Typography></Box>
             )}
           </Paper>
         </Box>
@@ -750,18 +744,12 @@ export default function QualityStandardMaster() {
         {dialog?.type === "edit" && selected && (
           <StandardForm mode="edit" standard={selected} revision={rev} characteristics={selected.characteristics} products={products} equipmentTypes={equipmentTypes} actor={actor} saving={saving} onClose={() => setDialog(null)} onSave={saveRevisionEdit} />
         )}
-        {dialog?.type === "reject" && (
-          <RemarkDialog title={tx("Reject")} icon={<ThumbDownOutlinedIcon />} requireRemark saving={saving} onClose={() => setDialog(null)} onConfirm={rejectRevision} />
-        )}
-        {dialog?.type === "newRevision" && (
-          <RemarkDialog title={tx("New Revision Action")} icon={<FactCheckOutlinedIcon />} requireRemark={false} saving={saving} onClose={() => setDialog(null)} onConfirm={() => newRevision()} />
-        )}
         {dialog?.type === "copy" && (
-          <CopyStandardDialog saving={saving} onClose={() => setDialog(null)} onConfirm={copyStandard} />
+          <CopyStandardDialog source={selected?.standard_code} saving={saving} onClose={() => setDialog(null)} onConfirm={copyStandard} />
         )}
 
-        <Snackbar open={msg.open} autoHideDuration={4500} onClose={() => setMsg((o) => ({ ...o, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-          <Alert severity={msg.type} variant="filled" onClose={() => setMsg((o) => ({ ...o, open: false }))}>{msg.text}</Alert>
+        <Snackbar open={Boolean(message)} autoHideDuration={4500} onClose={() => setMessage(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+          {message ? <Alert severity={message.severity} onClose={() => setMessage(null)}>{message.text}</Alert> : undefined}
         </Snackbar>
       </Box>
     </MuiThemeProvider>

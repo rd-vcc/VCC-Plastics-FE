@@ -34,8 +34,8 @@ import PageMeta from "../../../components/common/PageMeta";
 import { KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
 import { API_CONFIG } from "../../../config/config";
 import { useTheme as useAppTheme } from "../../../context/ThemeContext";
-import { KpiTile, downloadCsv, useRequest } from "../../MaterialManagement/materialUi";
-import { Dot, EMPTY, Head, btn, cardSx, ddmmhhmm, hhmm, num, pageTheme } from "../ProductionPlanning/ui";
+import { KpiTile, downloadExcel, useRequest } from "../../MaterialManagement/materialUi";
+import { Dot, EMPTY, Head, QuickAction, QuickActions, btn, cardSx, ddmmhhmm, hhmm, num, pageTheme } from "../ProductionPlanning/ui";
 import { SystemStatusBar } from "../WorkOrders/WorkOrderManagement/WoParts";
 import { localeTag, setActiveLanguage, tx } from "./dashLocales";
 
@@ -80,7 +80,7 @@ function Timeline({ rows, start, end, onOpen }) {
             <Box key={r.id} onClick={() => onOpen(r)} sx={{ display: "grid", gridTemplateColumns: "120px 1fr", alignItems: "center", py: 0.6, borderTop: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
               <Box sx={{ minWidth: 0 }}><Typography variant="caption" fontWeight={800} sx={{ display: "block", color: "#1570EF" }} noWrap>{r.wo_no}</Typography>
                 <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>{r.product_name} · {r.machine_code || EMPTY}</Typography></Box>
-              <Box sx={{ position: "relative", height: 34 }}>
+              <Box sx={{ position: "relative", height: 29 }}>
                 {!planBefore ? <Tooltip title={`${tx("Plan")}: ${ddmmhhmm(r.planned_start)} → ${ddmmhhmm(r.planned_end)}`}>
                   <Box sx={{ position: "absolute", top: 22, height: 5, borderRadius: 3, bgcolor: "action.selected", left: `${pos(r.planned_start)}%`, width: `${Math.max(pos(r.planned_end) - pos(r.planned_start), 0.5)}%` }} /></Tooltip>
                   : <Typography variant="caption" sx={{ position: "absolute", top: 20, left: 0, fontSize: 10, lineHeight: 1.3, color: "#F04438" }}>{tx("Planned before this shift")}: {ddmmhhmm(r.planned_end)}</Typography>}
@@ -155,7 +155,7 @@ export default function ProductionDashboard() {
     try { await navigator.clipboard.writeText(url); notify("success", tx("Link copied.")); } catch { notify("info", url); }
   };
   const fullscreen = () => { const el = rootRef.current; if (!document.fullscreenElement && el?.requestFullscreen) el.requestFullscreen(); else if (document.exitFullscreen) document.exitFullscreen(); };
-  const exportCsv = () => downloadCsv(`production-dashboard-${filter.business_date}.csv`, ["Metric", "Value"], [
+  const exportCsv = () => downloadExcel(`production-dashboard-${filter.business_date}.csv`, ["Metric", "Value"], [
     ["Window", `${ddmmhhmm(data.window.start)} - ${ddmmhhmm(data.window.end)}`], ["OEE %", k.oee], ["Achievement %", k.achievement], ["Good", k.good], ["Reject", k.reject],
     ["Target", k.target], ["Remaining", k.remaining], ["WO in progress", k.in_progress],
     ...data.machines.map((m) => [`Machine ${m.equipment_code}`, `${m.status} ${m.wo_no || ""} ${m.progress_pct ?? ""}`]),
@@ -174,11 +174,11 @@ export default function ProductionDashboard() {
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box ref={rootRef} sx={{ bgcolor: "background.default" }}>
+      <Box ref={rootRef} sx={{ bgcolor: "background.default", display: "flex", flexDirection: "column", gap: 1, height: { lg: "calc(var(--app-vh, 100vh) - 74px)" }, minHeight: 0, "& > *": { flexShrink: 0 } }}>
         <PageMeta title={`${tx("Production Dashboard")} | VCC Plastics`} description={tx("Real-time overview of the shift")} />
         <PageBreadcrumb pageTitle={tx("Production Dashboard")} />
 
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 0.75 }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
             <FormControl size="small" sx={{ minWidth: 150 }}><InputLabel>{tx("Area")}</InputLabel>
@@ -190,23 +190,21 @@ export default function ProductionDashboard() {
                 <MenuItem value="ALL">{tx("Whole day")}</MenuItem>
                 {lookups.shifts.map((s) => <MenuItem key={s.id} value={s.id}>{s.shift_name} ({String(Math.floor(s.start_min / 60)).padStart(2, "0")}:{String(s.start_min % 60).padStart(2, "0")} ~ {String(Math.floor(s.end_min / 60)).padStart(2, "0")}:{String(s.end_min % 60).padStart(2, "0")})</MenuItem>)}
               </Select></FormControl>
-            <TextField size="small" type="date" label={tx("Business date")} value={filter.business_date} onChange={(e) => setFilter((f) => ({ ...f, business_date: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ width: 150 }} />
+            <TextField size="small" type="date" label={tx("Business date")} value={filter.business_date} onChange={(e) => setFilter((f) => ({ ...f, business_date: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 150 }} />
             <Button startIcon={<BookmarkBorderOutlinedIcon />} onClick={saveView} sx={toolBtnSx}>{tx("Save View")}</Button>
             <Button startIcon={<FileDownloadOutlinedIcon />} onClick={exportCsv} sx={toolBtnSx}>{tx("Export")}</Button>
             <Button startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={toolBtnSx}>{tx("Print")}</Button>
             <Button startIcon={<ShareOutlinedIcon />} onClick={share} sx={toolBtnSx}>{tx("Share")}</Button>
             <Button startIcon={<FullscreenIcon />} onClick={fullscreen} sx={toolBtnSx}>{tx("Fullscreen")}</Button>
             <Box sx={{ flex: 1 }} />
-            <Stack sx={{ alignItems: "flex-end" }}>
-              <FormControlLabel sx={{ mr: 0 }} labelPlacement="start" control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
-                label={<Typography variant="caption" fontWeight={700} sx={{ mr: 1 }}>{tx("Auto Refresh")}</Typography>} />
-              <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
-            </Stack>
+            <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
+            <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
+              label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
           </Stack>
+          {loading ? <LinearProgress sx={{ mt: 0.5, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
 
-        <KpiCardGroup sx={{ mb: 1.5 }}>
+        <KpiCardGroup>
           <KpiTile tone="primary" title="OEE" value={k.oee != null ? num(k.oee, 1) : EMPTY} unit={k.oee != null ? "%" : ""} sub={shiftName} icon={SpeedOutlinedIcon} onClick={() => navigate("/production-management/results")} />
           <KpiTile tone="success" title={tx("Production Achievement")} value={k.achievement != null ? num(k.achievement, 1) : EMPTY} unit={k.achievement != null ? "%" : ""} sub={`${num(k.good)} / ${num(k.target)} pcs`} icon={EmojiEventsOutlinedIcon} />
           <KpiTile tone="info" title={tx("Good Pieces")} value={num(k.good)} unit="pcs" sub={vs(k.good, k.good_yesterday)} icon={InsightsOutlinedIcon} />
@@ -215,26 +213,28 @@ export default function ProductionDashboard() {
           <KpiTile tone="warning" title={tx("Work Orders In Progress")} value={num(k.in_progress)} sub={`${tx("On Track")} ${k.on_track} · ${tx("At Risk")} ${k.at_risk} · ${tx("Delay")} ${k.delay}`} icon={AssignmentOutlinedIcon} onClick={() => navigate("/production-management/work-orders/execution")} />
         </KpiCardGroup>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "minmax(0,1.15fr) minmax(0,1fr) 340px" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
+        <Box sx={{ flex: "1 1 0", minHeight: { xs: 600, lg: 0 }, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "minmax(0,1.15fr) minmax(0,1fr) 340px" }, gap: 1 }}>
+          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <Head title={tx("Injection Area Overview")} action={<Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}>{Object.keys(MACHINE_COLORS).map((s) => <Dot key={s} color={MACHINE_COLORS[s]} text={tx(MACHINE_TEXT[s])} />)}</Stack>} />
-            <Stack spacing={1.5} sx={{ px: 1.5, pb: 1.5 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", alignContent: "start", gap: 1, px: 1.5, pb: 1.25, flex: 1, minHeight: 0, overflowY: "auto" }}>
               {areas.map((area) => (
                 <Box key={area} sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1, bgcolor: dark ? "rgba(255,255,255,.02)" : "#F8FAFC" }}>
-                  <Typography variant="caption" fontWeight={800} sx={{ display: "inline-block", px: 1, py: 0.25, mb: 1, borderRadius: 1, color: "#fff", bgcolor: "#1570EF" }}>{area}</Typography>
+                  <Typography variant="caption" fontWeight={800} sx={{ display: "inline-block", px: 1, py: 0.25, mb: 0.75, borderRadius: 1, color: "#fff", bgcolor: "#1570EF" }}>{area}</Typography>
                   {(() => { const img = data.machines.find((m) => (m.area_name || "—") === area && m.area_image)?.area_image; return img ? <Box component="img" src={resolveImageUrl(img)} alt="" sx={{ display: "block", width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 1.5, mb: 1, bgcolor: "background.paper" }} /> : null; })()}
-                  <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 1 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(124px, 1fr))", gap: 0.75 }}>
                     {data.machines.filter((m) => (m.area_name || "—") === area).map((m) => {
                       const color = MACHINE_COLORS[m.status] || "#98A2B3";
                       return (
-                        <Box key={m.id} onClick={() => navigate(`/machine-equipment/machine-detail?machine=${m.id}`)} sx={{ borderRadius: 2, border: 2, borderColor: color, bgcolor: "background.paper", p: 1, cursor: "pointer", "&:hover": { boxShadow: 3 } }}>
+                        <Box key={m.id} onClick={() => navigate(`/machine-equipment/machine-detail?machine=${m.id}`)} sx={{ borderRadius: 2, border: 2, borderColor: color, bgcolor: "background.paper", px: 1, py: 0.6, cursor: "pointer", "&:hover": { boxShadow: 3 } }}>
                           <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
                             <Typography variant="caption" fontWeight={800}>{m.equipment_code}</Typography>
                             <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color, boxShadow: m.status === "RUNNING" ? `0 0 0 3px ${color}33` : "none" }} />
                           </Stack>
-                          <Box sx={{ display: "grid", placeItems: "center", py: 0.5, height: 52 }}>{m.image_url ? <Box component="img" src={resolveImageUrl(m.image_url)} alt="" sx={{ maxWidth: "100%", height: 48, objectFit: "contain" }} /> : <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 34, color }} />}</Box>
-                          <Typography variant="caption" sx={{ display: "block", color, fontWeight: 700 }}>{tx(MACHINE_TEXT[m.status] || m.status)}</Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>{m.wo_no || tx("No work order")}</Typography>
+                          <Box sx={{ display: "grid", placeItems: "center", height: 40 }}>{m.image_url ? <Box component="img" src={resolveImageUrl(m.image_url)} alt="" sx={{ maxWidth: "100%", height: 38, objectFit: "contain" }} /> : <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 24, color }} />}</Box>
+                          <Stack direction="row" spacing={0.75} sx={{ alignItems: "baseline", justifyContent: "space-between", minWidth: 0 }}>
+                            <Typography variant="caption" sx={{ color, fontWeight: 700, flexShrink: 0 }}>{tx(MACHINE_TEXT[m.status] || m.status)}</Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap title={m.wo_no || ""}>{m.wo_no || tx("No work order")}</Typography>
+                          </Stack>
                           {m.progress_pct != null ? <LinearProgress variant="determinate" value={Math.min(m.progress_pct, 100)} sx={{ mt: 0.5, height: 5, borderRadius: 3, "& .MuiLinearProgress-bar": { bgcolor: color } }} /> : null}
                           {m.oee != null ? <Typography variant="caption" color="text.secondary">OEE {num(m.oee, 1)}%</Typography> : null}
                         </Box>
@@ -243,21 +243,21 @@ export default function ProductionDashboard() {
                   </Box>
                 </Box>
               ))}
-            </Stack>
+            </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
+          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <Head title={tx("Production Timeline (Gantt)")} subtitle={`${hhmm(data.window.start)} – ${hhmm(data.window.end)}`} />
-            <Timeline rows={data.timeline} start={data.window.start} end={data.window.end} onOpen={(r) => (r.order_no ? navigate(`/production-management/production-orders/detail?order=${encodeURIComponent(r.order_no)}`) : navigate(`/production-management/work-orders/management?wo=${r.id}`))} />
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}><Timeline rows={data.timeline} start={data.window.start} end={data.window.end} onOpen={(r) => (r.order_no ? navigate(`/production-management/production-orders/detail?order=${encodeURIComponent(r.order_no)}`) : navigate(`/production-management/work-orders/management?wo=${r.id}`))} /></Box>
           </Paper>
-          <Stack spacing={1.5}>
-            <Paper elevation={0} sx={cardSx}>
+          <Stack spacing={1} sx={{ minHeight: 0 }}>
+            <Paper elevation={0} sx={{ ...cardSx, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
               <Head title={tx("Production Alerts")} subtitle={`(${data.alerts.length})`} />
-              <Box sx={{ px: 1.5, pb: 1, maxHeight: 250, overflow: "auto" }}>
+              <Box sx={{ px: 1.5, pb: 1, flex: 1, minHeight: 0, overflow: "auto" }}>
                 {data.alerts.length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No alerts.")}</Typography> : data.alerts.map((a, i) => {
                   const [Icon, color] = SEVERITY[a.severity];
                   return (
                     <Stack key={i} direction="row" spacing={1} onClick={() => openAlert(a)} sx={{ py: 0.75, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
-                      <Icon sx={{ color, fontSize: 20, mt: 0.25 }} />
+                      <Icon sx={{ color, fontSize: 16, mt: 0.25 }} />
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="caption" fontWeight={800} sx={{ display: "block" }}>{a.ref}</Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{alertText(a)}{a.detail ? ` · ${a.detail}` : ""}</Typography>
@@ -268,9 +268,9 @@ export default function ProductionDashboard() {
                 })}
               </Box>
             </Paper>
-            <Paper elevation={0} sx={{ ...cardSx, cursor: "pointer" }} onClick={() => navigate("/production-management/results")}>
+            <Paper elevation={0} sx={{ ...cardSx, flexShrink: 0, cursor: "pointer" }} onClick={() => navigate("/production-management/results")}>
               <Head title={`${tx("Shift Summary")} (${shiftName})`} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 0.6, px: 1.5, pb: 1.5 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 0.5, px: 1.5, pb: 1.25 }}>
                 {[[tx("Planned Production"), `${num(sh.planned)} pcs`], [tx("Actual Production"), `${num(sh.actual)} pcs`], [tx("Good Pieces"), `${num(sh.good)} pcs`],
                   [tx("Reject Pieces"), `${num(sh.reject)} pcs`], [tx("Reject Rate"), sh.reject_rate != null ? `${num(sh.reject_rate, 2)}%` : EMPTY],
                   [tx("Remaining"), `${num(sh.remaining)} pcs`], [tx("Achievement"), sh.achievement != null ? `${num(sh.achievement, 1)}%` : EMPTY]].map(([key, v], i) => [
@@ -282,20 +282,20 @@ export default function ProductionDashboard() {
           </Stack>
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "minmax(0,1.15fr) minmax(0,1fr) minmax(0,0.8fr) 340px" }, gap: 1.5, mb: 1.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "minmax(0,1.15fr) minmax(0,1fr) minmax(0,0.8fr) 340px" }, gap: 1, "& > *": { height: { xl: 236 } } }}>
           <Paper elevation={0} sx={cardSx}>
             <Head title={tx("Production by Hour")} subtitle={`(${shiftName})`} />
             <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="line" height={240} series={[{ name: tx("Plan (PCS)"), data: data.by_hour.map((h) => h.plan) }, { name: tx("Actual (PCS)"), data: data.by_hour.map((h) => h.actual) }]}
+              <Chart type="line" height={196} series={[{ name: tx("Plan (PCS)"), data: data.by_hour.map((h) => h.plan) }, { name: tx("Actual (PCS)"), data: data.by_hour.map((h) => h.actual) }]}
                 options={{ chart: { background: "transparent", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: ["#1570EF", "#12B76A"],
                   stroke: { width: [2, 3], curve: "straight", dashArray: [6, 0] }, markers: { size: [0, 4] }, xaxis: { categories: data.by_hour.map((h) => h.hour), labels: { style: { colors: axisColor, fontSize: "10px" } } },
-                  yaxis: { labels: { style: { colors: axisColor }, formatter: (v) => num(v) } }, legend: { position: "top", labels: { colors: axisColor } }, grid, tooltip: { theme: dark ? "dark" : "light", shared: true } }} />
+                  yaxis: { labels: { style: { colors: axisColor }, formatter: (v) => num(v) } }, legend: { position: "top", fontSize: "11px", offsetY: -4, labels: { colors: axisColor } }, grid: { ...grid, padding: { top: -14, bottom: -6 } }, tooltip: { theme: dark ? "dark" : "light", shared: true } }} />
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
+          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
             <Head title={tx("Top 5 Machines by OEE")} />
-            <Box sx={{ px: 1, pb: 1 }}>
-              <Table size="small" sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800 } }}>
+            <Box sx={{ px: 1, pb: 1, flex: 1, minHeight: 0, overflow: "auto" }}>
+              <Table size="small" sx={{ "& td, & th": { fontSize: 11, px: 0.75, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800 } }}>
                 <TableHead><TableRow><TableCell>{tx("Machine")}</TableCell><TableCell align="right">OEE</TableCell><TableCell align="right">{tx("Availability")}</TableCell><TableCell align="right">{tx("Performance")}</TableCell><TableCell align="right">{tx("Quality")}</TableCell><TableCell>{tx("Status")}</TableCell></TableRow></TableHead>
                 <TableBody>
                   {data.top_machines.length === 0 ? <TableRow><TableCell colSpan={6}>{tx("No data.")}</TableCell></TableRow> : data.top_machines.map((m) => (
@@ -311,26 +311,26 @@ export default function ProductionDashboard() {
           </Paper>
           <Paper elevation={0} sx={cardSx}>
             <Head title={tx("Work Order Status")} />
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              <Chart type="donut" height={170} series={stateKeys.length ? stateKeys.map((s) => data.wo_states[s]) : [1]} options={{
+            <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", alignItems: "center", gap: 1, px: 1.5 }}>
+              <Chart type="donut" height={180} series={stateKeys.length ? stateKeys.map((s) => data.wo_states[s]) : [1]} options={{
                 chart: { background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' }, labels: stateKeys.length ? stateKeys.map((s) => tx(STATE_TEXT[s])) : [tx("No data.")],
                 colors: stateKeys.length ? stateKeys.map((s) => STATE_COLORS[s]) : ["#EAECF0"], legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] },
-                tooltip: { theme: dark ? "dark" : "light" }, plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: tx("WO"), color: axisColor, formatter: () => String(stateTotal) }, value: { fontSize: "18px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
+                tooltip: { theme: dark ? "dark" : "light" }, plotOptions: { pie: { donut: { size: "74%", labels: { show: true, total: { show: true, label: tx("WO"), color: axisColor, fontSize: "11px", formatter: () => String(stateTotal) }, name: { fontSize: "11px", offsetY: -2 }, value: { fontSize: "20px", fontWeight: 800, offsetY: 2, color: dark ? "#F3F4F6" : "#172033" } } } } },
               }} />
-              <Stack spacing={0.5}>{stateKeys.map((s) => (
+              <Stack spacing={1} sx={{ "& .MuiTypography-root": { fontSize: 11.5 } }}>{stateKeys.map((s) => (
                 <Stack key={s} direction="row" sx={{ justifyContent: "space-between" }}><Dot color={STATE_COLORS[s]} text={tx(STATE_TEXT[s])} />
                   <Typography variant="caption" fontWeight={700}>{data.wo_states[s]} ({num(data.wo_states[s] / Math.max(stateTotal, 1) * 100, 0)}%)</Typography></Stack>
               ))}</Stack>
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
+          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
             <Head title={tx("Quick Actions")} />
-            <Stack spacing={1} sx={{ px: 1.5, pb: 1.5 }}>
-              {[[tx("Create Work Order"), AddCircleOutlineIcon, "/production-management/work-orders/management"], [tx("Report Downtime"), BuildOutlinedIcon, "/machine-equipment/downtime-management"],
-                [tx("Quality Inspection"), VerifiedUserOutlinedIcon, "/quality-management/inspection-management"], [tx("Material Request"), Inventory2OutlinedIcon, "/material-management/allocation"]].map(([text, Icon, to]) => (
-                <Button key={text} onClick={() => navigate(to)} startIcon={<Icon />} sx={{ justifyContent: "flex-start", border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none", fontWeight: 700, py: 1.1, color: "primary.main" }}>{text}</Button>
+            <QuickActions columns={2} sx={{ flex: 1, pb: 1 }}>
+              {[[tx("Create Work Order"), AddCircleOutlineIcon, "#1570EF", "/production-management/work-orders/management"], [tx("Report Downtime"), BuildOutlinedIcon, "#F04438", "/machine-equipment/downtime-management"],
+                [tx("Quality Inspection"), VerifiedUserOutlinedIcon, "#7A5AF8", "/quality-management/inspection-management"], [tx("Material Request"), Inventory2OutlinedIcon, "#12B76A", "/material-management/allocation"]].map(([text, Icon, color, to]) => (
+                <QuickAction key={text} icon={Icon} text={text} color={color} onClick={() => navigate(to)} />
               ))}
-            </Stack>
+            </QuickActions>
           </Paper>
         </Box>
 

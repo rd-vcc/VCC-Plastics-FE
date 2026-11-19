@@ -38,7 +38,7 @@ export default function UserDropdown() {
         <span className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
           <AccountCircle
             sx={{
-              fontSize: 27,
+              fontSize: 20.5,
             }}
           />
         </span>
@@ -51,7 +51,7 @@ export default function UserDropdown() {
         {/* DROPDOWN ARROW */}
         <ArrowDropDown
           sx={{
-            fontSize: 24,
+            fontSize: 18,
           }}
           className={`ml-1 text-gray-500 transition-transform duration-200 dark:text-gray-400 ${isOpen ? "rotate-180" : ""}`}
         />
@@ -75,7 +75,7 @@ export default function UserDropdown() {
             >
               <AccountCircle
                 sx={{
-                  fontSize: 22,
+                  fontSize: 18,
                 }}
                 className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
               />
@@ -94,7 +94,7 @@ export default function UserDropdown() {
           >
             <Settings
               sx={{
-                fontSize: 22,
+                fontSize: 18,
               }}
               className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
             />
@@ -113,7 +113,7 @@ export default function UserDropdown() {
           >
             <Help
               sx={{
-                fontSize: 22,
+                fontSize: 18,
               }}
               className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
             />
@@ -131,7 +131,7 @@ export default function UserDropdown() {
         >
           <Logout
             sx={{
-              fontSize: 22,
+              fontSize: 18,
             }}
             className="text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300"
           />

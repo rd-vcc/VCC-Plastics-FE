@@ -83,7 +83,7 @@ export default function ImageUploadField({ value, onChange, category = "other", 
         <Box onClick={() => !disabled && !busy && inputRef.current?.click()} sx={{ width: height * 1.3, height, flexShrink: 0, borderRadius: 2, border: 1, borderStyle: src ? "solid" : "dashed",
           borderColor: "divider", display: "grid", placeItems: "center", overflow: "hidden", bgcolor: "action.hover", cursor: disabled ? "default" : "pointer" }}>
           {busy ? <CircularProgress size={28} /> : src ? <Box component="img" src={src} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-            : <ImageOutlinedIcon sx={{ fontSize: 42, color: "text.disabled" }} />}
+            : <ImageOutlinedIcon sx={{ fontSize: 32, color: "text.disabled" }} />}
         </Box>
         <Stack spacing={0.75}>
           <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />} disabled={disabled || busy} onClick={() => inputRef.current?.click()} sx={{ textTransform: "none", fontWeight: 700 }}>

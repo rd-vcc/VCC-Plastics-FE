@@ -1,9 +1,12 @@
+import { Children } from "react";
 import { Box, Chip, IconButton, Typography, createTheme } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { buttonSystem } from "../../../components/button/ButtonSystem";
 import { label, tx } from "./locales";
 
 export const EMPTY = "—";
+// A person is always shown as "Full name - employee code"; the code alone when the name is unknown (e.g. SYSTEM).
+export const person = (name, code) => (name ? `${name} - ${code}` : code || EMPTY);
 export const cardSx = { border: "1px solid", borderColor: "divider", borderRadius: 2, boxShadow: "0 1px 3px rgba(15,23,42,.06)", overflow: "hidden", bgcolor: "background.paper" };
 export const dialogPaperSx = { borderRadius: 3, overflow: "hidden", boxShadow: (theme) => theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)" };
 
@@ -51,29 +54,60 @@ export function pageTheme(mode) {
 export function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
   const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
   return (
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: 1, borderColor: "divider",
+    <Box sx={{ px: 2, py: 1.25, display: "flex", alignItems: "center", gap: 1.25, borderBottom: 1, borderColor: "divider",
       bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "rgba(238,27,27,0.10)" : "rgba(0,91,171,0.14)") : (tone === "danger" ? "#FFF3F3" : "#F1F7FF") }}>
-      <Box sx={{ width: 44, height: 44, borderRadius: "50%",
+      <Box sx={{ width: 28, height: 28, borderRadius: "50%",
         bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "#4C1D1D" : "#173A63") : (tone === "danger" ? "#FDECEC" : "#EEF4FF"),
         color: toneColor, display: "grid", placeItems: "center", flexShrink: 0 }}>
         {icon}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>{title}</Typography>
-        {subtitle ? <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{subtitle}</Typography> : null}
+        <Typography variant="subtitle2" fontWeight={800} noWrap title={typeof title === "string" ? title : undefined}>{title}</Typography>
+        {subtitle ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>{subtitle}</Typography> : null}
       </Box>
       <IconButton size="small" disabled={disabled} onClick={onClose} sx={{ mr: -0.5 }}><CloseIcon fontSize="small" /></IconButton>
     </Box>
   );
 }
 
+// Quick Actions: one tile style and one size on every production page (icon above a one-line label).
+export const QUICK_TILE = { width: 120, height: 48 };
+
+export function QuickAction({ icon: Icon, text, color = "#1570EF", onClick, disabled, primary }) {
+  return (
+    <Box component="button" type="button" disabled={disabled} onClick={disabled ? undefined : onClick} title={text}
+      sx={{ width: QUICK_TILE.width, height: QUICK_TILE.height, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.4, px: 0.5,
+        border: 1, borderColor: primary && !disabled ? "primary.main" : "divider", borderRadius: 1.5, bgcolor: primary && !disabled ? "rgba(21,112,239,.06)" : "background.paper",
+        color: disabled ? "text.disabled" : primary ? "primary.main" : "text.primary", font: "inherit", fontSize: 10.5, fontWeight: 700, lineHeight: 1.2,
+        cursor: disabled ? "default" : "pointer", transition: "border-color .15s, background-color .15s",
+        "&:hover": disabled ? {} : { borderColor: color, bgcolor: `${color}12` } }}>
+      <Icon sx={{ fontSize: 19, color: disabled ? "action.disabled" : color }} />
+      <Box component="span" sx={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{text}</Box>
+    </Box>
+  );
+}
+
+// Lays the tiles out in rows of `columns` and spreads the free space evenly between the tiles and all four
+// edges of the box (a short last row is centred). Tiles keep their fixed size.
+export function QuickActions({ children, columns = 4, sx }) {
+  const tiles = Children.toArray(children);
+  const rows = [];
+  for (let i = 0; i < tiles.length; i += columns) rows.push(tiles.slice(i, i + columns));
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "space-evenly", gap: 0.75, ...sx }}>
+      {rows.map((row, i) => <Box key={i} sx={{ display: "flex", justifyContent: "space-evenly", gap: 0.75 }}>{row}</Box>)}
+    </Box>
+  );
+}
+
 export function Head({ title, subtitle, action }) {
   return (
-    <Box sx={{ minHeight: 40, px: 1.5, pt: 1, pb: 0.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+    // Fixed height so card titles line up across a row whether or not a card has an action.
+    <Box sx={{ height: 36, flexShrink: 0, px: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
       <Typography variant="subtitle2" fontWeight={800} noWrap>
         {title}{subtitle ? <Typography component="span" variant="subtitle2" fontWeight={500} color="text.secondary"> {subtitle}</Typography> : null}
       </Typography>
-      {action}
+      {action ? <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0, "& .MuiButton-root": { py: 0, minHeight: 0, height: 24 } }}>{action}</Box> : null}
     </Box>
   );
 }
@@ -89,11 +123,11 @@ export function Dot({ color, text }) {
 
 export function PriorityChip({ value }) {
   const color = PRIORITY_COLORS[value] || "#667085";
-  return <Chip size="small" label={label("priority", value)} sx={{ height: 20, width: 76, fontSize: 10.5, fontWeight: 800, color, bgcolor: `${color}1A`, "& .MuiChip-label": { px: 0.5 } }} />;
+  return <Chip size="small" label={label("priority", value)} sx={{ height: 20, width: 76, fontSize: 10, fontWeight: 800, color, bgcolor: `${color}1A`, "& .MuiChip-label": { px: 0.5 } }} />;
 }
 
 export function PlanStatusChip({ value }) {
-  return <Chip size="small" variant="outlined" color={PLAN_STATUS_TONES[value] || "default"} label={tx(value)} sx={{ height: 22, width: 104, fontSize: 11, fontWeight: 800, "& .MuiChip-label": { px: 0.5 } }} />;
+  return <Chip size="small" variant="outlined" color={PLAN_STATUS_TONES[value] || "default"} label={tx(value)} sx={{ height: 22, width: 104, fontSize: 10, fontWeight: 800, "& .MuiChip-label": { px: 0.5 } }} />;
 }
 
 const two = (n) => String(n).padStart(2, "0");

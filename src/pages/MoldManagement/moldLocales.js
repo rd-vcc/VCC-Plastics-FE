@@ -7,6 +7,7 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const TEXT = {
   vi: {
+    "Information": "Thông tin", "Adjust shots (short)": "Chỉnh bộ đếm", "Last": "Gần nhất", "Shots": "Shot", "Idle": "Nhàn rỗi", "Filter": "Bộ lọc",
     "Mold Overview": "Tổng quan khuôn", "Mold List": "Danh sách khuôn", "Mold Detail": "Chi tiết khuôn", "Mold Status": "Trạng thái khuôn",
     "Mold Installation History": "Lịch sử lắp đặt khuôn", "Installation History": "Lịch sử lắp đặt", "Mold Shot Counter": "Bộ đếm shot khuôn", "Shot Counter": "Bộ đếm shot",
     "Mold Location": "Vị trí khuôn", "Total Molds": "Tổng số khuôn", "Running": "Đang sử dụng", "In Use": "Đang sử dụng", "Available": "Sẵn sàng", "Standby": "Sẵn sàng",
@@ -65,6 +66,7 @@ const TEXT = {
     "Shots today": "Shot hôm nay", "idle": "không dùng", "Operation": "Vận hành", "Machine Detail": "Chi tiết máy",
   },
   ja: {
+    "Information": "情報", "Adjust shots (short)": "カウンター調整", "Last": "最新", "Shots": "ショット", "Idle": "未使用", "Filter": "フィルター",
     "Mold Overview": "金型概要", "Mold List": "金型一覧", "Mold Detail": "金型詳細", "Mold Status": "金型状態", "Mold Installation History": "金型取付履歴", "Installation History": "取付履歴",
     "Mold Shot Counter": "金型ショットカウンター", "Shot Counter": "ショットカウンター", "Mold Location": "金型所在", "Total Molds": "総金型数", "Running": "使用中", "In Use": "使用中",
     "Available": "待機", "Standby": "待機", "In Maintenance": "保全中", "In Repair": "修理中", "Out of Service": "使用停止", "Locked": "ロック", "Average Life Used": "平均寿命使用率",
@@ -112,6 +114,9 @@ const TEXT = {
     "Operation": "運用", "Machine Detail": "機械詳細",
   },
 };
+
+/** Short label for a narrow tile ("X (short)" key); English falls back to the full text. */
+export const txs = (key, full) => (tx(key) === key ? tx(full) : tx(key));
 
 export function tx(text, params) {
   const template = TEXT[lang()]?.[text] || WO_TEXT[lang()]?.[text] || text;

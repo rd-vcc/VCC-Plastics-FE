@@ -8,6 +8,7 @@ import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsAc
 
 import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num, toInputDateTime } from "../ProductionManagement/ProductionPlanning/ui";
 import { label, tx } from "./machineLocales";
+import DateTimeField from "../../components/common/DateTimeField";
 
 export const MACHINE_COLORS = { RUNNING: "#12B76A", IDLE: "#F79009", DOWN: "#F04438", MAINTENANCE: "#2E90FA", OFFLINE: "#98A2B3", UNKNOWN: "#98A2B3" };
 export const PRIORITY_COLORS = { CRITICAL: "#D92D20", HIGH: "#F79009", MEDIUM: "#EAAA08", LOW: "#12B76A" };
@@ -18,7 +19,7 @@ export const REASON_COLORS = ["#F04438", "#F79009", "#12B76A", "#7A5AF8", "#2E90
 
 const pillSx = (color, width) => ({
   display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
-  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
 });
 export const Pill = ({ group, value, colors, width = 104 }) => <Box component="span" title={label(group, value)} sx={pillSx(colors[value] || "#667085", width)}>{label(group, value)}</Box>;
 export const PriorityPill = ({ value }) => <Pill group="priority" value={value} colors={PRIORITY_COLORS} width={92} />;
@@ -92,8 +93,8 @@ export function DowntimeDialog({ mode = "report", api, request, lookups, item, p
             </Stack>
             <TextField size="small" label={tx("Describe the reason")} value={f.reason_text} onChange={ch("reason_text")} />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <TextField size="small" type="datetime-local" label={tx("Start Time")} value={f.started_at} onChange={ch("started_at")} slotProps={{ inputLabel: { shrink: true } }} disabled={mode === "close"} sx={{ flex: 1 }} />
-              <TextField size="small" type="datetime-local" label={tx("End Time")} value={f.ended_at} onChange={ch("ended_at")} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }}
+              <DateTimeField size="small" label={tx("Start Time")} value={f.started_at} onChange={ch("started_at")} slotProps={{ inputLabel: { shrink: true } }} disabled={mode === "close"} sx={{ flex: 1 }} />
+              <DateTimeField size="small" label={tx("End Time")} value={f.ended_at} onChange={ch("ended_at")} slotProps={{ inputLabel: { shrink: true } }} sx={{ flex: 1 }}
                 disabled={mode === "edit" && item?.status === "OPEN"} />
             </Stack>
             {mode === "report" ? <Typography variant="caption" color="text.secondary">{tx("Leave end time empty if the machine is still stopped.")}</Typography> : null}
@@ -108,7 +109,6 @@ export function DowntimeDialog({ mode = "report", api, request, lookups, item, p
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={submit} disabled={saving || !valid} sx={btn(mode === "cancel" ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -139,7 +139,7 @@ export function AlarmDialog({ api, request, alarmId, canEdit, actor, notify, onC
     clear: ["ACTIVE", "ACKNOWLEDGED", "SHELVED"].includes(a.status), close: a.status !== "CLOSED",
   } : {};
   const needNote = mode === "shelve" || (mode === "close" && a?.status !== "CLEARED");
-  const sx = { "& td, & th": { fontSize: 12, px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const sx = { "& td, & th": { fontSize: 11, px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
   return (
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<NotificationsActiveOutlinedIcon />} title={`${tx("Alarm Detail")}${a ? ` · ${a.alarm_no}` : ""}`} subtitle={a ? `${a.equipment_code || EMPTY} · ${a.message}` : ""} onClose={onClose} disabled={busy} tone="danger" />
@@ -189,8 +189,6 @@ export function AlarmDialog({ api, request, alarmId, canEdit, actor, notify, onC
           <Button key={m} disabled={!a || !canEdit || busy || !allowed[m]} onClick={() => { setMode(m); setNote(""); }} sx={btn(tone)}>{tx(t)}</Button>
         ))}
         <Button disabled={!a || !canEdit || !a.equipment_id} onClick={() => onReportDowntime(a)} sx={btn("edit")}>{tx("Report downtime from this alarm")}</Button>
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Close")}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -223,7 +221,6 @@ export function ReportAlarmDialog({ api, request, lookups, actor, notify, onClos
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={submit} disabled={saving || !f.equipment_id || !f.message.trim()} sx={btn("delete")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>

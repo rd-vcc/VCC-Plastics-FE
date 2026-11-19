@@ -48,12 +48,13 @@ import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { WorkOrderForm } from "../../ProductionPlanning/PlanningDialogs";
 import { setActiveLanguage as setPlanningLanguage } from "../../ProductionPlanning/locales";
-import { Dot, EMPTY, Head, PRIORITY_COLORS, btn, cardSx, ddmmhhmm, num, pageTheme } from "../../ProductionPlanning/ui";
+import { Dot, EMPTY, Head, PRIORITY_COLORS, QuickAction, QuickActions, btn, cardSx, ddmmhhmm, num, pageTheme } from "../../ProductionPlanning/ui";
 import { PROGRESS_COLORS, PriorityPill, ProgressBar, StatusPill } from "../orderUi";
 import {
   AdvancedSearchDialog, CopyDialog, ImportDialog, OrderForm, PriorityDialog, ReasonDialog, downloadImportTemplate,
 } from "./OrderDialogs";
 import { label, localeTag, setActiveLanguage, tx } from "./locales";
+import { downloadXlsx } from "../../../../utils/xlsxExport";
 
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const API = `${BASE}/api/production-orders`;
@@ -71,11 +72,6 @@ const DEFAULT_HIDDEN = ["due_date", "source"];
 
 function readHiddenColumns() {
   try { return JSON.parse(localStorage.getItem(COLUMN_KEY) || "null") || DEFAULT_HIDDEN; } catch { return DEFAULT_HIDDEN; }
-}
-
-function csvCell(value) {
-  const text = value == null ? "" : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 export default function ProductionOrderList() {
@@ -253,13 +249,8 @@ export default function ProductionOrderList() {
   const exportCsv = () => {
     const header = ["Order No", "Customer", "Product Code", "Product", "Order Qty", "Priority", "Plan Start", "Plan End", "Due", "Status", "Progress State", "Progress %", "Good", "Reject", "Source", "Source Ref"];
     const lines = rows.map((o) => [o.order_no, o.customer_name, o.product_code, o.product_name, o.order_qty, o.priority, o.planned_start, o.planned_end,
-      o.due_date, o.status, o.progress_state, o.progress_pct, o.good_qty, o.reject_qty, o.source, o.source_ref].map(csvCell).join(","));
-    const blob = new Blob([`\uFEFF${[header.join(","), ...lines].join("\n")}`], { type: "text/csv;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `production-orders-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+      o.due_date, o.status, o.progress_state, o.progress_pct, o.good_qty, o.reject_qty, o.source, o.source_ref]);
+    downloadXlsx(`production-orders-${new Date().toISOString().slice(0, 10)}.xlsx`, header, lines);
   };
 
   const goDetail = (order) => navigate(`/production-management/production-orders/detail?order=${encodeURIComponent(order.order_no)}`);
@@ -280,7 +271,7 @@ export default function ProductionOrderList() {
   const toggleAll = () => setCheckedIds((old) => (allChecked ? old.filter((id) => !visibleIds.includes(id)) : [...new Set([...old, ...visibleIds])]));
   const columnDefs = useMemo(() => {
     const cols = [
-      { headerName: "", colId: "select", width: 44, minWidth: 44, pinned: "left", sortable: false, resizable: false,
+      { headerName: "", colId: "select", width: 32, minWidth: 32, pinned: "left", sortable: false, resizable: false,
         headerComponent: () => <Checkbox size="small" checked={allChecked} indeterminate={!allChecked && someChecked} onChange={toggleAll} sx={{ p: 0.25 }} />,
         cellRenderer: (p) => <Checkbox size="small" checked={checkedIds.includes(p.data.id)} onClick={(e) => e.stopPropagation()} onChange={() => toggleChecked(p.data.id)} sx={{ p: 0.25 }} /> },
       ...(groupBy !== "none" ? [{
@@ -319,7 +310,7 @@ export default function ProductionOrderList() {
     options: {
       chart: { type: "donut", fontFamily: '"Bai Jamjuree", sans-serif', background: "transparent" },
       labels, colors, legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] },
-      plotOptions: { pie: { donut: { size: "66%", labels: { show: true, total: { show: true, label: centerLabel, color: chartText, formatter: () => String(series.reduce((a, b) => a + b, 0)) }, value: { color: dark ? "#F3F4F6" : "#172033", fontSize: "20px", fontWeight: 800 } } } } },
+      plotOptions: { pie: { donut: { size: "66%", labels: { show: true, total: { show: true, label: centerLabel, color: chartText, formatter: () => String(series.reduce((a, b) => a + b, 0)) }, value: { color: dark ? "#F3F4F6" : "#172033", fontSize: "16px", fontWeight: 800 } } } } },
       tooltip: { theme: dark ? "dark" : "light" },
     },
   });
@@ -347,7 +338,7 @@ export default function ProductionOrderList() {
 
   const k = summary?.kpis;
   const plants = lookups.factory_nodes.filter((n) => n.node_type === "FACTORY");
-  const toolBtnSx = btn("cancel", { height: 34, px: 1.5, whiteSpace: "nowrap" });
+  const toolBtnSx = btn("cancel", { height: 29, px: 1.5, whiteSpace: "nowrap" });
   const activeFilters = ["customer_id", "product_id", "priority", "source", "date_from", "date_to", "due_from", "due_to"].filter((f) => search[f]).length + (search.statuses.length ? 1 : 0) + (plantId ? 1 : 0);
   const machineId = selected?.machine_ids?.[0];
   const status = selected?.status;
@@ -368,12 +359,13 @@ export default function ProductionOrderList() {
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      {/* One screen on lg+: toolbar · KPI · (list + action bar | detail) · analysis row */}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: { lg: "calc(var(--app-vh, 100vh) - 74px)" }, minHeight: { lg: 640 } }}>
         <PageMeta title={`${tx("Production Order List")} | VCC Plastics`} description={tx("Track, prioritise and coordinate every production order across its lifecycle")} />
         <PageBreadcrumb pageTitle={tx("Production Order List")} />
 
         {/* ③ Order toolbar */}
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 1, flexShrink: 0 }}>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, alignItems: "center" }}>
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
             <Button startIcon={<FilterAltOutlinedIcon />} onClick={(e) => setAnchor({ type: "filter", el: e.currentTarget })} sx={toolBtnSx}>{tx("Filter")}{activeFilters ? ` (${activeFilters})` : ""}</Button>
@@ -391,7 +383,7 @@ export default function ProductionOrderList() {
 
         {/* ④ Order KPI */}
         {k ? (
-          <KpiCardGroup sx={{ mb: 1.5 }}>
+          <KpiCardGroup sx={{ flexShrink: 0 }}>
             <KpiCard tone="primary" label={tx("Total Orders")} value={num(k.total)} note={`+${k.created_today} ${tx("today")}`} icon={<AssignmentOutlinedIcon />} />
             <KpiCard tone="success" label={tx("On Track")} value={`${num(k.on_track)} (${num(k.on_track_pct, 1)}%)`} note={tx("of total")} icon={<CheckCircleOutlineIcon />} />
             <KpiCard tone="warning" label={tx("At Risk")} value={`${num(k.at_risk)} (${num(k.at_risk_pct, 1)}%)`} note={tx("of total")} icon={<ReportProblemOutlinedIcon />} />
@@ -403,12 +395,12 @@ export default function ProductionOrderList() {
           </KpiCardGroup>
         ) : null}
 
-        {/* ⑤ List | ⑥ Detail + ⑦ Related */}
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1fr) 300px" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* ⑤ List | ⑥ Detail + ⑦ Related  /  ⑧–⑪ Analysis | ⑫ Quick actions (bottom-right, as on the other pages) */}
+        <Box sx={{ flex: { lg: "1 1 0" }, minHeight: 0, display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1fr) 300px" }, gridTemplateRows: { xl: "minmax(0,1fr) 244px" }, gap: 1 }}>
+          <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
             <Head title={tx("Production Orders List")} />
             <Stack direction="row" sx={{ px: 1.5, pb: 1, gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-              <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 32, "& .MuiTabs-indicator": { display: "none" }, "& .MuiTab-root": { minHeight: 30, py: 0.25, px: 1.25, mr: 0.75, border: 1, borderColor: "divider", borderRadius: 1, textTransform: "none", fontSize: 12.5, fontWeight: 700 }, "& .Mui-selected": { bgcolor: "primary.main", color: "#fff !important", borderColor: "primary.main" } }}>
+              <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 27, "& .MuiTabs-indicator": { display: "none" }, "& .MuiTab-root": { minHeight: 30, py: 0.25, px: 1.25, mr: 0.75, border: 1, borderColor: "divider", borderRadius: 1, textTransform: "none", fontSize: 11.5, fontWeight: 700 }, "& .Mui-selected": { bgcolor: "primary.main", color: "#fff !important", borderColor: "primary.main" } }}>
                 {TABS.map(([key, text]) => <Tab key={key} value={key} label={`${tx(text)} (${tabCount(key)})`} />)}
               </Tabs>
               <Box sx={{ flex: 1 }} />
@@ -426,17 +418,17 @@ export default function ProductionOrderList() {
               </FormControl>
               <Tooltip title={tx("Columns")}><IconButton onClick={(e) => setAnchor({ type: "columns", el: e.currentTarget })} sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}><SettingsOutlinedIcon fontSize="small" /></IconButton></Tooltip>
             </Stack>
-            <Box sx={{ px: 1, pb: 1, flex: 1 }}>
-              <AgGridTable rowData={rows} columnDefs={columnDefs} loading={loading} height={420} rowHeight={34}
+            <Box sx={{ px: 1, pb: 1, flex: 1, minHeight: { xs: 420, lg: 0 } }}>
+              <AgGridTable rowData={rows} columnDefs={columnDefs} loading={loading} height="100%" rowHeight={29}
                 onRowClicked={(e) => setSelectedId(e.data.id)} getRowId={(p) => String(p.data.id)} />
             </Box>
           </Paper>
 
-          <Stack spacing={1.5}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Order Detail")} subtitle={tx("(Selected)")} action={selected ? <Button size="small" sx={{ textTransform: "none" }} onClick={() => goDetail(selected)}>{tx("View Detail")}</Button> : null} />
+          <Stack spacing={1} sx={{ minHeight: 0 }}>
+            <Paper elevation={0} sx={{ ...cardSx, flex: 1, minHeight: 0, overflowY: "auto" }}>
+              <Head title={tx("Order Detail")} subtitle={tx("(Selected)")} />
               {selected ? (
-                <Stack spacing={0.9} sx={{ px: 1.5, pb: 1.5 }}>
+                <Stack spacing={0.35} sx={{ px: 1.5, pb: 1 }}>
                   {[
                     [tx("Order No."), selected.order_no], [tx("Product"), selected.product_name],
                     [tx("Customer"), selected.customer_name || EMPTY], [tx("Order Quantity"), `${num(selected.order_qty)} PCS`],
@@ -454,87 +446,72 @@ export default function ProductionOrderList() {
                     <Stack direction="row" spacing={0.75}><StatusPill value={selected.status} /><Dot color={PROGRESS_COLORS[selected.progress_state]} text={label("progress", selected.progress_state)} /></Stack>
                   </Stack>
                   <Box><Typography variant="caption" color="text.secondary">{tx("Progress")}</Typography><ProgressBar value={selected.progress_pct} state={selected.progress_state} /></Box>
-                  <Stack direction="row" spacing={1} sx={{ pt: 0.5, flexWrap: "wrap", gap: 1 }}>
-                    {status === "DRAFT" ? <Button size="small" disabled={!canEdit || saving} onClick={() => transition(selected, "release", null, tx("Order released."))} sx={btn("primary", { flex: 1 })}>{tx("Release Order")}</Button> : null}
-                    {["RELEASED", "SCHEDULING", "IN_PRODUCTION"].includes(status) ? <Button size="small" disabled={!canEdit || saving} onClick={() => openCreateWorkOrder(selected)} sx={btn("primary", { flex: 1 })}>{tx("Create Work Order")}</Button> : null}
-                    {status === "IN_PRODUCTION" ? <Button size="small" disabled={!canEdit || saving} onClick={() => setDialog({ type: "complete", item: selected })} sx={btn("edit", { flex: 1 })}>{tx("Complete Order")}</Button> : null}
-                    {status === "COMPLETED" ? <Button size="small" disabled={!canEdit || saving} onClick={() => setDialog({ type: "close", item: selected })} sx={btn("edit", { flex: 1 })}>{tx("Close Order")}</Button> : null}
-                  </Stack>
                 </Stack>
               ) : <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>{tx("Select an order to view details.")}</Typography>}
             </Paper>
-            <Paper elevation={0} sx={cardSx}>
+            <Paper elevation={0} sx={{ ...cardSx, flexShrink: 0 }}>
               <Head title={tx("Related Information")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0.75, px: 1.5, pb: 1.5 }}>
+              <QuickActions columns={2} sx={{ pb: 0.75 }}>
                 {[
                   [tx("Production Execution"), ShowChartOutlinedIcon, `/production-management/work-orders/execution?order=${encodeURIComponent(selected?.order_no || "")}`],
                   [tx("Quality Result"), VerifiedOutlinedIcon, `/quality-management/inspection-management?order=${encodeURIComponent(selected?.order_no || "")}`],
                   [tx("Material Usage"), Inventory2OutlinedIcon, `/material-management/usage?order=${encodeURIComponent(selected?.order_no || "")}`],
                   [tx("Machine"), PrecisionManufacturingOutlinedIcon, machineId ? `/machine-equipment/machine-detail?machine=${machineId}` : null],
-                ].map(([text, Icon, to]) => (
-                  <Button key={text} disabled={!selected || !to} onClick={() => navigate(to)}
-                    sx={{ flexDirection: "column", gap: 0.5, py: 1, px: 0.5, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none", fontSize: 11, lineHeight: 1.2, color: "text.primary", minWidth: 0 }}>
-                    <Icon sx={{ color: "primary.main" }} />{text}
-                  </Button>
-                ))}
-              </Box>
+                ].map(([text, Icon, to]) => <QuickAction key={text} icon={Icon} text={text} onClick={() => navigate(to)} disabled={!selected || !to} />)}
+              </QuickActions>
             </Paper>
           </Stack>
+          {summary ? (
+            <Box sx={{ minHeight: 0, display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "1fr 1fr 1.2fr 1fr" }, gap: 1 }}>
+              <Paper elevation={0} sx={cardSx}>
+                <Head title={tx("Orders by Status")} />
+                <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
+                  <Box sx={{ minWidth: 0 }}><Chart type="donut" height={165} {...donut(statusKeys.map((s) => label("progress", s)), statusKeys.map((s) => summary.progress_states[s]), statusKeys.map((s) => PROGRESS_COLORS[s]), tx("Total"))} /></Box>
+                  <Legend entries={statusKeys.map((s) => [label("progress", s), summary.progress_states[s], k.total, PROGRESS_COLORS[s]])} />
+                </Box>
+              </Paper>
+              <Paper elevation={0} sx={cardSx}>
+                <Head title={tx("Orders by Priority")} />
+                <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
+                  <Box sx={{ minWidth: 0 }}><Chart type="donut" height={165} {...donut(summary.by_priority.map((p) => label("priority", p.priority)), summary.by_priority.map((p) => p.count), summary.by_priority.map((p) => PRIORITY_COLORS[p.priority]), tx("Total"))} /></Box>
+                  <Legend entries={summary.by_priority.map((p) => [label("priority", p.priority), p.count, k.total, PRIORITY_COLORS[p.priority]])} />
+                </Box>
+              </Paper>
+              <Paper elevation={0} sx={cardSx}>
+                <Head title={tx("Top 5 Products by Order Quantity")} subtitle="(PCS)" />
+                <Box sx={{ px: 1 }}>
+                  <Chart type="bar" height={175} series={[{ name: "PCS", data: summary.top_products.map((p) => p.order_qty) }]} options={{
+                    chart: { toolbar: { show: false }, background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' },
+                    plotOptions: { bar: { horizontal: true, barHeight: "55%", borderRadius: 2 } }, colors: ["#1570EF"],
+                    dataLabels: { enabled: true, formatter: (v) => num(v), style: { fontSize: "10px" }, offsetX: 4 },
+                    xaxis: { categories: summary.top_products.map((p) => p.product_name), tickAmount: 3, labels: { style: { colors: chartText }, formatter: (v) => (Number(v) >= 1000 ? `${num(Number(v) / 1000)}K` : num(v)) } },
+                    yaxis: { labels: { style: { colors: chartText }, maxWidth: 120 } }, grid: { borderColor: dark ? "#344054" : "#EAECF0" },
+                    tooltip: { theme: dark ? "dark" : "light" },
+                  }} />
+                </Box>
+              </Paper>
+              <Paper elevation={0} sx={cardSx}>
+                <Head title={tx("Orders by Customer")} />
+                <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
+                  <Box sx={{ minWidth: 0 }}><Chart type="donut" height={165} {...donut(customerSlices.map((c) => c.customer_name), customerSlices.map((c) => c.count), CUSTOMER_COLORS, tx("Total"))} /></Box>
+                  <Legend entries={customerSlices.map((c, i) => [c.customer_name, c.count, k.total, CUSTOMER_COLORS[i]])} />
+                </Box>
+              </Paper>
+            </Box>
+          ) : null}
+          <Paper elevation={0} sx={{ ...cardSx, gridColumn: { xl: 2 }, gridRow: { xl: 2 }, display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <Head title={tx("Quick Actions")} action={<Typography variant="caption" color="text.secondary" noWrap>{tx("Selected")}: <b>{selected ? selected.order_no : EMPTY}</b></Typography>} />
+            <QuickActions columns={2} sx={{ flex: 1, pb: 1 }}>
+                {actionItems(selected).filter((a) => (
+                ["view", "wo", "schedule", "priority", "copy", "cancel"].includes(a.key)
+                || (a.key === "release" && status === "DRAFT") || (a.key === "complete" && status === "IN_PRODUCTION") || (a.key === "close" && status === "COMPLETED")
+              )).map((a) => (
+                <QuickAction key={a.key} icon={a.icon} text={a.text} color={a.danger ? "#F04438" : "#1570EF"} primary={["release", "wo"].includes(a.key)}
+                  onClick={a.onClick} disabled={!selected || a.disabled || saving} />
+              ))}
+            </QuickActions>
+          </Paper>
         </Box>
-
-        {/* ⑧–⑪ Analysis | ⑫ Quick actions */}
-        {summary ? (
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "1fr 1fr 1.1fr 1fr 300px" }, gap: 1.5 }}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Orders by Status")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
-                <Box sx={{ minWidth: 0 }}><Chart type="donut" height={190} {...donut(statusKeys.map((s) => label("progress", s)), statusKeys.map((s) => summary.progress_states[s]), statusKeys.map((s) => PROGRESS_COLORS[s]), tx("Total"))} /></Box>
-                <Legend entries={statusKeys.map((s) => [label("progress", s), summary.progress_states[s], k.total, PROGRESS_COLORS[s]])} />
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Orders by Priority")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
-                <Box sx={{ minWidth: 0 }}><Chart type="donut" height={190} {...donut(summary.by_priority.map((p) => label("priority", p.priority)), summary.by_priority.map((p) => p.count), summary.by_priority.map((p) => PRIORITY_COLORS[p.priority]), tx("Total"))} /></Box>
-                <Legend entries={summary.by_priority.map((p) => [label("priority", p.priority), p.count, k.total, PRIORITY_COLORS[p.priority]])} />
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Top 5 Products by Order Quantity")} subtitle="(PCS)" />
-              <Box sx={{ px: 1 }}>
-                <Chart type="bar" height={200} series={[{ name: "PCS", data: summary.top_products.map((p) => p.order_qty) }]} options={{
-                  chart: { toolbar: { show: false }, background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' },
-                  plotOptions: { bar: { horizontal: true, barHeight: "55%", borderRadius: 2 } }, colors: ["#1570EF"],
-                  dataLabels: { enabled: true, formatter: (v) => num(v), style: { fontSize: "11px" }, offsetX: 4 },
-                  xaxis: { categories: summary.top_products.map((p) => p.product_name), tickAmount: 3, labels: { style: { colors: chartText }, formatter: (v) => (Number(v) >= 1000 ? `${num(Number(v) / 1000)}K` : num(v)) } },
-                  yaxis: { labels: { style: { colors: chartText }, maxWidth: 120 } }, grid: { borderColor: dark ? "#344054" : "#EAECF0" },
-                  tooltip: { theme: dark ? "dark" : "light" },
-                }} />
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Orders by Customer")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.3fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
-                <Box sx={{ minWidth: 0 }}><Chart type="donut" height={190} {...donut(customerSlices.map((c) => c.customer_name), customerSlices.map((c) => c.count), CUSTOMER_COLORS, tx("Total"))} /></Box>
-                <Legend entries={customerSlices.map((c, i) => [c.customer_name, c.count, k.total, CUSTOMER_COLORS[i]])} />
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Quick Actions")} />
-              <Stack spacing={0.75} sx={{ px: 1.5, pb: 1.5 }}>
-                {actionItems(selected).filter((a) => ["view", "schedule", "priority", "cancel", "copy"].includes(a.key)).map((a) => {
-                  const Icon = a.icon;
-                  return (
-                    <Button key={a.key} disabled={!selected || a.disabled} onClick={a.onClick} startIcon={<Icon />}
-                      sx={{ justifyContent: "flex-start", textTransform: "none", border: 1, borderColor: "divider", borderRadius: 1, color: a.danger ? "error.main" : "primary.main", fontWeight: 700 }}>
-                      {a.text}
-                    </Button>
-                  );
-                })}
-              </Stack>
-            </Paper>
-          </Box>
-        ) : null}
 
         {/* menus */}
         <Menu open={anchor?.type === "row"} anchorEl={anchor?.el} onClose={() => setAnchor(null)}>

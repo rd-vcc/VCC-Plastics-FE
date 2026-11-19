@@ -3,29 +3,30 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Chart from "react-apexcharts";
 import {
-  Box, Button, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography,
+  Box, Button, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import EventRepeatOutlinedIcon from "@mui/icons-material/EventRepeatOutlined";
-import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import InsertChartOutlinedIcon from "@mui/icons-material/InsertChartOutlined";
+import ManageSearchOutlinedIcon from "@mui/icons-material/ManageSearchOutlined";
 import PlayArrowOutlinedIcon from "@mui/icons-material/PlayArrowOutlined";
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
-import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 
 import { KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
-import { KpiTile, downloadCsv } from "../../MaterialManagement/materialUi";
-import { EMPTY, Head, btn, cardSx, ddmmhhmm, num } from "../../ProductionManagement/ProductionPlanning/ui";
+import { KpiTile, colShares, downloadExcel } from "../../MaterialManagement/materialUi";
+import { EMPTY, Head, ddmmhhmm, num } from "../../ProductionManagement/ProductionPlanning/ui";
 import { setActiveLanguage as setMaintLanguage } from "../../MaintenanceManagement/maintLocales";
-import { MaintFrame, useMaintData } from "../../MaintenanceManagement/maintPage";
-import { QuickActionGrid, SEL } from "../../MaintenanceManagement/maintUi";
+import { DonutCard, MaintFrame, useMaintData } from "../../MaintenanceManagement/maintPage";
+import { EmptyBody, FilterToggle, QuickCard, cellsSx, chartBase, fitGridSx, panelSx, toolBtnSx } from "../../shared/onePage";
+import { SEL } from "../../MaintenanceManagement/maintUi";
 import { useQualityPage } from "../../QualityManagement/qualityPage";
 import { CreateReportDialog, HistoryDialog, PreviewDialog, REPORT_API, SchedulesDialog, download, reportName } from "./reportDialogs";
 import { label, setActiveLanguage, tx } from "./reportLocales";
@@ -38,12 +39,14 @@ export default function ReportCenter() {
   const { i18n } = useTranslation();
   setActiveLanguage(i18n.resolvedLanguage || i18n.language || "en");
   setMaintLanguage(i18n.resolvedLanguage || i18n.language || "en");
-  const { dark, axisColor, grid, tableSx, request, actor, notify, canEdit } = page;
+  const { dark, axisColor, grid, tableSx, request, actor, notify, canEdit, navigate } = page;
   const [catalog, setCatalog] = useState(null);
   const [tab, setTab] = useState("ALL");
   const [f, setF] = useState({ module: "", category: "", type: "" });
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState(null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [usageView, setUsageView] = useState("usage");
   const sum = useMaintData(page, `${REPORT_API}/summary?actor=${encodeURIComponent(actor)}`, { interval: 60000, paused: Boolean(dialog) });
   const loadCatalog = useCallback(() => request(`${REPORT_API}/catalog?actor=${encodeURIComponent(actor)}`).then((r) => setCatalog(r.items)).catch((e) => notify("error", e.message)), [request, actor, notify]);
   useEffect(() => { loadCatalog(); }, [loadCatalog]);
@@ -77,88 +80,90 @@ export default function ReportCenter() {
     if (!window.confirm(tx("Delete this custom report?"))) return;
     try { await request(`${REPORT_API}/saved/${r.code}?actor=${encodeURIComponent(actor)}`, { method: "DELETE" }); notify("success", tx("Deleted.")); refresh(); } catch (e) { notify("error", e.message); }
   };
-  const exportList = () => downloadCsv("report-catalog.csv", ["Code", "Name", "Module", "Category", "Type", "Last generated", "Uses (MTD)", "Schedules"],
+  const exportList = () => downloadExcel("report-catalog.csv", ["Code", "Name", "Module", "Category", "Type", "Last generated", "Uses (MTD)", "Schedules"],
     shown.map((r) => [r.code, reportName(r), label("module", r.module), label("category", r.category), r.type, r.last_generated || "", r.uses_mtd, r.schedules]));
   const quick = [
     [tx("Create Report"), AddIcon, "#1570EF", () => setDialog({ type: "create" }), !canEdit],
     [tx("Scheduled Reports"), EventRepeatOutlinedIcon, "#F79009", () => setDialog({ type: "schedules" })],
     [tx("Report History"), HistoryOutlinedIcon, "#12B76A", () => setDialog({ type: "history" })],
-    [tx("Favorites"), StarBorderIcon, "#EAAA08", () => setTab("FAV")],
-    [tx("Export Data"), FileDownloadOutlinedIcon, "#7A5AF8", exportList],
-    [tx("Most used"), TrendingUpOutlinedIcon, "#0E9384", () => setTab("FREQ")],
+    [tx("Audit Log"), ManageSearchOutlinedIcon, "#7A5AF8", () => navigate("/administration/audit-log")],
+    [tx("Production Results"), InsertChartOutlinedIcon, "#0E9384", () => navigate("/production-management/results")],
+    [tx("Quality Overview"), FactCheckOutlinedIcon, "#F04438", () => navigate("/quality-management/dashboard")],
   ];
   const storage = sum.data?.storage || [];
   const used = storage.reduce((a, s) => a + s.bytes, 0);
+  const activeFilters = Object.values(f).filter(Boolean).length + (search ? 1 : 0);
+  const reset = () => { setF({ module: "", category: "", type: "" }); setSearch(""); setTab("ALL"); };
   const toolbar = (
     <>
-      <Button startIcon={<StarBorderIcon />} onClick={() => setTab("FAV")} sx={{ ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" }}>{tx("Favorites")}</Button>
-      <Button startIcon={<EventRepeatOutlinedIcon />} onClick={() => setDialog({ type: "schedules" })} sx={{ ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" }}>{tx("Scheduled Reports")}</Button>
-      <Button startIcon={<HistoryOutlinedIcon />} onClick={() => setDialog({ type: "history" })} sx={{ ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" }}>{tx("Report History")}</Button>
-      {canEdit ? <Button startIcon={<AddIcon />} onClick={() => setDialog({ type: "create" })} sx={btn("primary")}>{tx("Create Report")}</Button> : null}
+      <TextField size="small" placeholder={tx("Search by report name, description...")} value={search} onChange={(e) => setSearch(e.target.value)} sx={{ width: 260 }}
+        slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+      <FilterToggle label={tx("Filter")} open={showFilter} count={activeFilters} onClick={() => setShowFilter((v) => !v)} />
     </>
   );
+  const filters = showFilter ? (
+    <>
+      <TextField select size="small" label={tx("Module")} value={f.module} onChange={(e) => setF({ ...f, module: e.target.value, category: "" })} slotProps={SEL} sx={{ width: 200 }}>
+        <MenuItem value="">{tx("All Modules")}</MenuItem>{Object.keys(byModule).map((m) => <MenuItem key={m} value={m}>{label("module", m)}</MenuItem>)}</TextField>
+      <TextField select size="small" label={tx("Report Category")} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} slotProps={SEL} sx={{ width: 170 }}>
+        <MenuItem value="">{tx("All Categories")}</MenuItem>{categories.map((c) => <MenuItem key={c} value={c}>{label("category", c)}</MenuItem>)}</TextField>
+      <TextField select size="small" label={tx("Report Type")} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} slotProps={SEL} sx={{ width: 150 }}>
+        <MenuItem value="">{tx("All Types")}</MenuItem><MenuItem value="STANDARD">{tx("Standard")}</MenuItem><MenuItem value="CUSTOM">{tx("Custom")}</MenuItem></TextField>
+      <Button onClick={reset} sx={toolBtnSx}>{tx("Reset")}</Button>
+    </>
+  ) : null;
   const genChange = k.generated_prev ? Math.round(((k.generated_mtd - k.generated_prev) / k.generated_prev) * 1000) / 10 : null;
+  const base = chartBase(dark, axisColor);
+  const toggleSx = { px: 1, py: 0.1, textTransform: "none", fontWeight: 700, fontSize: 10.5 };
+  const usage = (sum.data?.by_module || []).map(([m, n]) => [m, n, label("module", m)]);
+  const usageColors = Object.fromEntries((sum.data?.by_module || []).map(([m], i) => [m, MODULE_ICONS_COLORS[i % MODULE_ICONS_COLORS.length]]));
 
   return (
-    <MaintFrame page={page} title={tx("Report Center")} loading={sum.loading || !catalog} ready={Boolean(sum.data && catalog)} lastUpdate={sum.lastUpdate} live={sum.live} setLive={sum.setLive}
-      onRefresh={refresh} onExport={exportList} toolbar={toolbar} system={sum.data?.system}>
+    <MaintFrame fit page={page} title={tx("Report Center")} loading={sum.loading || !catalog} ready={Boolean(sum.data && catalog)} lastUpdate={sum.lastUpdate} live={sum.live} setLive={sum.setLive}
+      onRefresh={refresh} onExport={exportList} toolbar={toolbar} filters={filters} system={sum.data?.system}>
       {sum.data && catalog ? (
         <>
-          <Box sx={{ mb: 1.5 }}>
-            <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(3, minmax(0,1fr))", xl: "repeat(5, minmax(0,1fr))" }}>
-              <KpiTile tone="primary" title={tx("Total Reports")} value={num(k.total)} sub={`${k.new_month} ${tx("new this month")}`} icon={DescriptionOutlinedIcon} onClick={() => setTab("ALL")} />
-              <KpiTile tone="success" title={tx("Favorite Reports")} value={num(k.favorites)} sub={tx("frequently used")} icon={StarBorderIcon} onClick={() => setTab("FAV")} />
-              <KpiTile tone="accent" title={tx("Reports Generated (MTD)")} value={num(k.generated_mtd)} sub={genChange != null ? `${genChange >= 0 ? "▲" : "▼"} ${num(Math.abs(genChange), 1)}% ${tx("vs last month")}` : `${num(k.generated_prev)} ${tx("vs last month")}`}
-                icon={InsertChartOutlinedIcon} onClick={() => setDialog({ type: "history" })} />
-              <KpiTile tone="warning" title={tx("Scheduled Reports")} value={num(k.scheduled)} sub={tx("active schedules")} icon={ScheduleOutlinedIcon} onClick={() => setDialog({ type: "schedules" })} />
-              <KpiTile tone="info" title={tx("Last Generated")} value={k.last_generated ? String(k.last_generated).slice(11, 19) : EMPTY} sub={k.last_generated ? String(k.last_generated).slice(0, 10).split("-").reverse().join("/") : tx("never")}
-                icon={HistoryOutlinedIcon} onClick={() => setDialog({ type: "history" })} />
-            </KpiCardGroup>
-          </Box>
+          <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(3, minmax(0,1fr))", xl: "repeat(5, minmax(0,1fr))" }}>
+            <KpiTile tone="primary" title={tx("Total Reports")} value={num(k.total)} sub={`${k.new_month} ${tx("new this month")}`} icon={DescriptionOutlinedIcon} onClick={() => setTab("ALL")} />
+            <KpiTile tone="success" title={tx("Favorite Reports")} value={num(k.favorites)} sub={tx("frequently used")} icon={StarBorderIcon} onClick={() => setTab("FAV")} />
+            <KpiTile tone="accent" title={tx("Reports Generated (MTD)")} value={num(k.generated_mtd)} sub={genChange != null ? `${genChange >= 0 ? "▲" : "▼"} ${num(Math.abs(genChange), 1)}% ${tx("vs last month")}` : `${num(k.generated_prev)} ${tx("vs last month")}`}
+              icon={InsertChartOutlinedIcon} onClick={() => setDialog({ type: "history" })} />
+            <KpiTile tone="warning" title={tx("Scheduled Reports")} value={num(k.scheduled)} sub={tx("active schedules")} icon={ScheduleOutlinedIcon} onClick={() => setDialog({ type: "schedules" })} />
+            <KpiTile tone="info" title={tx("Last Generated")} value={k.last_generated ? String(k.last_generated).slice(11, 19) : EMPTY} sub={k.last_generated ? String(k.last_generated).slice(0, 10).split("-").reverse().join("/") : tx("never")}
+              icon={HistoryOutlinedIcon} onClick={() => setDialog({ type: "history" })} />
+          </KpiCardGroup>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1fr) 300px" }, gap: 1.5, mb: 1.5 }}>
-            <Paper elevation={0} sx={cardSx}>
-              <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ px: 1.5, minHeight: 40, "& .MuiTab-root": { minHeight: 40, textTransform: "none", fontWeight: 700 } }}>
-                <Tab value="ALL" label={tx("All Reports")} /><Tab value="FAV" label={`${tx("My Favorites")} (${k.favorites || 0})`} /><Tab value="FREQ" label={tx("Frequently Used")} />
-                <Tab value="CUSTOM" label={`${tx("Custom Reports")} (${items.filter((r) => r.type === "CUSTOM").length})`} />
-              </Tabs>
-              <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", px: 1.5, py: 1, borderTop: 1, borderColor: "divider" }}>
-                <TextField select size="small" label={tx("Module")} value={f.module} onChange={(e) => setF({ ...f, module: e.target.value, category: "" })} slotProps={SEL} sx={{ width: 200 }}>
-                  <MenuItem value="">{tx("All Modules")}</MenuItem>{Object.keys(byModule).map((m) => <MenuItem key={m} value={m}>{label("module", m)}</MenuItem>)}</TextField>
-                <TextField select size="small" label={tx("Report Category")} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} slotProps={SEL} sx={{ width: 170 }}>
-                  <MenuItem value="">{tx("All Categories")}</MenuItem>{categories.map((c) => <MenuItem key={c} value={c}>{label("category", c)}</MenuItem>)}</TextField>
-                <TextField select size="small" label={tx("Report Type")} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} slotProps={SEL} sx={{ width: 150 }}>
-                  <MenuItem value="">{tx("All Types")}</MenuItem><MenuItem value="STANDARD">{tx("Standard")}</MenuItem><MenuItem value="CUSTOM">{tx("Custom")}</MenuItem></TextField>
-                <TextField size="small" placeholder={tx("Search by report name, description...")} value={search} onChange={(e) => setSearch(e.target.value)} sx={{ flex: 1, minWidth: 220 }}
-                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
-                <Button onClick={() => { setF({ module: "", category: "", type: "" }); setSearch(""); setTab("ALL"); }} sx={btn("cancel")}>{tx("Reset")}</Button>
+          <Box sx={{ ...fitGridSx, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0,1fr))", lg: "repeat(4, minmax(0,1fr))" }, gridTemplateRows: { lg: "minmax(0,1fr) minmax(0,1fr) minmax(0,0.9fr)" } }}>
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "1 / 4" }, gridRow: { lg: "1 / 3" }, minHeight: { xs: 420, lg: 0 } }}>
+              <Stack direction="row" sx={{ alignItems: "center", px: 1.5, height: 36, flexShrink: 0, gap: 1 }}>
+                <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ flex: 1, minHeight: 30, "& .MuiTab-root": { minHeight: 30, py: 0, px: 1.25, minWidth: 0, textTransform: "none", fontWeight: 700, fontSize: 11.5 } }}>
+                  <Tab value="ALL" label={tx("All Reports")} /><Tab value="FAV" label={`${tx("My Favorites")} (${k.favorites || 0})`} /><Tab value="FREQ" label={tx("Frequently Used")} />
+                  <Tab value="CUSTOM" label={`${tx("Custom Reports")} (${items.filter((r) => r.type === "CUSTOM").length})`} />
+                </Tabs>
+                <Typography variant="caption" color="text.secondary">{shown.length} {tx("Reports")}</Typography>
               </Stack>
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "240px minmax(0,1fr)" }, gap: 1.5, px: 1.5, pb: 1.5 }}>
-                <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1, alignSelf: "start" }}>
-                  <Typography variant="subtitle2" fontWeight={800} sx={{ px: 0.5, mb: 0.5 }}>{tx("Report Categories")}</Typography>
+              <Box sx={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: { xs: "1fr", lg: "210px minmax(0,1fr)" }, gap: 1, px: 1, pb: 1 }}>
+                <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, p: 0.75, minHeight: 0, overflow: "auto" }}>
                   {[["", tx("All Categories"), items.length], ...Object.entries(byModule).map(([m, n]) => [m, label("module", m), n])].map(([m, text, n]) => (
-                    <Stack key={m || "all"} direction="row" onClick={() => setF({ ...f, module: m, category: "" })} sx={{ alignItems: "center", gap: 1, px: 0.75, py: 0.6, borderRadius: 1.5, cursor: "pointer",
+                    <Stack key={m || "all"} direction="row" onClick={() => setF({ ...f, module: m, category: "" })} sx={{ alignItems: "center", gap: 1, px: 0.75, py: 0.5, borderRadius: 1.25, cursor: "pointer",
                       bgcolor: f.module === m ? "#1570EF14" : undefined, color: f.module === m ? "#1570EF" : undefined, "&:hover": { bgcolor: "action.hover" } }}>
-                      <CategoryOutlinedIcon sx={{ fontSize: 18 }} /><Typography variant="caption" fontWeight={700} sx={{ flex: 1 }}>{text}</Typography><Typography variant="caption">{n}</Typography>
+                      <CategoryOutlinedIcon sx={{ fontSize: 14 }} /><Typography variant="caption" fontWeight={700} sx={{ flex: 1 }} noWrap>{text}</Typography><Typography variant="caption">{n}</Typography>
                     </Stack>
                   ))}
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>{tx("Reports")} ({shown.length})</Typography>
-                  <Box sx={{ height: 440, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1.5 }}>
-                    <Table size="small" stickyHeader sx={tableSx}>
-                      <TableHead><TableRow><TableCell sx={{ width: 30 }}>#</TableCell><TableCell>{tx("Report Name")}</TableCell><TableCell>{tx("Module")}</TableCell><TableCell>{tx("Category")}</TableCell>
+                <Box sx={{ minHeight: 0, minWidth: 0, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1.5 }}>
+                  {shown.length ? (
+                    <Table size="small" stickyHeader sx={{ ...tableSx, ...cellsSx, ...colShares(4, 31, 13, 12, 8, 10, 10, 12) }}>
+                      <TableHead><TableRow><TableCell>#</TableCell><TableCell>{tx("Report Name")}</TableCell><TableCell>{tx("Module")}</TableCell><TableCell>{tx("Category")}</TableCell>
                         <TableCell>{tx("Type")}</TableCell><TableCell>{tx("Output")}</TableCell><TableCell>{tx("Last Generated")}</TableCell><TableCell align="right">{tx("Actions")}</TableCell></TableRow></TableHead>
                       <TableBody>{shown.map((r, i) => (
                         <TableRow key={r.code} hover>
                           <TableCell>{i + 1}</TableCell>
-                          <TableCell>
-                            <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-                              <Typography variant="caption" fontWeight={800} sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "preview", report: r })}>{reportName(r)}</Typography>
-                              <IconButton size="small" onClick={() => toggleFav(r)} sx={{ p: 0.25 }}>{r.favorite ? <StarIcon sx={{ fontSize: 16, color: "#EAAA08" }} /> : <StarBorderIcon sx={{ fontSize: 16, color: "text.disabled" }} />}</IconButton>
-                            </Stack>
+                          <TableCell title={reportName(r)}>
+                            <IconButton size="small" onClick={() => toggleFav(r)} sx={{ p: 0.25, mr: 0.25 }}>{r.favorite ? <StarIcon sx={{ fontSize: 13.5, color: "#EAAA08" }} /> : <StarBorderIcon sx={{ fontSize: 13.5, color: "text.disabled" }} />}</IconButton>
+                            <Box component="span" sx={{ fontWeight: 800, color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "preview", report: r })}>{reportName(r)}</Box>
                           </TableCell>
-                          <TableCell sx={{ cursor: "pointer" }} onClick={() => setF({ ...f, module: r.module, category: "" })}>{label("module", r.module)}</TableCell><TableCell>{label("category", r.category)}</TableCell>
+                          <TableCell sx={{ cursor: "pointer" }} onClick={() => setF({ ...f, module: r.module, category: "" })}>{label("module", r.module)}</TableCell><TableCell title={label("category", r.category)}>{label("category", r.category)}</TableCell>
                           <TableCell>{r.type === "CUSTOM" ? tx("Custom") : tx("Standard")}</TableCell>
                           <TableCell>
                             {[["PDF", "#F04438", () => setDialog({ type: "preview", report: r })], ["XLSX", "#12B76A", () => quickExport(r)]].map(([fm, color, fn]) => (
@@ -166,111 +171,112 @@ export default function ReportCenter() {
                             ))}
                           </TableCell>
                           <TableCell>{r.last_generated ? ddmmhhmm(r.last_generated) : EMPTY}</TableCell>
-                          <TableCell align="right" sx={{ py: 0 }}>
+                          <TableCell align="right" sx={{ py: "0 !important" }}>
                             <Tooltip title={tx("Preview")}><IconButton size="small" onClick={() => setDialog({ type: "preview", report: r })}><PlayArrowOutlinedIcon fontSize="small" /></IconButton></Tooltip>
                             <Tooltip title={tx("Schedule")}><IconButton size="small" onClick={() => setDialog({ type: "schedules", preset: r })}><EventRepeatOutlinedIcon fontSize="small" /></IconButton></Tooltip>
                             {r.type === "CUSTOM" && canEdit ? <Tooltip title={tx("Delete")}><IconButton size="small" color="error" onClick={() => delCustom(r)}><DeleteOutlineIcon fontSize="small" /></IconButton></Tooltip> : null}
                           </TableCell></TableRow>
                       ))}</TableBody>
                     </Table>
-                    {!shown.length ? <Typography variant="caption" color="text.secondary" sx={{ p: 1.5, display: "block" }}>{tx("No data.")}</Typography> : null}
-                  </Box>
+                  ) : <EmptyBody text={tx("No data.")} />}
                 </Box>
               </Box>
             </Paper>
 
-            <Stack spacing={1.5}>
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Quick Actions")} />
-                <Box sx={{ px: 1.5, pb: 1.5 }}><QuickActionGrid actions={quick} columns="repeat(3, 1fr)" /></Box>
-              </Paper>
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Most Recent Reports")} action={<Typography variant="caption" sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "history" })}>{tx("View all")}</Typography>} />
-                <Box sx={{ px: 1.5, pb: 1.5 }}>
-                  {(sum.data.recent || []).map((r) => {
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "1" } }}>
+              <Head title={tx("Most Recent Reports")} action={<Typography variant="caption" sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "history" })}>{tx("View all")}</Typography>} />
+              {(sum.data.recent || []).length ? (
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                  {sum.data.recent.map((r) => {
                     const c = items.find((x) => x.code === r.report_code);
                     return (
-                      <Stack key={r.id} direction="row" spacing={1} onClick={() => c && setDialog({ type: "preview", report: c })} sx={{ alignItems: "center", py: 0.6, borderBottom: 1, borderColor: "divider", cursor: c ? "pointer" : "default" }}>
-                        <DescriptionOutlinedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+                      <Stack key={r.id} direction="row" spacing={1} onClick={() => c && setDialog({ type: "preview", report: c })} sx={{ alignItems: "center", py: 0.45, borderBottom: 1, borderColor: "divider", cursor: c ? "pointer" : "default" }}>
+                        <DescriptionOutlinedIcon sx={{ fontSize: 14.5, color: "text.secondary" }} />
                         <Box sx={{ flex: 1, minWidth: 0 }}><Typography variant="caption" fontWeight={700} noWrap sx={{ display: "block" }}>{c ? reportName(c) : r.report_name}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{ddmmhhmm(r.created_at)} · {label("action", r.action)}</Typography></Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{ddmmhhmm(r.created_at)} · {label("action", r.action)}</Typography></Box>
                         <Box component="span" sx={{ fontSize: 10, fontWeight: 800, color: "#12B76A", border: "1px solid #12B76A55", borderRadius: 0.75, px: 0.6 }}>{r.output_format || "VIEW"}</Box>
                       </Stack>
                     );
                   })}
-                  {!(sum.data.recent || []).length ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : null}
                 </Box>
-              </Paper>
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Report Usage (MTD)")} />
-                {sum.data.by_module.length ? (
-                  <Chart type="donut" height={200} series={sum.data.by_module.map(([, n]) => n)} options={{
-                    labels: sum.data.by_module.map(([m]) => label("module", m)), colors: MODULE_ICONS_COLORS, legend: { position: "right", labels: { colors: axisColor }, fontSize: "10px" },
-                    dataLabels: { enabled: false }, chart: { background: "transparent" }, stroke: { width: 1, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light" },
-                    plotOptions: { pie: { donut: { size: "64%", labels: { show: true, name: { color: axisColor, fontSize: "11px" }, value: { color: dark ? "#fff" : "#101828", fontWeight: 800 },
-                      total: { show: true, label: tx("Total"), color: axisColor } } } } } }} />
-                ) : <Typography variant="caption" color="text.secondary" sx={{ px: 1.5, pb: 1.5, display: "block" }}>{tx("No data.")}</Typography>}
-              </Paper>
-            </Stack>
-          </Box>
+              ) : <EmptyBody text={tx("No data.")} />}
+            </Paper>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0,1fr))", xl: "repeat(4, minmax(0,1fr))" }, gap: 1.5 }}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Report Generation Trend (Last 7 Days)")} />
-              <Box sx={{ px: 1 }}>
-                <Chart type="area" height={220} series={[{ name: tx("Reports"), data: sum.data.trend.map((t) => t.count) }]} options={{
-                  chart: { background: "transparent", toolbar: { show: false } }, colors: ["#1570EF"], stroke: { width: 2 }, fill: { type: "gradient", gradient: { opacityFrom: 0.3, opacityTo: 0.02 } },
-                  markers: { size: 4 }, dataLabels: { enabled: true, style: { fontSize: "9px" }, background: { enabled: false }, offsetY: -6 }, grid,
-                  xaxis: { categories: sum.data.trend.map((t) => String(t.date).slice(8, 10) + "/" + String(t.date).slice(5, 7)), labels: { style: { colors: axisColor, fontSize: "10px" } } },
-                  yaxis: { min: 0, labels: { style: { colors: axisColor }, formatter: (v) => num(v, 0) } }, tooltip: { theme: dark ? "dark" : "light" } }} />
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Top 5 Frequently Used Reports (MTD)")} />
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                {sum.data.top.map((t, i) => {
-                  const c = items.find((x) => x.code === t.report_code);
-                  const max = sum.data.top[0]?.n || 1;
-                  return (
-                    <Box key={t.report_code} sx={{ py: 0.6, cursor: c ? "pointer" : "default" }} onClick={() => c && setDialog({ type: "preview", report: c })}>
-                      <Stack direction="row" sx={{ justifyContent: "space-between" }}><Typography variant="caption" fontWeight={700}>{i + 1}. {c ? reportName(c) : t.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{t.n} {tx("times")}</Typography></Stack>
-                      <LinearProgress variant="determinate" value={(t.n / max) * 100} sx={{ height: 5, borderRadius: 3 }} />
-                    </Box>
-                  );
-                })}
-                {!sum.data.top.length ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : null}
-              </Box>
-            </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Scheduled Reports (Next 7 Days)")} action={<Typography variant="caption" sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "schedules" })}>{tx("View all")}</Typography>} />
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                {sum.data.upcoming.map((s) => (
-                  <Stack key={s.id} direction="row" sx={{ alignItems: "center", py: 0.7, borderBottom: 1, borderColor: "divider", gap: 1 }}>
-                    <Typography variant="caption" fontWeight={700} sx={{ flex: 1 }} noWrap>{s.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{label("frequency", s.frequency)} · {ddmmhhmm(s.next_run_at)}</Typography>
-                    <Box component="span" sx={{ fontSize: 10, fontWeight: 800, color: "#12B76A", border: "1px solid #12B76A55", borderRadius: 0.75, px: 0.6 }}>{label("status", s.status)}</Box>
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "2" } }}>
+              <Head title={usageView === "storage" ? tx("Storage Usage") : tx("Report Usage (MTD)")} action={(
+                <ToggleButtonGroup exclusive size="small" value={usageView} onChange={(e, v) => v && setUsageView(v)}>
+                  <ToggleButton value="usage" sx={toggleSx}>{tx("Reports")}</ToggleButton>
+                  <ToggleButton value="storage" sx={toggleSx}>{tx("Storage Usage")}</ToggleButton>
+                </ToggleButtonGroup>
+              )} />
+              {usageView === "usage" ? (usage.length ? (
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", alignItems: "center" }}>
+                  <Box sx={{ width: "100%", "& .MuiStack-root": { maxHeight: 150, overflow: "auto" } }}>
+                    <DonutCard entries={usage} colors={usageColors} dark={dark} axisColor={axisColor} height={140} size={130} />
+                  </Box>
+                </Box>
+              ) : <EmptyBody text={tx("No data.")} />) : (
+                <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  {storage.length ? (
+                    <DonutCard entries={storage.map((s) => [s.format, s.bytes, `${s.format} (${s.files} ${tx("Files")})`])} colors={{ XLSX: "#12B76A", CSV: "#1570EF", PDF: "#F04438" }}
+                      dark={dark} axisColor={axisColor} height={130} size={120} centerLabel={tx("Used")} formatter={fmtSize} />
+                  ) : <EmptyBody text={tx("No data.")} />}
+                  <Stack direction="row" sx={{ justifyContent: "space-between", px: 1.5, pb: 1 }}>
+                    <Typography variant="caption">{tx("Used")}: <b>{fmtSize(used)}</b></Typography>
+                    <Typography variant="caption">{tx("Available")}: <b>{sum.data.disk.free != null ? fmtSize(sum.data.disk.free) : EMPTY}</b></Typography>
                   </Stack>
-                ))}
-                {!sum.data.upcoming.length ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : null}
+                </Box>
+              )}
+            </Paper>
+
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "1" }, gridRow: { lg: "3" } }}>
+              <Head title={tx("Report Generation Trend (Last 7 Days)")} />
+              <Box sx={{ flex: 1, minHeight: 0, px: 1 }}>
+                <Chart type="area" height="100%" series={[{ name: tx("Reports"), data: sum.data.trend.map((t) => t.count) }]} options={{
+                  ...base, colors: ["#1570EF"], stroke: { width: 2 }, fill: { type: "gradient", gradient: { opacityFrom: 0.3, opacityTo: 0.02 } },
+                  markers: { size: 3 }, dataLabels: { enabled: true, formatter: (v) => (v ? v : ""), style: { fontSize: "10px" }, background: { enabled: false }, offsetY: -6 },
+                  xaxis: { ...base.xaxis, categories: sum.data.trend.map((t) => String(t.date).slice(8, 10) + "/" + String(t.date).slice(5, 7)) },
+                  yaxis: { min: 0, tickAmount: 3, labels: { ...base.yaxis.labels, formatter: (v) => num(v, 0) } } }} />
               </Box>
             </Paper>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Storage Usage")} />
-              <Box sx={{ px: 1, pb: 1 }}>
-                {storage.length ? (
-                  <Chart type="donut" height={190} series={storage.map((s) => s.bytes)} options={{
-                    labels: storage.map((s) => `${s.format} (${s.files} ${tx("Files")})`), colors: ["#12B76A", "#1570EF", "#98A2B3"], legend: { position: "right", labels: { colors: axisColor }, fontSize: "10px" },
-                    dataLabels: { enabled: false }, chart: { background: "transparent" }, stroke: { width: 1, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light", y: { formatter: (v) => fmtSize(v) } },
-                    plotOptions: { pie: { donut: { size: "64%", labels: { show: true, name: { color: axisColor, fontSize: "11px" }, value: { color: dark ? "#fff" : "#101828", fontWeight: 800, fontSize: "14px", formatter: (v) => fmtSize(Number(v)) },
-                      total: { show: true, label: tx("Used"), color: axisColor, formatter: () => fmtSize(used) } } } } } }} />
-                ) : <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, display: "block", py: 1 }}>{tx("No data.")}</Typography>}
-                <Stack direction="row" sx={{ justifyContent: "space-between", px: 0.5 }}>
-                  <Typography variant="caption">{tx("Used")}: <b>{fmtSize(used)}</b></Typography>
-                  <Typography variant="caption">{tx("Available")}: <b>{sum.data.disk.free != null ? fmtSize(sum.data.disk.free) : EMPTY}</b></Typography>
-                </Stack>
-              </Box>
+
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "2" }, gridRow: { lg: "3" } }}>
+              <Head title={tx("Top 5 Frequently Used Reports (MTD)")} />
+              {sum.data.top.length ? (
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1, display: "flex", flexDirection: "column", justifyContent: "space-evenly" }}>
+                  {sum.data.top.map((t, i) => {
+                    const c = items.find((x) => x.code === t.report_code);
+                    const max = sum.data.top[0]?.n || 1;
+                    return (
+                      <Box key={t.report_code} sx={{ cursor: c ? "pointer" : "default" }} onClick={() => c && setDialog({ type: "preview", report: c })}>
+                        <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1 }}><Typography variant="caption" fontWeight={700} noWrap>{i + 1}. {c ? reportName(c) : t.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{t.n} {tx("times")}</Typography></Stack>
+                        <LinearProgress variant="determinate" value={(t.n / max) * 100} sx={{ height: 5, borderRadius: 3 }} />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ) : <EmptyBody text={tx("No data.")} />}
             </Paper>
+
+            <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "3" }, gridRow: { lg: "3" } }}>
+              <Head title={tx("Scheduled Reports (Next 7 Days)")} action={<Typography variant="caption" sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => setDialog({ type: "schedules" })}>{tx("View all")}</Typography>} />
+              {sum.data.upcoming.length ? (
+                <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                  {sum.data.upcoming.map((s) => (
+                    <Stack key={s.id} direction="row" sx={{ alignItems: "center", py: 0.5, borderBottom: 1, borderColor: "divider", gap: 1 }}>
+                      <Typography variant="caption" fontWeight={700} sx={{ flex: 1 }} noWrap title={s.name}>{s.name}</Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>{label("frequency", s.frequency)} · {ddmmhhmm(s.next_run_at)}</Typography>
+                      <Box component="span" sx={{ fontSize: 10, fontWeight: 800, color: "#12B76A", border: "1px solid #12B76A55", borderRadius: 0.75, px: 0.6 }}>{label("status", s.status)}</Box>
+                    </Stack>
+                  ))}
+                </Box>
+              ) : <EmptyBody text={tx("No data.")} />}
+            </Paper>
+
+            <Box sx={{ gridColumn: { lg: "4" }, gridRow: { lg: "3" }, display: "flex", minHeight: 0, "& > *": { flex: 1 } }}>
+              <QuickCard title={tx("Quick Actions")} actions={quick} columns={3} />
+            </Box>
           </Box>
         </>
       ) : null}

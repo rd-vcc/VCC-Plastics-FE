@@ -12,6 +12,7 @@ import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 
 import { DialogHeader, EMPTY, btn, dialogPaperSx, fromInputDateTime, toInputDateTime } from "../../ProductionPlanning/ui";
 import { label, tx } from "./locales";
+import DateTimeField from "../../../../components/common/DateTimeField";
 
 export const PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 export const SOURCES = ["MANUAL", "SALES_ORDER", "FORECAST", "MRP", "PLANNING"];
@@ -84,9 +85,9 @@ export function OrderForm({ item, lookups, defaultOrderNo, plantId, saving, onCl
               {plants.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
             </Select>
           </FormControl>
-          <TextField size="small" type="datetime-local" label={tx("Plan Start")} value={f.planned_start} onChange={ch("planned_start")} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" type="datetime-local" label={tx("Plan End")} value={f.planned_end} onChange={ch("planned_end")} InputLabelProps={{ shrink: true }} error={Boolean(windowInvalid)} />
-          <TextField size="small" type="datetime-local" label={tx("Due Date")} value={f.due_date} onChange={ch("due_date")} InputLabelProps={{ shrink: true }} />
+          <DateTimeField size="small" label={tx("Plan Start")} value={f.planned_start} onChange={ch("planned_start")} slotProps={{ inputLabel: { shrink: true } }} />
+          <DateTimeField size="small" label={tx("Plan End")} value={f.planned_end} onChange={ch("planned_end")} slotProps={{ inputLabel: { shrink: true } }} error={Boolean(windowInvalid)} />
+          <DateTimeField size="small" label={tx("Due Date")} value={f.due_date} onChange={ch("due_date")} slotProps={{ inputLabel: { shrink: true } }} />
           <FormControl size="small">
             <InputLabel>{tx("Source")}</InputLabel>
             <Select label={tx("Source")} value={f.source} onChange={ch("source")}>
@@ -97,8 +98,7 @@ export function OrderForm({ item, lookups, defaultOrderNo, plantId, saving, onCl
           <TextField size="small" multiline minRows={2} label={tx("Remark")} value={f.remark} onChange={ch("remark")} sx={{ gridColumn: "1 / -1" }} />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={submit} disabled={saving || !valid} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
       {customerDialog ? (
@@ -123,8 +123,7 @@ function CustomerDialog({ onClose, onSave }) {
           <TextField size="small" label={tx("Short Name")} value={f.short_name} onChange={ch("short_name")} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || !f.customer_code.trim() || !f.customer_name.trim()} sx={btn("primary")}
           onClick={async () => { setSaving(true); try { await onSave({ ...f, short_name: f.short_name || null }); } finally { setSaving(false); } }}>{tx("Save")}</Button>
       </DialogActions>
@@ -153,8 +152,7 @@ export function PriorityDialog({ order, saving, onClose, onSave }) {
           <TextField size="small" label={tx("Reason")} value={remark} onChange={(e) => setRemark(e.target.value)} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || priority === order.priority} onClick={() => onSave(priority, remark || null)} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -172,8 +170,7 @@ export function ReasonDialog({ title, subtitle, message, reasonLabel, required, 
           <TextField size="small" multiline minRows={2} required={required} label={reasonLabel || tx("Remark")} value={remark} onChange={(e) => setRemark(e.target.value)} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || (required && !remark.trim())} onClick={() => onConfirm(remark.trim() || null)} sx={btn(danger ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -188,8 +185,7 @@ export function CopyDialog({ order, saving, onClose, onConfirm }) {
       <DialogContent sx={{ pt: "20px !important" }}>
         <TextField fullWidth size="small" label={tx("New Order No.")} value={orderNo} onChange={(e) => setOrderNo(e.target.value)} helperText={tx("Leave blank to generate automatically.")} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving} onClick={() => onConfirm(orderNo.trim() || null)} sx={btn("primary")}>{tx("Copy Order")}</Button>
       </DialogActions>
     </Dialog>
@@ -267,7 +263,7 @@ export function ImportDialog({ saving, onClose, onImport }) {
         ) : null}
         {rows.length ? (
           <Box sx={{ maxHeight: 360, overflow: "auto" }}>
-            <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 12, whiteSpace: "nowrap" } }}>
+            <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, whiteSpace: "nowrap" } }}>
               <TableHead><TableRow><TableCell>#</TableCell>{IMPORT_COLUMNS.map((c) => <TableCell key={c}>{c}</TableCell>)}</TableRow></TableHead>
               <TableBody>
                 {rows.map((r, i) => {
@@ -283,8 +279,7 @@ export function ImportDialog({ saving, onClose, onImport }) {
           </Box>
         ) : null}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || !rows.length} onClick={submit} sx={btn("primary")}>{tx("Import")}</Button>
       </DialogActions>
     </Dialog>
@@ -339,17 +334,16 @@ export function AdvancedSearchDialog({ value, lookups, onClose, onApply }) {
             </Select>
           </FormControl>
           <Box />
-          <TextField size="small" type="date" label={tx("Plan From")} value={f.date_from} onChange={ch("date_from")} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" type="date" label={tx("Plan To")} value={f.date_to} onChange={ch("date_to")} InputLabelProps={{ shrink: true }} />
+          <TextField size="small" type="date" label={tx("Plan From")} value={f.date_from} onChange={ch("date_from")} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField size="small" type="date" label={tx("Plan To")} value={f.date_to} onChange={ch("date_to")} slotProps={{ inputLabel: { shrink: true } }} />
           <Box />
-          <TextField size="small" type="date" label={tx("Due From")} value={f.due_from} onChange={ch("due_from")} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" type="date" label={tx("Due To")} value={f.due_to} onChange={ch("due_to")} InputLabelProps={{ shrink: true }} />
+          <TextField size="small" type="date" label={tx("Due From")} value={f.due_from} onChange={ch("due_from")} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField size="small" type="date" label={tx("Due To")} value={f.due_to} onChange={ch("due_to")} slotProps={{ inputLabel: { shrink: true } }} />
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={() => setF(Object.fromEntries(Object.keys(f).map((k) => [k, Array.isArray(f[k]) ? [] : ""])))} sx={btn("cancel")}>{tx("Clear")}</Button>
         <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
         <Button onClick={() => onApply(f)} sx={btn("primary")}>{tx("Apply")}</Button>
       </DialogActions>
     </Dialog>

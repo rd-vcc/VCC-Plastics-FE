@@ -17,7 +17,7 @@ export function AllocPill({ value }) {
   const color = ALLOC_COLORS[value] || "#667085";
   return (
     <Box component="span" title={label("allocStatus", value)} sx={{ display: "inline-block", width: 104, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis",
-      whiteSpace: "nowrap", verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40` }}>
+      whiteSpace: "nowrap", verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40` }}>
       {label("allocStatus", value)}
     </Box>
   );
@@ -69,62 +69,119 @@ export function CreateAllocationDialog({ api, request, lookups, actor, initialWo
     } catch (e) { notify("error", e.message); } finally { setBusy(false); }
   };
 
+  const allDone = Boolean(lines?.length) && lines.every((l) => l.remaining_qty <= 0);
+  const step = !woId ? 0 : allDone ? 2 : 1;
+  const steps = [tx("Select a work order"), tx("Check suggested lots (FEFO)"), tx("Reserve")];
+  const info = (k, v) => (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.3 }}>{k}</Typography>
+      <Typography variant="caption" fontWeight={700} noWrap sx={{ display: "block", fontSize: 12 }}>{v || EMPTY}</Typography>
+    </Box>
+  );
+
   return (
-    <Dialog open onClose={busy ? undefined : onClose} maxWidth="lg" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open onClose={busy ? undefined : onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<AddTaskOutlinedIcon />} title={tx("New Allocation")} subtitle={tx("Lots are suggested FEFO: earliest expiry first.")} onClose={onClose} disabled={busy} />
-      <DialogContent sx={{ pt: "16px !important" }}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 2, alignItems: { sm: "center" } }}>
-          <Autocomplete size="small" sx={{ flex: 1 }} options={lookups.work_orders} value={wo || null}
-            getOptionLabel={(w) => `${w.wo_no} · ${w.product_name}${w.machine_code ? ` · ${w.machine_code}` : ""}${w.planned_start ? ` · ${ddmmhhmm(w.planned_start)}` : ""}`}
-            isOptionEqualToValue={(a, b) => a.id === b.id} onChange={(_, w) => setWoId(w?.id ?? null)}
-            renderInput={(p) => <TextField {...p} label={tx("Select a work order")} />} />
-          <Button startIcon={<AutoModeOutlinedIcon />} disabled={!woId || busy || !lines?.some((l) => l.remaining_qty > 0 && l.lots.length)} onClick={auto} sx={btn("primary")}>{tx("Auto allocate (FEFO)")}</Button>
+      <DialogContent sx={{ pt: "16px !important", pb: 2.5 }}>
+        {/* 3-step guide */}
+        <Stack direction="row" sx={{ alignItems: "center", gap: 1, mb: 2 }}>
+          {steps.map((text, i) => (
+            <Stack key={text} direction="row" sx={{ alignItems: "center", gap: 1, flex: i < steps.length - 1 ? 1 : "0 0 auto" }}>
+              <Box sx={{ width: 22, height: 22, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 11, fontWeight: 800, flexShrink: 0,
+                color: i <= step ? "#fff" : "text.secondary", bgcolor: i < step ? "#12B76A" : i === step ? "primary.main" : "action.hover" }}>{i < step ? "✓" : i + 1}</Box>
+              <Typography variant="caption" fontWeight={i === step ? 800 : 600} noWrap sx={{ color: i <= step ? "text.primary" : "text.secondary" }}>{text}</Typography>
+              {i < steps.length - 1 ? <Box sx={{ flex: 1, height: 2, borderRadius: 1, bgcolor: i < step ? "#12B76A" : "divider", minWidth: 24 }} /> : null}
+            </Stack>
+          ))}
         </Stack>
-        {busy ? <LinearProgress sx={{ mb: 1 }} /> : null}
-        {!woId ? null : !lines ? <LinearProgress /> : lines.length === 0 ? <Alert severity="info">{tx("No data.")}</Alert> : (
-          <Stack spacing={1.5}>
-            {lines.map((line) => (
-              <Box key={line.id} sx={{ border: 1, borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Stack direction="row" sx={{ px: 1.5, py: 1, gap: 2, flexWrap: "wrap", alignItems: "center", bgcolor: "action.hover" }}>
-                  <Typography variant="subtitle2" fontWeight={800}>{line.material_code}</Typography>
-                  <Typography variant="caption">{tx("Need")}: <b>{qty(line.need_qty, line.unit)}</b></Typography>
-                  <Typography variant="caption">{tx("Allocated")}: <b>{qty(line.allocated_qty, line.unit)}</b></Typography>
-                  <Typography variant="caption" sx={{ color: line.remaining_qty > 0 ? "#F04438" : "#12B76A" }}>
-                    {line.remaining_qty > 0 ? <>{tx("Remaining")}: <b>{qty(line.remaining_qty, line.unit)}</b></> : <b>{tx("Fully allocated")}</b>}
-                  </Typography>
-                </Stack>
-                {line.remaining_qty > 0 ? (
-                  line.lots.length === 0 ? <Alert severity="warning" sx={{ m: 1, py: 0 }}>{tx("No usable lot (in stock, IQC passed, not expired).")}</Alert> : (
-                    <Table size="small" sx={{ "& td, & th": { fontSize: 12, whiteSpace: "nowrap" } }}>
-                      <TableHead><TableRow>
-                        <TableCell>{tx("Lot No.")}</TableCell><TableCell>{tx("Location")}</TableCell><TableCell>{tx("Expiry")}</TableCell>
-                        <TableCell align="right">{tx("Free")}</TableCell><TableCell align="right">{tx("Suggested")}</TableCell><TableCell align="right">{tx("Reserved qty")}</TableCell><TableCell />
-                      </TableRow></TableHead>
-                      <TableBody>
-                        {line.lots.map((lot) => (
-                          <TableRow key={lot.id} hover>
-                            <TableCell sx={{ fontWeight: 700 }}>{lot.lot_no}</TableCell><TableCell>{lot.location_name}</TableCell>
-                            <TableCell>{lot.expiry_date ? String(lot.expiry_date).split("-").reverse().join("/") : EMPTY}</TableCell>
-                            <TableCell align="right">{qty(lot.free_qty, line.unit)}</TableCell>
-                            <TableCell align="right">{lot.suggested_qty ? qty(lot.suggested_qty, line.unit) : EMPTY}</TableCell>
-                            <TableCell align="right">
-                              <TextField size="small" type="number" value={inputs[`${line.id}-${lot.id}`] ?? ""} sx={{ width: 120 }} inputProps={{ min: 0, step: "any" }}
-                                onChange={(e) => setInputs((o) => ({ ...o, [`${line.id}-${lot.id}`]: e.target.value }))}
-                                InputProps={{ endAdornment: <InputAdornment position="end">{line.unit}</InputAdornment> }} />
-                            </TableCell>
-                            <TableCell align="right"><Button size="small" disabled={busy || !(Number(inputs[`${line.id}-${lot.id}`]) > 0)} onClick={() => reserveOne(line, lot)}>{tx("Reserve")}</Button></TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )
-                ) : null}
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" } }}>
+          <Autocomplete size="small" sx={{ flex: 1 }} options={lookups.work_orders} value={wo || null}
+            getOptionLabel={(w) => `${w.wo_no} · ${w.product_name}`}
+            renderOption={({ key, ...props }, w) => (
+              <Box component="li" key={key} {...props} sx={{ display: "block !important", py: "6px !important" }}>
+                <Typography variant="caption" fontWeight={800} sx={{ display: "block", color: "primary.main" }}>{w.wo_no}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {w.product_name}{w.machine_code ? ` · ${w.machine_code}` : ""}{w.planned_start ? ` · ${ddmmhhmm(w.planned_start)}` : ""} · {w.line_count} {tx("materials")}
+                </Typography>
               </Box>
-            ))}
+            )}
+            isOptionEqualToValue={(a, b) => a.id === b.id} onChange={(_, w) => setWoId(w?.id ?? null)}
+            renderInput={(p) => <TextField {...p} label={tx("Select a work order")} placeholder="WO-..." />} />
+          <Button startIcon={<AutoModeOutlinedIcon />} disabled={!woId || busy || !lines?.some((l) => l.remaining_qty > 0 && l.lots.length)} onClick={auto} sx={btn("primary", { whiteSpace: "nowrap" })}>{tx("Auto allocate (FEFO)")}</Button>
+        </Stack>
+        {busy ? <LinearProgress sx={{ mt: 1.5 }} /> : null}
+
+        {!woId ? (
+          <Stack sx={{ alignItems: "center", textAlign: "center", gap: 0.75, mt: 2, py: 4, border: "1px dashed", borderColor: "divider", borderRadius: 2, bgcolor: "action.hover" }}>
+            <Inventory2OutlinedIcon sx={{ fontSize: 36, color: "primary.main", opacity: 0.8 }} />
+            <Typography variant="body2" fontWeight={700}>{tx("Choose the work order to supply")}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 460 }}>
+              {tx("The system lists each material the work order needs (from its BOM) and suggests lots by FEFO. Use Auto allocate, or enter quantities per lot and press Reserve.")}
+            </Typography>
           </Stack>
+        ) : (
+          <>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, minmax(0,1fr))" }, gap: 1.5, mt: 2, mb: 1.5, px: 1.5, py: 1, borderRadius: 2, border: 1, borderColor: "divider" }}>
+              {info(tx("Work Order"), wo?.wo_no)}
+              {info(tx("Product"), wo?.product_name)}
+              {info(tx("Machine"), wo?.machine_code)}
+              {info(tx("Planned start"), wo?.planned_start ? ddmmhhmm(wo.planned_start) : null)}
+            </Box>
+            {!lines ? <LinearProgress /> : lines.length === 0 ? <Alert severity="info">{tx("This work order has no material requirement yet.")}</Alert> : (
+              <Stack spacing={1.25}>
+                {lines.map((line) => {
+                  const pct = line.need_qty ? Math.min((line.allocated_qty / line.need_qty) * 100, 100) : 0;
+                  const done = line.remaining_qty <= 0;
+                  return (
+                    <Box key={line.id} sx={{ border: 1, borderColor: done ? "#12B76A66" : "divider", borderRadius: 2, overflow: "hidden" }}>
+                      <Box sx={{ px: 1.5, py: 1, bgcolor: done ? "#12B76A0F" : "action.hover" }}>
+                        <Stack direction="row" sx={{ gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+                          <Typography variant="subtitle2" fontWeight={800}>{line.material_code}</Typography>
+                          <Typography variant="caption">{tx("Need")}: <b>{qty(line.need_qty, line.unit)}</b></Typography>
+                          <Typography variant="caption">{tx("Allocated")}: <b>{qty(line.allocated_qty, line.unit)}</b></Typography>
+                          <Box sx={{ flex: 1 }} />
+                          <Typography variant="caption" fontWeight={800} sx={{ color: done ? "#12B76A" : "#F04438" }}>
+                            {done ? `✓ ${tx("Fully allocated")}` : `${tx("Remaining")}: ${qty(line.remaining_qty, line.unit)}`}
+                          </Typography>
+                        </Stack>
+                        <Box sx={{ mt: 0.75, height: 6, borderRadius: 3, bgcolor: "background.paper", overflow: "hidden" }}>
+                          <Box sx={{ width: `${pct}%`, height: "100%", borderRadius: 3, bgcolor: done ? "#12B76A" : "#1570EF" }} />
+                        </Box>
+                      </Box>
+                      {done ? null : line.lots.length === 0 ? <Alert severity="warning" sx={{ m: 1, py: 0 }}>{tx("No usable lot (in stock, IQC passed, not expired).")}</Alert> : (
+                        <Table size="small" sx={{ "& td, & th": { fontSize: 11, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } }}>
+                          <TableHead><TableRow>
+                            <TableCell>{tx("Lot No.")}</TableCell><TableCell>{tx("Location")}</TableCell><TableCell>{tx("Expiry")}</TableCell>
+                            <TableCell align="right">{tx("Free")}</TableCell><TableCell align="right">{tx("Suggested")}</TableCell><TableCell align="right">{tx("Reserved qty")}</TableCell><TableCell />
+                          </TableRow></TableHead>
+                          <TableBody>
+                            {line.lots.map((lot) => (
+                              <TableRow key={lot.id} hover>
+                                <TableCell sx={{ fontWeight: 700 }}>{lot.lot_no}</TableCell><TableCell>{lot.location_name}</TableCell>
+                                <TableCell>{lot.expiry_date ? String(lot.expiry_date).split("-").reverse().join("/") : EMPTY}</TableCell>
+                                <TableCell align="right">{qty(lot.free_qty, line.unit)}</TableCell>
+                                <TableCell align="right" sx={{ color: "primary.main", fontWeight: 700 }}>{lot.suggested_qty ? qty(lot.suggested_qty, line.unit) : EMPTY}</TableCell>
+                                <TableCell align="right">
+                                  <TextField size="small" type="number" value={inputs[`${line.id}-${lot.id}`] ?? ""} sx={{ width: 120 }} inputProps={{ min: 0, step: "any" }}
+                                    onChange={(e) => setInputs((o) => ({ ...o, [`${line.id}-${lot.id}`]: e.target.value }))}
+                                    InputProps={{ endAdornment: <InputAdornment position="end">{line.unit}</InputAdornment> }} />
+                                </TableCell>
+                                <TableCell align="right"><Button size="small" disabled={busy || !(Number(inputs[`${line.id}-${lot.id}`]) > 0)} onClick={() => reserveOne(line, lot)} sx={btn("cancel", { height: 26, px: 1.5 })}>{tx("Reserve")}</Button></TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </Box>
+                  );
+                })}
+                {allDone ? <Alert severity="success" sx={{ py: 0.25 }}>{tx("All materials of this work order are reserved. Open the allocation in the list and use Issue to Machine when production starts.")}</Alert> : null}
+              </Stack>
+            )}
+          </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }
@@ -213,13 +270,11 @@ export function AllocationDetailDialog({ api, request, allocation, machines, can
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, flexWrap: "wrap", gap: 1 }}>
+      <DialogActions sx={{ px: 2, py: 1.25, flexWrap: "wrap", gap: 1 }}>
         <Button disabled={!canEdit || busy || a.reserved_qty <= 0} onClick={() => open("issue")} sx={btn("primary")}>{tx("Issue to Machine")}</Button>
         <Button disabled={!canEdit || busy || a.in_use_qty <= 0} onClick={() => open("return")} sx={btn("edit")}>{tx("Return Material")}</Button>
         <Button disabled={!canEdit || busy || a.reserved_qty <= 0} onClick={() => open("extend")} sx={btn("edit")}>{tx("Extend Reservation")}</Button>
         <Button disabled={!canEdit || busy || a.reserved_qty <= 0} color="error" onClick={() => open("release")} sx={btn("delete")}>{tx("Release Reservation")}</Button>
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Close")}</Button>
       </DialogActions>
     </Dialog>
   );

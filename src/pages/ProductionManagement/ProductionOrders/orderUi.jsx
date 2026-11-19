@@ -10,7 +10,7 @@ export { WO_STATUS_COLORS } from "../WorkOrders/woStatus";
 // Fixed width so every badge in a column is the same size (short labels are not smaller).
 function Pill({ color, text, outlined, width = 104 }) {
   return (
-    <Box component="span" title={text} sx={{ display: "inline-block", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", width, px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: outlined ? `1px solid ${color}40` : "none", whiteSpace: "nowrap" }}>
+    <Box component="span" title={text} sx={{ display: "inline-block", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", verticalAlign: "middle", width, px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: outlined ? `1px solid ${color}40` : "none", whiteSpace: "nowrap" }}>
       {text}
     </Box>
   );
@@ -36,7 +36,7 @@ export function ProgressBar({ value, state, color }) {
   const tone = color || PROGRESS_COLORS[state] || "#2E90FA";
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: "center", width: "100%" }}>
-      <Typography variant="caption" sx={{ width: 42, textAlign: "right", fontWeight: 700, color: tone }}>{num(value, 1)}%</Typography>
+      <Typography variant="caption" sx={{ width: 30, textAlign: "right", fontWeight: 700, color: tone }}>{num(value, 1)}%</Typography>
       <LinearProgress variant="determinate" value={Math.min(Number(value) || 0, 100)} sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: tone, borderRadius: 3 } }} />
     </Stack>
   );

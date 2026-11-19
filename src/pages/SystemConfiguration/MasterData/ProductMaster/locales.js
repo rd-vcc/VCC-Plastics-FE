@@ -3,6 +3,28 @@ import i18n from "../../../../i18n";
 export const translations = {
   "vi": {
     "productMaster": {
+      "Open full image": "Mở ảnh gốc",
+      "Choose the product family on the left; its specification fields appear on the right.": "Chọn nhóm sản phẩm ở cây bên trái, các trường thông số của nhóm sẽ hiện bên phải.",
+      "Not selected": "Chưa chọn",
+      "Select a product family to show its specification fields.": "Chọn một nhóm sản phẩm để hiện các trường thông số.",
+      "This family has no specification fields configured.": "Nhóm này chưa cấu hình trường thông số nào.",
+      "Sub-families": "Số nhóm con",
+      "Expand all": "Mở rộng tất cả",
+      "Collapse all": "Thu gọn tất cả",
+      "Delete its sub-families first": "Cần xóa các nhóm con trước",
+      "Add sub-family": "Thêm nhóm con",
+      "Select a family in the tree to view its details.": "Chọn một nhóm trên cây để xem chi tiết.",
+      "Basic information": "Thông tin cơ bản",
+      "Position in tree": "Vị trí trong cây",
+      "Path": "Đường dẫn",
+      "New family": "Nhóm mới",
+      "Product families group products in a parent / child tree.": "Nhóm sản phẩm dùng để phân loại sản phẩm theo cây cấp cha / con.",
+      "Information": "Thông tin",
+      "Record": "Thông tin bản ghi",
+      "Specifications": "Thông số",
+      "Products": "Số sản phẩm",
+      "Edit": "Sửa",
+      "Product families and their parent / child levels.": "Các nhóm sản phẩm và quan hệ cấp cha / con.",
       "Product BOM": "BOM sản phẩm",
       "BOM": "BOM",
       "Manage BOM": "Quản lý BOM",
@@ -103,7 +125,7 @@ export const translations = {
       "Status": "Trạng thái",
       "All Statuses": "Tất cả trạng thái",
       "Active": "Hoạt động",
-      "Inactive": "Ngừng hoạt động",
+      "Inactive": "Ngừng dùng",
       "Clear": "Xóa bộ lọc",
       "Product Family Tree": "Cây nhóm sản phẩm",
       "Product List ({{count}})": "Danh sách sản phẩm ({{count}})",
@@ -289,6 +311,25 @@ export const translations = {
   },
   "ja": {
     "productMaster": {
+      "Open full image": "元の画像を開く",
+      "Not selected": "未選択",
+      "Sub-families": "子ファミリー数",
+      "Expand all": "すべて展開",
+      "Collapse all": "すべて折りたたむ",
+      "Delete its sub-families first": "先に子ファミリーを削除してください",
+      "Add sub-family": "子ファミリーを追加",
+      "Select a family in the tree to view its details.": "ツリーからファミリーを選択してください。",
+      "Basic information": "基本情報",
+      "Position in tree": "ツリー内の位置",
+      "Path": "パス",
+      "New family": "新しいファミリー",
+      "Product families group products in a parent / child tree.": "製品ファミリーは親子ツリーで製品を分類します。",
+      "Information": "情報",
+      "Record": "レコード情報",
+      "Specifications": "仕様",
+      "Products": "製品数",
+      "Edit": "編集",
+      "Product families and their parent / child levels.": "製品ファミリーと親子階層。",
       "Product BOM": "製品BOM",
       "BOM": "BOM",
       "Manage BOM": "BOM管理",
@@ -466,3 +507,5 @@ Object.entries(translations).forEach(([language, translation]) => {
 });
 
 export default translations;
+
+/// --- IGNORE --- ///

@@ -24,6 +24,7 @@ import { resolveImageUrl } from "../../components/common/ImageUploadField";
 import { API_CONFIG } from "../../config/config";
 import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num, toInputDateTime } from "../ProductionManagement/ProductionPlanning/ui";
 import { label, tx } from "./maintLocales";
+import DateTimeField from "../../components/common/DateTimeField";
 
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 export const MAINT_API = `${BASE}/api/maintenance`;
@@ -38,8 +39,8 @@ export const CHART_COLORS = ["#2E90FA", "#12B76A", "#F79009", "#7A5AF8", "#F0443
 export const COST_COLORS = { PARTS: "#1570EF", LABOR: "#F04438", OUTSOURCING: "#F79009", TOOLS: "#7A5AF8", OTHERS: "#98A2B3" };
 
 const pillSx = (color, width) => ({
-  display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
-  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
+  display: "inline-block", boxSizing: "border-box", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
+  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}55`,
 });
 export const Pill = ({ group, value, colors, width = 104 }) => <Box component="span" title={label(group, value)} sx={pillSx(colors[value] || "#667085", width)}>{label(group, value)}</Box>;
 export const WoStatusPill = ({ value }) => <Pill group="woStatus" value={value} colors={WO_STATUS_COLORS} />;
@@ -65,7 +66,7 @@ export function AssetCell({ code, name, type, onClick }) {
     <Box sx={{ minWidth: 0 }}>
       <Typography variant="caption" fontWeight={800} sx={{ display: "block", color: onClick ? "#1570EF" : undefined, cursor: onClick ? "pointer" : "default" }} noWrap
         onClick={onClick ? (e) => { e.stopPropagation(); onClick(); } : undefined}>{code || EMPTY}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5 }} noWrap>{name}{type ? ` · ${label("assetType", type)}` : ""}</Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10 }} noWrap>{name}{type ? ` · ${label("assetType", type)}` : ""}</Typography>
     </Box>
   );
 }
@@ -85,7 +86,7 @@ export function QuickActionGrid({ actions, columns = "repeat(auto-fill, minmax(1
     <Box sx={{ display: "grid", gridTemplateColumns: columns, gap: 0.75 }}>
       {actions.map(([text, Icon, color, onClick, disabled]) => (
         <Button key={text} disabled={disabled} onClick={onClick} sx={{ flexDirection: "column", gap: 0.4, py: 1, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none",
-          fontSize: 11, fontWeight: 700, color: "text.primary", lineHeight: 1.2, minWidth: 0 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
+          fontSize: 10, fontWeight: 700, color: "text.primary", lineHeight: 1.2, minWidth: 0 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
       ))}
     </Box>
   );
@@ -104,7 +105,7 @@ export function Timeline({ events }) {
           </Box>
           <Box sx={{ pb: 1, minWidth: 0 }}>
             <Typography variant="caption" fontWeight={700} sx={{ display: "block" }}>{label("action", e.action)}{e.action === "STAGE" && e.note ? ` · ${label("stage", e.note)}` : ""}</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{e.actor}{e.note && e.action !== "STAGE" ? ` · ${e.note}` : ""}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{e.actor}{e.note && e.action !== "STAGE" ? ` · ${e.note}` : ""}</Typography>
           </Box>
         </Box>
       ))}
@@ -124,8 +125,8 @@ export function WoSteps({ events }) {
           <Box key={a} sx={{ textAlign: "center", position: "relative" }}>
             {i > 0 ? <Box sx={{ position: "absolute", top: 8, left: 0, right: "50%", height: 2, bgcolor: color }} /> : null}
             {i < 5 ? <Box sx={{ position: "absolute", top: 8, left: "50%", right: 0, height: 2, bgcolor: [...(events || [])].some((e) => e.action === steps[i + 1][0]) ? "#12B76A" : "#D0D5DD" }} /> : null}
-            <CheckCircleOutlineIcon sx={{ position: "relative", fontSize: 18, color, bgcolor: "background.paper", borderRadius: "50%" }} />
-            <Typography variant="caption" sx={{ display: "block", fontSize: 10.5, fontWeight: 700 }}>{label("woStatus", st)}</Typography>
+            <CheckCircleOutlineIcon sx={{ position: "relative", fontSize: 14.5, color, bgcolor: "background.paper", borderRadius: "50%" }} />
+            <Typography variant="caption" sx={{ display: "block", fontSize: 10, fontWeight: 700 }}>{label("woStatus", st)}</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{ev ? ddmmhhmm(ev.event_at) : EMPTY}</Typography>
           </Box>
         );
@@ -201,12 +202,11 @@ export function RequestDialog({ lookups, item, preset, request, actor, onClose, 
           <TextField size="small" multiline minRows={3} label={tx("Detail Description")} value={f.description} onChange={ch("description")} />
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth label={tx("Department")} value={f.department} onChange={ch("department")} />
-            <TextField size="small" fullWidth type="datetime-local" label={tx("Required Date")} value={f.required_date} onChange={ch("required_date")} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateTimeField size="small" fullWidth label={tx("Required Date")} value={f.required_date} onChange={ch("required_date")} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={save} disabled={saving || !f.asset_id || !f.short_description.trim()} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -228,7 +228,6 @@ export function NoteDialog({ title, noteLabel, required = true, danger, technici
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={submit} disabled={saving || (technicianMode ? !tech : required && !note.trim())} sx={btn(danger ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -282,8 +281,8 @@ export function WoDialog({ mode = "create", lookups, item, preset, scopeTypes, r
             <TechSelect lookups={lookups} value={f.assistant} onChange={(v) => setF((o) => ({ ...o, assistant: v }))} labelText={tx("Assistant")} />
           </Stack>
           <Stack direction="row" spacing={1.5}>
-            <TextField size="small" fullWidth type="datetime-local" label={tx("Planned Start")} value={f.planned_start} onChange={ch("planned_start")} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField size="small" fullWidth type="datetime-local" label={tx("Planned Finish")} value={f.planned_finish} onChange={ch("planned_finish")} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateTimeField size="small" fullWidth label={tx("Planned Start")} value={f.planned_start} onChange={ch("planned_start")} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateTimeField size="small" fullWidth label={tx("Planned Finish")} value={f.planned_finish} onChange={ch("planned_finish")} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
           <Stack direction="row" spacing={1.5}>
             <TextField size="small" fullWidth type="number" label={tx("Est. minutes")} value={f.est_minutes} onChange={ch("est_minutes")} />
@@ -310,7 +309,6 @@ export function WoDialog({ mode = "create", lookups, item, preset, scopeTypes, r
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={save} disabled={saving || !f.asset_id || !f.task_name.trim()} sx={btn("primary")}>{mode === "edit" ? tx("Save") : tx("Create")}</Button>
       </DialogActions>
     </Dialog>
@@ -384,7 +382,6 @@ export function PlanDialog({ lookups, item, preset, request, actor, onClose, onS
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={save} disabled={saving || !f.asset_id || !f.task_name.trim() || !Number(f.interval_value)} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -434,15 +431,15 @@ export function Attachments({ owner, ownerId, items, request, actor, canEdit, on
           <Box key={a.id} sx={{ position: "relative", border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", height: 80, cursor: "pointer" }} onClick={() => window.open(resolveImageUrl(a.file_url), "_blank", "noopener")}>
             <Box component="img" src={resolveImageUrl(a.file_url)} alt="" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <Chip size="small" label={tx(a.kind === "AFTER" ? "After" : "Before")} sx={{ position: "absolute", left: 4, top: 4, height: 18, fontSize: 10, bgcolor: a.kind === "AFTER" ? "#12B76A" : "#F79009", color: "#fff" }} />
-            {canEdit ? <IconButton size="small" onClick={(e) => { e.stopPropagation(); remove(a); }} sx={{ position: "absolute", right: 0, top: 0, bgcolor: "rgba(255,255,255,.8)" }}><DeleteOutlineIcon sx={{ fontSize: 16 }} /></IconButton> : null}
+            {canEdit ? <IconButton size="small" onClick={(e) => { e.stopPropagation(); remove(a); }} sx={{ position: "absolute", right: 0, top: 0, bgcolor: "rgba(255,255,255,.8)" }}><DeleteOutlineIcon sx={{ fontSize: 13.5 }} /></IconButton> : null}
           </Box>
         ))}
       </Box>
       {files.map((a) => (
         <Stack key={a.id} direction="row" spacing={1} sx={{ alignItems: "center", py: 0.5, borderBottom: 1, borderColor: "divider" }}>
-          <InsertDriveFileOutlinedIcon sx={{ fontSize: 18, color: "#1570EF" }} />
+          <InsertDriveFileOutlinedIcon sx={{ fontSize: 14.5, color: "#1570EF" }} />
           <Typography variant="caption" fontWeight={700} sx={{ flex: 1, color: "#1570EF", cursor: "pointer" }} noWrap onClick={() => window.open(resolveImageUrl(a.file_url), "_blank", "noopener")}>{a.file_name}</Typography>
-          {canEdit ? <IconButton size="small" onClick={() => remove(a)}><DeleteOutlineIcon sx={{ fontSize: 16 }} /></IconButton> : null}
+          {canEdit ? <IconButton size="small" onClick={() => remove(a)}><DeleteOutlineIcon sx={{ fontSize: 13.5 }} /></IconButton> : null}
         </Stack>
       ))}
     </Box>
@@ -474,7 +471,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
     catch (e) { notify("error", e.message); }
   };
   const call = async (url, method, body) => { try { await request(url, { method, body: body ? JSON.stringify({ ...body, actor }) : undefined }); refresh(); } catch (e) { notify("error", e.message); } };
-  const tableSx = { "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4 }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const tableSx = { "& td, & th": { fontSize: 11, px: 0.75, py: 0.4 }, "& th": { color: "text.secondary", fontWeight: 800 } };
   const isMold = w.asset_type === "MOLD";
   const tabs = [["info", tx("Information")], ["check", `${tx("Checklist")} (${d.checklist.length})`], ...(isMold ? [["comp", `${tx("Components")} (${d.components.length})`]] : []),
     ["parts", `${tx("Spare Parts")} (${d.parts.length})`], ["labor", `${tx("Labor")} (${d.labor.length})`], ["att", `${tx("Attachments")} (${d.attachments.length})`], ["hist", tx("History")], ...(extraTabs || [])];
@@ -485,16 +482,18 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 0.5, flexWrap: "wrap" }}>
         <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#1570EF" }}>{w.wo_no}</Typography><WoStatusPill value={w.overdue ? "OVERDUE" : w.status} />
         {w.overdue ? <WoStatusPill value={w.status} /> : null}
-        {!open ? <Chip size="small" icon={<LockOutlinedIcon sx={{ fontSize: 14 }} />} label={tx("The work order is read-only.")} sx={{ height: 20, fontSize: 10.5 }} /> : null}
+        {!open ? <Chip size="small" icon={<LockOutlinedIcon sx={{ fontSize: 12 }} />} label={tx("The work order is read-only.")} sx={{ height: 20, fontSize: 10 }} /> : null}
       </Stack>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 32, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 32, py: 0, textTransform: "none", fontSize: 12, fontWeight: 700, px: 1 } }}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 27, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 27, py: 0, textTransform: "none", fontSize: 11, fontWeight: 700, px: 1 } }}>
         {tabs.map(([k, t]) => <Tab key={k} label={t} />)}
       </Tabs>
       <Box sx={{ pt: 1.25, minHeight: 250, maxHeight: 360, overflow: "auto" }}>
         {key === "info" ? (
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "120px minmax(0,1fr) minmax(0,1fr)" }, gap: 1.5 }}>
-            <Box sx={{ height: 100, borderRadius: 1.5, border: 1, borderColor: "divider", display: "grid", placeItems: "center", overflow: "hidden", bgcolor: "action.hover" }}>
-              {a.image_url ? <Box component="img" src={resolveImageUrl(a.image_url)} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} /> : <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 48, color: "#1570EF" }} />}
+          <Box sx={{ containerType: "inline-size" }}>
+          {/* Layout follows the panel's own width (container query), not the viewport: the panel is narrow on wide screens. */}
+          <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 1.5, "@container (min-width: 640px)": { gridTemplateColumns: "120px minmax(0,1fr) minmax(0,1fr)" } }}>
+            <Box sx={{ width: 120, height: 100, borderRadius: 1.5, border: 1, borderColor: "divider", display: "grid", placeItems: "center", overflow: "hidden", bgcolor: "action.hover" }}>
+              {a.image_url ? <Box component="img" src={resolveImageUrl(a.image_url)} alt="" sx={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} /> : <PrecisionManufacturingOutlinedIcon sx={{ fontSize: 36.5, color: "#1570EF" }} />}
             </Box>
             <InfoRows rows={[[tx("Type"), label("woType", w.wo_type)], [label("assetType", w.asset_type), <Box key="a" component="span" sx={{ color: path ? "#1570EF" : undefined, cursor: path ? "pointer" : "default" }} onClick={() => path && navigate(path)}>{a.code} · {a.name}</Box>],
               w.asset_type === "TOOL" ? [tx("Tool Category"), a.tool_category] : [tx("Machine Model"), [a.manufacturer, a.model].filter(Boolean).join(" ") || a.sub],
@@ -508,6 +507,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
               [tx("Downtime (Est.)"), w.est_downtime_minutes != null ? hhmmFromMinutes(w.est_downtime_minutes) : null], [tx("Downtime (Actual)"), w.downtime_actual_minutes != null ? hhmmFromMinutes(w.downtime_actual_minutes) : null],
               w.downtime_no ? [tx("Linked downtime"), w.downtime_no] : null, [tx("Total cost"), money(w.total_cost)]]} />
           </Box>
+          </Box>
         ) : null}
         {key === "check" ? (
           <Box>
@@ -518,7 +518,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
                 <ToggleButtonGroup size="small" exclusive value={c.result || null} disabled={!canEdit || !["IN_PROGRESS", "PAUSED"].includes(w.status)}
                   onChange={(_, v) => call(`${MAINT_API}/work-orders/${w.id}/checklist/${c.id}`, "PUT", { result: v, note: c.note })}>
                   {[["OK", "#12B76A"], ["NG", "#F04438"], ["NA", "#98A2B3"]].map(([v, color]) => (
-                    <ToggleButton key={v} value={v} sx={{ py: 0, px: 1, fontSize: 11, fontWeight: 800, "&.Mui-selected": { color: "#fff", bgcolor: color, "&:hover": { bgcolor: color } } }}>{v === "NA" ? "N/A" : v}</ToggleButton>))}
+                    <ToggleButton key={v} value={v} sx={{ py: 0, px: 1, fontSize: 10, fontWeight: 800, "&.Mui-selected": { color: "#fff", bgcolor: color, "&:hover": { bgcolor: color } } }}>{v === "NA" ? "N/A" : v}</ToggleButton>))}
                 </ToggleButtonGroup>
                 <Typography variant="caption" color="text.secondary" sx={{ width: 90 }} noWrap>{c.done_by || ""}</Typography>
               </Stack>
@@ -539,12 +539,12 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
                 <TableCell sx={{ fontWeight: 700 }}>{label("component", c.component)}</TableCell>
                 <TableCell>
                   <Select size="small" variant="standard" disableUnderline value={c.condition_code} disabled={!canEdit} onChange={(e) => call(`${MAINT_API}/work-orders/${w.id}/components/${c.component}`, "PUT", { condition_code: e.target.value, action_code: c.action_code, note: c.note })}
-                    sx={{ fontSize: 11.5, fontWeight: 700, color: CONDITION_COLORS[c.condition_code] }}>
+                    sx={{ fontSize: 11, fontWeight: 700, color: CONDITION_COLORS[c.condition_code] }}>
                     {(lookups?.component_conditions || []).map((v) => <MenuItem key={v} value={v} sx={{ color: CONDITION_COLORS[v], fontWeight: 700 }}>{label("condition", v)}</MenuItem>)}
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Select size="small" variant="standard" disableUnderline value={c.action_code} disabled={!canEdit} onChange={(e) => call(`${MAINT_API}/work-orders/${w.id}/components/${c.component}`, "PUT", { condition_code: c.condition_code, action_code: e.target.value, note: c.note })} sx={{ fontSize: 11.5 }}>
+                  <Select size="small" variant="standard" disableUnderline value={c.action_code} disabled={!canEdit} onChange={(e) => call(`${MAINT_API}/work-orders/${w.id}/components/${c.component}`, "PUT", { condition_code: c.condition_code, action_code: e.target.value, note: c.note })} sx={{ fontSize: 11 }}>
                     {(lookups?.component_actions || []).map((v) => <MenuItem key={v} value={v}>{label("compAction", v)}</MenuItem>)}
                   </Select>
                 </TableCell>
@@ -560,7 +560,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
               <TableBody>{d.parts.map((p) => (
                 <TableRow key={p.id}><TableCell>{p.part_code || EMPTY}</TableCell><TableCell sx={{ fontWeight: 700 }}>{p.part_name}</TableCell><TableCell align="right">{num(p.qty, 2)} {p.unit || ""}</TableCell>
                   <TableCell align="right">{num(p.unit_cost)}</TableCell><TableCell align="right" sx={{ fontWeight: 700 }}>{num(p.amount)}</TableCell>
-                  <TableCell padding="none">{canEdit ? <IconButton size="small" onClick={() => call(`${MAINT_API}/work-orders/${w.id}/parts/${p.id}`, "DELETE")}><DeleteOutlineIcon sx={{ fontSize: 16 }} /></IconButton> : null}</TableCell></TableRow>
+                  <TableCell padding="none">{canEdit ? <IconButton size="small" onClick={() => call(`${MAINT_API}/work-orders/${w.id}/parts/${p.id}`, "DELETE")}><DeleteOutlineIcon sx={{ fontSize: 13.5 }} /></IconButton> : null}</TableCell></TableRow>
               ))}</TableBody>
             </Table>
             {canEdit ? (
@@ -584,7 +584,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
               <TableBody>{d.labor.map((l) => (
                 <TableRow key={l.id}><TableCell sx={{ fontWeight: 700 }}>{l.technician}</TableCell><TableCell>{label("laborType", l.labor_type)}</TableCell><TableCell align="right">{num(l.hours, 2)}</TableCell>
                   <TableCell align="right">{num(l.rate)}</TableCell><TableCell align="right" sx={{ fontWeight: 700 }}>{num(l.amount)}</TableCell>
-                  <TableCell padding="none">{canEdit ? <IconButton size="small" onClick={() => call(`${MAINT_API}/work-orders/${w.id}/labor/${l.id}`, "DELETE")}><DeleteOutlineIcon sx={{ fontSize: 16 }} /></IconButton> : null}</TableCell></TableRow>
+                  <TableCell padding="none">{canEdit ? <IconButton size="small" onClick={() => call(`${MAINT_API}/work-orders/${w.id}/labor/${l.id}`, "DELETE")}><DeleteOutlineIcon sx={{ fontSize: 13.5 }} /></IconButton> : null}</TableCell></TableRow>
               ))}</TableBody>
             </Table>
             {canEdit ? (
@@ -622,7 +622,7 @@ export function WorkOrderPanel({ woId, lookups, request, actor, canEdit: canEdit
           {["RELEASED", "ASSIGNED"].includes(w.status) ? <Button size="small" startIcon={<CancelOutlinedIcon />} onClick={() => setDialog({ type: "cancel" })} sx={btn("delete")}>{tx("Cancel WO")}</Button> : null}
         </Stack>
       ) : null}
-      {w.status === "IN_PROGRESS" && d.checklist.some((c) => !c.result) ? <Alert severity="info" sx={{ mt: 1, py: 0, fontSize: 12 }}>{tx("Checklist items")}: {d.checklist.filter((c) => c.result).length}/{d.checklist.length}</Alert> : null}
+      {w.status === "IN_PROGRESS" && d.checklist.some((c) => !c.result) ? <Alert severity="info" sx={{ mt: 1, py: 0, fontSize: 11 }}>{tx("Checklist items")}: {d.checklist.filter((c) => c.result).length}/{d.checklist.length}</Alert> : null}
       {dialog?.type === "assign" ? <NoteDialog title={tx("Assign")} technicianMode required={false} lookups={lookups} initialTech={w.technician} onClose={() => setDialog(null)} onSubmit={({ technician }) => act("ASSIGN", { technician })} /> : null}
       {dialog?.type === "pause" ? <NoteDialog title={tx("Pause Work")} onClose={() => setDialog(null)} onSubmit={({ note }) => act("PAUSE", { note })} /> : null}
       {dialog?.type === "reject" ? <NoteDialog title={tx("Send Back")} danger onClose={() => setDialog(null)} onSubmit={({ note }) => act("REJECT", { note })} /> : null}

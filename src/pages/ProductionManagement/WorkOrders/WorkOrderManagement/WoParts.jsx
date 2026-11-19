@@ -13,7 +13,7 @@ import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutlineOutl
 import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 
-import { DialogHeader, EMPTY, PRIORITY_COLORS, btn, cardSx, ddmmhhmm, dialogPaperSx, num } from "../../ProductionPlanning/ui";
+import { DialogHeader, EMPTY, PRIORITY_COLORS, btn, cardSx, ddmmhhmm, dialogPaperSx, num, person } from "../../ProductionPlanning/ui";
 import { WO_STATUS_COLORS } from "../woStatus";
 import { label, localeTag, tx } from "./woLocales";
 
@@ -32,7 +32,7 @@ export function SystemStatusBar({ system: sys }) {
       {[["MES", sys.MES], ["PLC", sys.PLC], ["Robot", sys.ROBOT], ["AGV", sys.AGV], ["IoT Gateway", sys.IOT_GATEWAY], ["Database", sys.DATABASE], ["API", sys.API]].map(([name, st]) => (
         <Stack key={name} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
           <Typography variant="caption" fontWeight={700}>{name}</Typography>
-          <CircleIcon sx={{ fontSize: 9, color: sysColor[st] }} /><Typography variant="caption" sx={{ color: sysColor[st] }}>{sysText[st]}</Typography>
+          <CircleIcon sx={{ fontSize: 10, color: sysColor[st] }} /><Typography variant="caption" sx={{ color: sysColor[st] }}>{sysText[st]}</Typography>
         </Stack>
       ))}
       <Box sx={{ flex: 1 }} />
@@ -45,7 +45,7 @@ export function SystemStatusBar({ system: sys }) {
 
 const pillSx = (color, width) => ({
   display: "inline-block", width, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", verticalAlign: "middle",
-  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+  px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
 });
 
 export function WoStatusPill({ value }) {
@@ -72,10 +72,10 @@ export const delayText = (minutes) => {
 function Visual({ image, icon: Icon, color, onClick }) {
   return (
     <Tooltip title={image ? "" : tx("Upload the image in master data")}>
-      <Box onClick={onClick} sx={{ width: 132, height: 104, flexShrink: 0, borderRadius: 2, overflow: "hidden", cursor: onClick ? "pointer" : "default",
+      <Box onClick={onClick} sx={{ width: 100, height: 80, flexShrink: 0, borderRadius: 1.5, overflow: "hidden", cursor: onClick ? "pointer" : "default",
         display: "grid", placeItems: "center", border: 1, borderColor: "divider",
         background: image ? "transparent" : `radial-gradient(circle at 30% 25%, ${color}33, ${color}0D 60%, transparent 75%)` }}>
-        {image ? <Box component="img" src={resolveImageUrl(image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Icon sx={{ fontSize: 64, color, opacity: 0.85 }} />}
+        {image ? <Box component="img" src={resolveImageUrl(image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Icon sx={{ fontSize: 36, color, opacity: 0.85 }} />}
       </Box>
     </Tooltip>
   );
@@ -83,10 +83,10 @@ function Visual({ image, icon: Icon, color, onClick }) {
 
 function InfoRows({ rows }) {
   return (
-    <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1.5, rowGap: 0.35, alignContent: "start", minWidth: 0 }}>
+    <Box sx={{ display: "grid", gridTemplateColumns: "84px minmax(0,1fr)", columnGap: 0.75, rowGap: 0.25, alignContent: "center", minWidth: 0, flex: 1 }}>
       {rows.map(([k, v]) => [
-        <Typography key={`${k}-k`} variant="caption" color="text.secondary" noWrap>{k}</Typography>,
-        <Typography key={`${k}-v`} variant="caption" fontWeight={700} component="div" noWrap sx={{ minWidth: 0 }}>{v ?? EMPTY}</Typography>,
+        <Typography key={`${k}-k`} variant="caption" color="text.secondary" noWrap sx={{ fontSize: 11, lineHeight: 1.5 }}>{k}</Typography>,
+        <Typography key={`${k}-v`} variant="caption" fontWeight={700} component="div" noWrap sx={{ minWidth: 0, fontSize: 11, fontWeight: 600, lineHeight: 1.5 }} title={typeof v === "string" ? v : undefined}>{v ?? EMPTY}</Typography>,
       ])}
     </Box>
   );
@@ -95,45 +95,49 @@ function InfoRows({ rows }) {
 const MACHINE_COLORS = { RUNNING: "#12B76A", IDLE: "#F79009", MAINTENANCE: "#F04438", DOWN: "#F04438", OFFLINE: "#98A2B3" };
 const MOLD_COLORS = { IN_PRODUCTION: "#12B76A", AVAILABLE: "#2E90FA", IN_MAINTENANCE: "#F79009", IN_REPAIR: "#F04438" };
 const StateText = ({ value, colors }) => (value ? <Box component="span" sx={{ color: colors[value] || "inherit", display: "inline-flex", alignItems: "center", gap: 0.5 }}><CircleIcon sx={{ fontSize: 8 }} />{value}</Box> : EMPTY);
+const joined = (...parts) => parts.filter((x) => x != null && x !== "").join(" · ") || null;
 
 function ReadyItem({ ok, text, na }) {
   const Icon = na ? RemoveCircleOutlineIcon : ok ? CheckCircleIcon : HighlightOffIcon;
   const color = na ? "#98A2B3" : ok ? "#12B76A" : "#F04438";
-  return <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}><Icon sx={{ fontSize: 16, color }} /><Typography variant="caption" fontWeight={700}>{text}</Typography></Stack>;
+  return <Stack direction="row" spacing={0.4} sx={{ alignItems: "center", minWidth: 0 }}><Icon sx={{ fontSize: 13, color }} /><Typography variant="caption" fontWeight={600} noWrap sx={{ fontSize: 11 }}>{text}</Typography></Stack>;
 }
 
+// Compact: sized so the whole panel fits beside the table on a 1080p screen without scrolling.
 export function VisualOverview({ wo, onMachine, onMold }) {
-  const section = (title) => <Typography variant="overline" sx={{ fontWeight: 800, color: "text.secondary", lineHeight: 1.6 }}>{title}</Typography>;
+  const section = (title, extra) => (
+    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", borderTop: 1, borderColor: "divider", pt: 0.4 }}>
+      <Typography variant="overline" sx={{ fontWeight: 800, fontSize: 10.5, letterSpacing: ".06em", color: "text.primary", lineHeight: 1.6 }}>{title}</Typography>{extra}
+    </Stack>
+  );
+  const bar = (value, color) => <LinearProgress variant="determinate" value={Math.min(value || 0, 100)} sx={{ height: 5, borderRadius: 3, "& .MuiLinearProgress-bar": { bgcolor: color } }} />;
   const ex = wo.exceptions || [];
   return (
-    <Stack spacing={1.25}>
-      {section(tx("Product"))}
-      <Stack direction="row" spacing={1.5}>
+    <Stack spacing={0.6}>
+      {section(tx("Product"), <Typography variant="caption" fontWeight={800}>{tx("Progress")}: {num(wo.progress_pct, 1)}%</Typography>)}
+      <Stack direction="row" spacing={1.25}>
         <Visual image={wo.product_image} icon={ViewInArOutlinedIcon} color="#1570EF" />
-        <InfoRows rows={[[tx("Product Name"), wo.product_name], [tx("Product Code"), wo.product_code], [tx("Customer"), wo.customer_short_name || wo.customer_name],
-          [tx("Part weight"), wo.part_weight_g ? `${num(wo.part_weight_g, 2)} g` : null], [tx("Planned Qty"), num(wo.planned_qty)],
-          [tx("Good (PCS)"), num(wo.good_qty)], [tx("Reject"), num(wo.reject_qty)], [tx("Remaining"), num(wo.remaining_qty)]]} />
+        <InfoRows rows={[[tx("Product"), joined(wo.product_code, wo.product_name)], [tx("Customer"), wo.customer_short_name || wo.customer_name],
+          [tx("Part weight"), wo.part_weight_g ? `${num(wo.part_weight_g, 2)} g` : null],
+          [tx("Plan / Good / NG"), `${num(wo.planned_qty)} / ${num(wo.good_qty)} / ${num(wo.reject_qty)}`], [tx("Remaining"), num(wo.remaining_qty)]]} />
       </Stack>
-      <Box><Stack direction="row" sx={{ justifyContent: "space-between" }}><Typography variant="caption" color="text.secondary">{tx("Progress")}</Typography>
-        <Typography variant="caption" fontWeight={800}>{num(wo.progress_pct, 1)}%</Typography></Stack>
-        <LinearProgress variant="determinate" value={Math.min(wo.progress_pct || 0, 100)} sx={{ height: 6, borderRadius: 3, "& .MuiLinearProgress-bar": { bgcolor: WO_STATUS_COLORS[wo.status] } }} /></Box>
+      {bar(wo.progress_pct, WO_STATUS_COLORS[wo.status])}
       {section(tx("Machine"))}
-      <Stack direction="row" spacing={1.5}>
+      <Stack direction="row" spacing={1.25}>
         <Visual image={wo.machine_image} icon={PrecisionManufacturingOutlinedIcon} color="#0BA5EC" onClick={wo.machine_id ? onMachine : undefined} />
-        <InfoRows rows={[[tx("Machine Code"), wo.machine_code], [tx("Machine Name"), wo.machine_name], [tx("Machine Type"), wo.machine_type],
-          [tx("Model"), [wo.machine_manufacturer, wo.machine_model].filter(Boolean).join(" ") || null], [tx("Status"), <StateText key="m" value={wo.machine_status} colors={MACHINE_COLORS} />],
-          [tx("Area / Shift"), [wo.area_name, wo.shift_code].filter(Boolean).join(" · ") || null]]} />
+        <InfoRows rows={[[tx("Machine"), joined(wo.machine_code, wo.machine_name)], [tx("Type / Model"), joined(wo.machine_type, [wo.machine_manufacturer, wo.machine_model].filter(Boolean).join(" "))],
+          [tx("Status"), <StateText key="m" value={wo.machine_status} colors={MACHINE_COLORS} />], [tx("Area / Shift"), joined(wo.area_name, wo.shift_code)]]} />
       </Stack>
       {section(tx("Mold"))}
-      <Stack direction="row" spacing={1.5}>
+      <Stack direction="row" spacing={1.25}>
         <Visual image={wo.mold_image} icon={GridViewOutlinedIcon} color="#7A5AF8" onClick={wo.mold_id ? onMold : undefined} />
-        <InfoRows rows={[[tx("Mold Code"), wo.mold_code], [tx("Mold Name"), wo.mold_name], [tx("Cavity"), wo.mold_cavity ?? wo.cavity], [tx("Mold Type"), wo.mold_type],
+        <InfoRows rows={[[tx("Mold"), joined(wo.mold_code, wo.mold_name)], [tx("Cavity / Type"), joined(wo.mold_cavity ?? wo.cavity, wo.mold_type)],
           [tx("Mold Status"), <StateText key="s" value={wo.mold_status} colors={MOLD_COLORS} />],
           [tx("Shot Count"), wo.design_shot ? `${num(wo.current_shot)} / ${num(wo.design_shot)}` : null]]} />
       </Stack>
-      {wo.mold_usage_pct != null ? <LinearProgress variant="determinate" value={Math.min(wo.mold_usage_pct, 100)} sx={{ height: 5, borderRadius: 3, "& .MuiLinearProgress-bar": { bgcolor: wo.mold_usage_pct >= 90 ? "#F04438" : "#12B76A" } }} /> : null}
+      {wo.mold_usage_pct != null ? bar(wo.mold_usage_pct, wo.mold_usage_pct >= 90 ? "#F04438" : "#12B76A") : null}
       {section(tx("Readiness"))}
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.75 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 1.5, rowGap: 0.75, py: 0.25 }}>
         <ReadyItem ok={!ex.includes("WAITING_MAINTENANCE") && Boolean(wo.machine_id)} text={tx("Machine ready")} />
         <ReadyItem ok={!ex.includes("WAITING_MOLD")} text={tx("Mold ready")} />
         <ReadyItem ok={!ex.includes("WAITING_MATERIAL")} text={tx("Material ready")} />
@@ -186,8 +190,7 @@ export function ActionDialog({ mode, wo, detail, saving, onClose, onSubmit }) {
           {needsReason ? <TextField size="small" required multiline minRows={2} label={tx(REASON_LABELS[mode])} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus /> : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={() => onSubmit({ reason: reason.trim(), priority })} disabled={saving || !valid} sx={btn(danger ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -198,10 +201,14 @@ export function ActionDialog({ mode, wo, detail, saving, onClose, onSubmit }) {
 // DETAIL (history + materials)
 // =========================================================
 
+// material requirement line status → [label key, colour]
+const LINE_STATUS = { PLANNED: ["Not allocated", "#98A2B3"], ASSIGNED: ["Assigned", "#2E90FA"], SHORT: ["Short", "#F04438"],
+  RESERVED: ["Reserved (line)", "#F79009"], READY: ["Issued to machine", "#12B76A"], CANCELLED: ["Cancelled", "#98A2B3"] };
+
 export function WoDetailDialog({ api, request, woId, notify, onClose, onExecution, onOrder }) {
   const [wo, setWo] = useState(null);
   useEffect(() => { request(`${api}/${woId}`).then(setWo).catch((e) => notify("error", e.message)); }, [api, woId, request, notify]);
-  const tableSx = { "& td, & th": { fontSize: 12, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const tableSx = { "& td, & th": { fontSize: 11, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
   return (
     <Dialog open onClose={onClose} maxWidth="lg" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<AssignmentOutlinedIcon />} title={`${tx("Work Order Detail")}${wo ? ` · ${wo.wo_no}` : ""}`} subtitle={wo ? `${wo.order_no || EMPTY} · ${wo.product_name}` : ""} onClose={onClose} />
@@ -228,11 +235,11 @@ export function WoDetailDialog({ api, request, woId, notify, onClose, onExecutio
               <Box>
                 <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>{tx("Materials")}</Typography>
                 <Table size="small" sx={tableSx}>
-                  <TableHead><TableRow><TableCell>{tx("Product")}</TableCell><TableCell align="right">{tx("Required")}</TableCell><TableCell align="right">{tx("Allocated")}</TableCell><TableCell>{tx("Status")}</TableCell></TableRow></TableHead>
+                  <TableHead><TableRow><TableCell>{tx("Material")}</TableCell><TableCell align="right">{tx("Required")}</TableCell><TableCell align="right">{tx("Allocated")}</TableCell><TableCell>{tx("Status")}</TableCell></TableRow></TableHead>
                   <TableBody>
                     {wo.materials.length === 0 ? <TableRow><TableCell colSpan={4}>{tx("No data.")}</TableCell></TableRow> : wo.materials.map((m) => (
                       <TableRow key={m.id}><TableCell sx={{ fontWeight: 700 }}>{m.material_code}</TableCell><TableCell align="right">{num(m.required_qty, 3)} {m.unit}</TableCell>
-                        <TableCell align="right">{num(m.allocated_qty, 3)} {m.unit}</TableCell><TableCell>{m.status}</TableCell></TableRow>
+                        <TableCell align="right">{num(m.allocated_qty, 3)} {m.unit}</TableCell><TableCell sx={{ fontWeight: 700, color: LINE_STATUS[m.status]?.[1] || "text.secondary" }}>{LINE_STATUS[m.status] ? tx(LINE_STATUS[m.status][0]) : m.status}</TableCell></TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -246,7 +253,7 @@ export function WoDetailDialog({ api, request, woId, notify, onClose, onExecutio
                       {wo.history.map((h, i) => (
                         <TableRow key={i}><TableCell>{ddmmhhmm(h.acted_at)}</TableCell><TableCell sx={{ fontWeight: 700 }}>{label("action", h.action)}</TableCell>
                           <TableCell>{h.from_status && h.from_status !== h.to_status ? `${label("woStatus", h.from_status)} → ` : ""}{label("woStatus", h.to_status)}</TableCell>
-                          <TableCell>{h.actor}</TableCell><TableCell sx={{ maxWidth: 320, whiteSpace: "normal" }}>{h.remark || EMPTY}</TableCell></TableRow>
+                          <TableCell>{person(h.actor_name, h.actor)}</TableCell><TableCell sx={{ maxWidth: 320, whiteSpace: "normal" }}>{h.remark || EMPTY}</TableCell></TableRow>
                       ))}
                     </TableBody>
                   </Table>
@@ -256,7 +263,6 @@ export function WoDetailDialog({ api, request, woId, notify, onClose, onExecutio
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }

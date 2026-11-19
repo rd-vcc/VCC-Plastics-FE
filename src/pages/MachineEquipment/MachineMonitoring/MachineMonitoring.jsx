@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import Chart from "react-apexcharts";
 import {
   Alert, Box, Button, CircularProgress, FormControl, FormControlLabel, InputLabel, LinearProgress, MenuItem, Paper, Select, Snackbar, Stack, Switch,
-  Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider as MuiThemeProvider, Typography,
+  Table, TableBody, TableCell, TableHead, TableRow, ThemeProvider as MuiThemeProvider, ToggleButton, ToggleButtonGroup, Typography,
 } from "@mui/material";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import BuildCircleOutlinedIcon from "@mui/icons-material/BuildCircleOutlined";
@@ -35,8 +35,9 @@ import { KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
 import MachineLayoutBoard from "../../../components/machine/MachineLayoutBoard";
 import { API_CONFIG } from "../../../config/config";
 import { useTheme as useAppTheme } from "../../../context/ThemeContext";
-import { KpiTile, downloadCsv, useRequest } from "../../MaterialManagement/materialUi";
-import { EMPTY, Head, btn, cardSx, hhmm, num, pageTheme } from "../../ProductionManagement/ProductionPlanning/ui";
+import { KpiTile, colShares, downloadExcel, useRequest } from "../../MaterialManagement/materialUi";
+import { EmptyBody, FilterToggle, QuickCard, cellsSx, chartBase, fillSx, fitGridSx, fitPageSx, panelSx, toolBtnSx } from "../../shared/onePage";
+import { Dot, EMPTY, Head, cardSx, hhmm, num, pageTheme } from "../../ProductionManagement/ProductionPlanning/ui";
 import { SystemStatusBar } from "../../ProductionManagement/WorkOrders/WorkOrderManagement/WoParts";
 import { HoldDialog } from "../MachineDetail/MachineDetail";
 import { label, localeTag, setActiveLanguage, tx } from "../machineLocales";
@@ -99,6 +100,9 @@ export default function MachineMonitoring() {
   const [dtLookups, setDtLookups] = useState(null);
   const [dialog, setDialog] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [sideView, setSideView] = useState("alarm");
+  const [perfView, setPerfView] = useState("oee");
   const [msg, setMsg] = useState({ open: false, type: "success", text: "" });
   const notify = useCallback((type, text) => setMsg({ open: true, type, text }), []);
 
@@ -136,10 +140,7 @@ export default function MachineMonitoring() {
   const sel = items.find((i) => i.id === selectedId);
   const cur = detail?.machine?.id === selectedId ? detail.current : null;
   const axisColor = dark ? "#A7B0C0" : "#667085";
-  const grid = { borderColor: dark ? "#263244" : "#EEF2F6" };
-  const toolBtnSx = { ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" };
-  const tableSx = { "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } };
-  const statusCounts = STATUSES.map((s) => [s, k[s.toLowerCase()] || 0]);
+  const tableSx = { "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } };
   const dtTotal = data.downtime_by_reason.reduce((a, [, m]) => a + m, 0);
   const runSec = items.reduce((a, i) => a + (i.running_sec || 0), 0);
   const elapsedSec = items.reduce((a, i) => a + (i.elapsed_sec || 0), 0);
@@ -156,25 +157,22 @@ export default function MachineMonitoring() {
     try { await request(`${EX_API}/${cur.id}/resume`, { method: "POST", body: JSON.stringify({ actor, version: cur.version }) }); notify("success", L("Work order resumed.")); load({ silent: true }); }
     catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
-  const exportCsv = () => downloadCsv("machine-monitoring.csv", ["Machine", "Name", "Area", "Status", "Work Order", "Product", "OEE %", "Good", "Reject", "Utilization %", "Active alarms"],
+  const exportCsv = () => downloadExcel("machine-monitoring.csv", ["Machine", "Name", "Area", "Status", "Work Order", "Product", "OEE %", "Good", "Reject", "Utilization %", "Active alarms"],
     items.map((i) => [i.equipment_code, i.equipment_name, i.layout_area, i.operational_status, i.wo_no, i.product_name, i.oee, i.good, i.reject,
       i.elapsed_sec ? Math.round((i.running_sec / i.elapsed_sec) * 1000) / 10 : "", i.alarms]));
   const fullScreen = () => (document.fullscreenElement ? document.exitFullscreen() : rootRef.current?.requestFullscreen?.());
 
+  // Parameter Monitor and Machine Detail opened the same page; export / print / alarms are in the toolbar or on screen
   const quick = [
-    [L("Parameter Monitor"), InsightsOutlinedIcon, "#0E9384", () => navigate(detailUrl(selectedId)), !selectedId],
-    [tx("Alarm History"), NotificationsOutlinedIcon, "#F79009", () => navigate(`/machine-equipment/alarm-history${selectedId ? `?machine=${selectedId}` : ""}`), false],
-    [tx("Downtime Management"), TimerOutlinedIcon, "#7A5AF8", () => navigate(`/machine-equipment/downtime-management${selectedId ? `?machine=${selectedId}` : ""}`), false],
-    [L("Work Order"), AssignmentOutlinedIcon, "#12B76A", () => navigate(cur ? `/production-management/work-orders/execution?wo=${cur.id}` : "/production-management/work-orders/management"), false],
-    [L("Hold Machine"), PauseCircleOutlineIcon, "#F79009", () => setDialog({ type: "hold" }), !canEdit || cur?.status !== "IN_PRODUCTION"],
-    [L("Resume Machine"), PlayCircleOutlineIcon, "#12B76A", resume, !canEdit || saving || cur?.status !== "ON_HOLD"],
     [tx("Machine Detail"), PrecisionManufacturingOutlinedIcon, "#1570EF", () => navigate(detailUrl(selectedId)), !selectedId],
     [tx("Report Downtime"), ReportProblemOutlinedIcon, "#F04438", () => setDialog({ type: "downtime" }), !canEdit || !selectedId || Boolean(detail?.open_downtime)],
-    [tx("Export"), FileDownloadOutlinedIcon, "#12B76A", exportCsv, false],
-    [tx("Print"), PrintOutlinedIcon, "#475467", () => window.print(), false],
+    [L("Work Order"), AssignmentOutlinedIcon, "#12B76A", () => navigate(cur ? `/production-management/work-orders/execution?wo=${cur.id}` : "/production-management/work-orders/management")],
+    [L("Hold Machine"), PauseCircleOutlineIcon, "#F79009", () => setDialog({ type: "hold" }), !canEdit || cur?.status !== "IN_PRODUCTION"],
+    [L("Resume Machine"), PlayCircleOutlineIcon, "#12B76A", resume, !canEdit || saving || cur?.status !== "ON_HOLD"],
+    [tx("Alarm History"), NotificationsOutlinedIcon, "#7A5AF8", () => navigate(`/machine-equipment/alarm-history${selectedId ? `?machine=${selectedId}` : ""}`)],
   ];
   const tooltip = (i) => (
-    <Box sx={{ fontSize: 11.5, lineHeight: 1.5 }}>
+    <Box sx={{ fontSize: 11, lineHeight: 1.5 }}>
       <b>{i.equipment_code}</b> · {i.equipment_name}<br />
       {label("machineStatus", i.operational_status)} · OEE {i.oee != null ? `${num(i.oee, 1)}%` : EMPTY}<br />
       {i.wo_no ? <>{i.wo_no} · {i.product_name}<br />{L("Progress")}: {num(i.progress_pct, 1)}%<br /></> : null}
@@ -182,233 +180,212 @@ export default function MachineMonitoring() {
     </Box>
   );
   const params = (detail?.parameters || []).filter((p) => p.value != null).sort((a, b) => (KEY_PARAMS.indexOf(a.code) + 1 || 99) - (KEY_PARAMS.indexOf(b.code) + 1 || 99)).slice(0, 8);
+  const base = chartBase(dark, axisColor);
+  const activeFilters = Object.values(filter).filter(Boolean).length;
+  const toggleSx = { px: 1, py: 0.1, textTransform: "none", fontWeight: 700, fontSize: 10.5 };
+  const showArea = areas.length > 1;
+  const statusClick = (s) => () => setFilter((f) => ({ ...f, status: f.status === s ? "" : s }));
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box ref={rootRef} sx={{ bgcolor: "background.default", overflow: "auto" }}>
+      <Box ref={rootRef} sx={{ ...fitPageSx, bgcolor: "background.default" }}>
         <PageMeta title={`${tx("Machine Monitoring")} | VCC Plastics`} description={L("subtitle")} />
         <PageBreadcrumb pageTitle={tx("Machine Monitoring")} />
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 0.75, position: "relative", overflow: "hidden" }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
-            <FormControl size="small" sx={{ minWidth: 170 }}><InputLabel>{tx("Area")}</InputLabel>
-              <Select label={tx("Area")} value={area} onChange={(e) => setArea(e.target.value)}>
-                <MenuItem value="ALL">{L("All Areas")}</MenuItem>{areas.map((a) => <MenuItem key={a.id ?? "none"} value={a.id}>{a.name}</MenuItem>)}
-              </Select></FormControl>
-            <FormControl size="small" sx={{ minWidth: 170 }}><InputLabel shrink>{L("Group")}</InputLabel>
-              <Select displayEmpty notched label={L("Group")} value={filter.group_id} onChange={(e) => setFilter((f) => ({ ...f, group_id: e.target.value }))}>
-                <MenuItem value="">{tx("All")}</MenuItem>{data.groups.map((g) => <MenuItem key={g.id} value={g.id}>{g.group_name}</MenuItem>)}
-              </Select></FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}><InputLabel shrink>{tx("Status")}</InputLabel>
-              <Select displayEmpty notched label={tx("Status")} value={filter.status} onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}>
-                <MenuItem value="">{tx("All")}</MenuItem>{STATUSES.map((s) => <MenuItem key={s} value={s}>{label("machineStatus", s)}</MenuItem>)}
-              </Select></FormControl>
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
-            <Button startIcon={<NotificationsActiveOutlinedIcon />} onClick={() => navigate("/machine-equipment/alarm-history")} sx={toolBtnSx}>{tx("Alarms")}</Button>
+            <FormControl size="small" sx={{ width: 170 }}><InputLabel>{tx("Area")}</InputLabel>
+              <Select label={tx("Area")} value={area} onChange={(e) => setArea(e.target.value)}>
+                <MenuItem value="ALL">{L("All Areas")} ({total})</MenuItem>{areas.map((a) => <MenuItem key={a.id ?? "none"} value={a.id}>{a.name} ({a.count})</MenuItem>)}
+              </Select></FormControl>
+            <FilterToggle label={tx("Filter")} open={showFilter} count={activeFilters} onClick={() => setShowFilter((v) => !v)} />
             <Button startIcon={<FileDownloadOutlinedIcon />} onClick={exportCsv} sx={toolBtnSx}>{tx("Export")}</Button>
+            <Button startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={toolBtnSx}>{tx("Print")}</Button>
             <Button startIcon={<FullscreenOutlinedIcon />} onClick={fullScreen} sx={toolBtnSx}>{L("Full Screen")}</Button>
             <Box sx={{ flex: 1 }} />
             <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
-            <FormControlLabel sx={{ mx: 0.5 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
+            <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={live} onChange={(e) => setLive(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
           </Stack>
+          {showFilter ? (
+            <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>
+              <FormControl size="small" sx={{ width: 170 }}><InputLabel shrink>{L("Group")}</InputLabel>
+                <Select displayEmpty notched label={L("Group")} value={filter.group_id} onChange={(e) => setFilter((f) => ({ ...f, group_id: e.target.value }))}>
+                  <MenuItem value="">{tx("All")}</MenuItem>{data.groups.map((g) => <MenuItem key={g.id} value={g.id}>{g.group_name}</MenuItem>)}
+                </Select></FormControl>
+              <FormControl size="small" sx={{ width: 150 }}><InputLabel shrink>{tx("Status")}</InputLabel>
+                <Select displayEmpty notched label={tx("Status")} value={filter.status} onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))}>
+                  <MenuItem value="">{tx("All")}</MenuItem>{STATUSES.map((s) => <MenuItem key={s} value={s}>{label("machineStatus", s)}</MenuItem>)}
+                </Select></FormControl>
+            </Stack>
+          ) : null}
+          {loading ? <LinearProgress sx={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
 
-        <Box sx={{ mb: 1.5 }}>
-          <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(7, minmax(0,1fr))" }}>
-            <KpiTile tone="primary" title={L("Total Machines")} value={num(total)} sub={`${data.groups.length} ${L("Group").toLowerCase()} · ${areas.length} ${tx("Area").toLowerCase()}`} icon={PrecisionManufacturingOutlinedIcon} />
-            <KpiTile tone="success" title={label("machineStatus", "RUNNING")} value={num(k.running)} sub={pct(k.running)} icon={PlayCircleOutlineIcon} onClick={() => setFilter((f) => ({ ...f, status: f.status === "RUNNING" ? "" : "RUNNING" }))} />
-            <KpiTile tone="warning" title={label("machineStatus", "IDLE")} value={num(k.idle)} sub={pct(k.idle)} icon={PauseCircleOutlineIcon} onClick={() => setFilter((f) => ({ ...f, status: f.status === "IDLE" ? "" : "IDLE" }))} />
-            <KpiTile tone="danger" title={label("machineStatus", "DOWN")} value={num(k.down)} sub={pct(k.down)} icon={StopCircleOutlinedIcon} onClick={() => setFilter((f) => ({ ...f, status: f.status === "DOWN" ? "" : "DOWN" }))} />
-            <KpiTile tone="info" title={label("machineStatus", "MAINTENANCE")} value={num(k.maintenance)} sub={pct(k.maintenance)} icon={BuildCircleOutlinedIcon} onClick={() => setFilter((f) => ({ ...f, status: f.status === "MAINTENANCE" ? "" : "MAINTENANCE" }))} />
-            <KpiTile tone="accent" title={L("OEE (Average)")} value={k.oee != null ? num(k.oee, 1) : EMPTY} unit={k.oee != null ? "%" : ""} sub={`${tx("Availability")} ${k.availability != null ? `${num(k.availability, 1)}%` : EMPTY}`} icon={SpeedOutlinedIcon} />
-            <KpiTile tone="danger" title={tx("Active Alarms")} value={num(k.active_alarms)} sub={k.active_alarms ? L("Need attention") : ""} icon={WarningAmberOutlinedIcon} onClick={() => navigate("/machine-equipment/alarm-history")} />
-          </KpiCardGroup>
-        </Box>
+        {/* the status tiles are the status summary (no separate status donut) */}
+        <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(7, minmax(0,1fr))" }}>
+          <KpiTile tone="primary" title={L("Total Machines")} value={num(total)} sub={`${data.groups.length} ${L("Group").toLowerCase()} · ${areas.length} ${tx("Area").toLowerCase()}`} icon={PrecisionManufacturingOutlinedIcon} />
+          <KpiTile tone="success" title={label("machineStatus", "RUNNING")} value={num(k.running)} sub={pct(k.running)} icon={PlayCircleOutlineIcon} onClick={statusClick("RUNNING")} />
+          <KpiTile tone="warning" title={label("machineStatus", "IDLE")} value={num(k.idle)} sub={pct(k.idle)} icon={PauseCircleOutlineIcon} onClick={statusClick("IDLE")} />
+          <KpiTile tone="danger" title={label("machineStatus", "DOWN")} value={num(k.down)} sub={pct(k.down)} icon={StopCircleOutlinedIcon} onClick={statusClick("DOWN")} />
+          <KpiTile tone="info" title={label("machineStatus", "MAINTENANCE")} value={num(k.maintenance)} sub={pct(k.maintenance)} icon={BuildCircleOutlinedIcon} onClick={statusClick("MAINTENANCE")} />
+          <KpiTile tone="accent" title={L("OEE (Average)")} value={k.oee != null ? num(k.oee, 1) : EMPTY} unit={k.oee != null ? "%" : ""} sub={`${tx("Availability")} ${k.availability != null ? `${num(k.availability, 1)}%` : EMPTY}`} icon={SpeedOutlinedIcon} />
+          <KpiTile tone="danger" title={tx("Active Alarms")} value={num(k.active_alarms)} sub={k.active_alarms ? L("Need attention") : ""} icon={WarningAmberOutlinedIcon} onClick={() => navigate("/machine-equipment/alarm-history")} />
+        </KpiCardGroup>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
+        <Box sx={{ ...fitGridSx, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0,1fr))", lg: "repeat(4, minmax(0,1fr))" }, gridTemplateRows: { lg: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)" } }}>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "1 / 3" }, gridRow: { lg: "1 / 3" }, minHeight: { xs: 360, lg: 0 } }}>
             <Head title={L("Factory Layout - Machine Status")} action={
-              <Stack direction="row" spacing={1.25} sx={{ flexWrap: "wrap" }}>{STATUSES.map((s) => (
-                <Stack key={s} direction="row" spacing={0.5} sx={{ alignItems: "center" }}><Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: MACHINE_COLORS[s] }} />
-                  <Typography variant="caption" fontWeight={600}>{label("machineStatus", s)}</Typography></Stack>))}</Stack>} />
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "150px minmax(0,1fr)" }, gap: 1, px: 1.5, pb: 1 }}>
-              <Stack spacing={0.75}>
-                {[{ id: "ALL", name: L("All Areas"), count: total }, ...areas].map((a) => (
-                  <Button key={a.id ?? "none"} onClick={() => setArea(a.id)} sx={{ justifyContent: "space-between", textTransform: "none", fontSize: 12, fontWeight: 700, py: 0.6, borderRadius: 1.5, border: 1,
-                    borderColor: area === a.id ? "#1570EF" : "divider", bgcolor: area === a.id ? "#1570EF" : "background.paper", color: area === a.id ? "#fff" : "text.primary", "&:hover": { bgcolor: area === a.id ? "#175CD3" : "action.hover" } }}>
-                    <span>{a.name}</span><span>{a.count}</span>
-                  </Button>
-                ))}
-              </Stack>
-              <Box>
-                <MachineLayoutBoard image={boardArea?.image_url} items={boardItems} selectedId={selectedId} minHeight={330} renderTooltip={tooltip}
-                  onSelect={(i) => (i.id === selectedId ? navigate(detailUrl(i.id)) : setSelectedId(i.id))} emptyText={boardArea?.image_url ? "" : L("No layout image yet — machines are placed on a grid.")} />
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5, textAlign: "right" }}>{L("Click a machine to view its status; click again to open Machine Detail.")}</Typography>
+              <Stack direction="row" spacing={1.25} sx={{ flexWrap: "wrap" }}>{STATUSES.map((s) => <Dot key={s} color={MACHINE_COLORS[s]} text={label("machineStatus", s)} />)}</Stack>} />
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5 }}>
+              <MachineLayoutBoard image={boardArea?.image_url} items={boardItems} selectedId={selectedId} minHeight={260} renderTooltip={tooltip}
+                onSelect={(i) => (i.id === selectedId ? navigate(detailUrl(i.id)) : setSelectedId(i.id))} emptyText={boardArea?.image_url ? "" : L("No layout image yet — machines are placed on a grid.")} />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", px: 1.5, py: 0.5, textAlign: "right" }}>{L("Click a machine to view its status; click again to open Machine Detail.")}</Typography>
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "3 / 5" }, gridRow: { lg: "1" } }}>
+            <Head title={L("Machine List")} action={<Typography variant="caption" color={sel ? "#1570EF" : "text.secondary"} fontWeight={sel ? 700 : 400}>{sel ? `${tx("Selected")}: ${sel.equipment_code}` : `${listItems.length} ${L("machines")}`}</Typography>} />
+            {listItems.length ? (
+              <Box sx={fillSx}>
+                <Table size="small" stickyHeader sx={{ ...tableSx, ...cellsSx, ...colShares(...(showArea ? [10, 10, 14, 17, 13, 7, 7, 6, 7, 9] : [11, 15, 20, 15, 8, 8, 6, 7, 10])) }}>
+                  <TableHead><TableRow>
+                    <TableCell>{tx("Machine")}</TableCell>{showArea ? <TableCell>{tx("Area")}</TableCell> : null}<TableCell align="center">{tx("Status")}</TableCell><TableCell>{L("Product")}</TableCell>
+                    <TableCell>{L("Work Order")}</TableCell><TableCell align="right">OEE %</TableCell><TableCell align="right">{L("Good")}</TableCell><TableCell align="right">{L("Reject")}</TableCell>
+                    <TableCell align="right">{L("Util. %")}</TableCell><TableCell align="center">{tx("Alarms")}</TableCell>
+                  </TableRow></TableHead>
+                  <TableBody>{listItems.map((i) => (
+                    <TableRow key={i.id} hover selected={i.id === selectedId} onClick={() => setSelectedId(i.id)} onDoubleClick={() => navigate(detailUrl(i.id))} sx={{ cursor: "pointer" }}>
+                      <TableCell sx={{ fontWeight: 800, color: "#1570EF" }} title={i.equipment_name}>{i.equipment_code}</TableCell>{showArea ? <TableCell title={i.layout_area || i.area_name || ""}>{i.layout_area || i.area_name || EMPTY}</TableCell> : null}
+                      <TableCell align="center"><MachineStatusPill value={i.operational_status} /></TableCell>
+                      <TableCell title={i.product_name || ""}>{i.product_name || EMPTY}</TableCell>
+                      <TableCell>{i.wo_no ? <Box component="span" sx={{ color: "#1570EF", fontWeight: 700 }} onClick={(e) => { e.stopPropagation(); navigate(`/production-management/work-orders/execution?wo=${i.wo_id}`); }}>{i.wo_no}</Box> : EMPTY}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{i.oee != null ? num(i.oee, 1) : EMPTY}</TableCell>
+                      <TableCell align="right">{num(i.good)}</TableCell><TableCell align="right" sx={{ color: i.reject ? "#F04438" : undefined }}>{num(i.reject)}</TableCell>
+                      <TableCell align="right">{i.elapsed_sec ? `${num((i.running_sec / i.elapsed_sec) * 100, 0)}%` : EMPTY}</TableCell>
+                      <TableCell align="center">{i.alarms ? <PriorityPill value={i.alarm_top} /> : EMPTY}</TableCell>
+                    </TableRow>
+                  ))}</TableBody>
+                </Table>
               </Box>
+            ) : <EmptyBody text={tx("No data.")} />}
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "3" }, gridRow: { lg: "2" } }}>
+            <Head title={`${L("Real-time Status")}${sel ? ` · ${sel.equipment_code}` : ""}`} action={sel ? <MachineStatusPill value={sel.operational_status} /> : null} />
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+              {!sel ? <EmptyBody text={L("Select a machine")} /> : !params.length ? <Typography variant="caption" color="text.secondary">{L("No data yet (waiting for PLC / IoT data).")}</Typography> : (
+                <Table size="small" sx={{ ...tableSx, ...cellsSx, ...colShares(70, 30) }}><TableBody>{params.map((p) => (
+                  <TableRow key={p.code}><TableCell title={p.name}>{p.name}{p.unit ? ` (${p.unit})` : ""}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, color: p.state === "HIGH" || p.state === "LOW" ? "#F04438" : undefined }}>{num(p.value, p.value >= 100 ? 0 : 2)}</TableCell></TableRow>
+                ))}</TableBody></Table>
+              )}
+              {detail?.open_downtime ? <Alert severity="error" sx={{ mt: 1, py: 0, fontSize: 11 }}>{tx("Open")}: {detail.open_downtime.downtime_no} · {detail.open_downtime.reason_text || EMPTY}</Alert> : null}
             </Box>
           </Paper>
 
-          <Stack spacing={1.5}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={L("Machine Status Summary")} />
-              <Box sx={{ display: "grid", gridTemplateColumns: "150px 1fr", alignItems: "center", px: 1, pb: 1 }}>
-                <Chart type="donut" height={160} series={statusCounts.map(([, n]) => n)} options={{
-                  labels: statusCounts.map(([s]) => label("machineStatus", s)), colors: statusCounts.map(([s]) => MACHINE_COLORS[s]), legend: { show: false }, dataLabels: { enabled: false },
-                  stroke: { width: 1, colors: [dark ? "#111827" : "#fff"] }, chart: { background: "transparent" }, tooltip: { theme: dark ? "dark" : "light" },
-                  plotOptions: { pie: { donut: { size: "70%", labels: { show: true, name: { show: true, color: axisColor }, value: { show: true, fontSize: "20px", fontWeight: 800, color: dark ? "#fff" : "#101828" },
-                    total: { show: true, label: tx("Total"), color: axisColor, formatter: () => String(total) } } } } } }} />
-                <Stack spacing={0.6}>{statusCounts.map(([s, n]) => (
-                  <Stack key={s} direction="row" spacing={1} sx={{ alignItems: "center" }}><Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: MACHINE_COLORS[s] }} />
-                    <Typography variant="caption" sx={{ flex: 1 }}>{label("machineStatus", s)}</Typography>
-                    <Typography variant="caption" fontWeight={800}>{n} ({total ? num((n / total) * 100, 1) : 0}%)</Typography></Stack>))}</Stack>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "2" } }}>
+            <Head title={`${L("Current Production")}${sel ? ` · ${sel.equipment_code}` : ""}`} />
+            {!cur ? <EmptyBody text={L("No machine in production.")} /> : (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 0.75 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 1.25, alignItems: "center" }}>
+                  <Box sx={{ height: 64, borderRadius: 1.5, border: 1, borderColor: "divider", display: "grid", placeItems: "center", overflow: "hidden", bgcolor: "action.hover" }}>
+                    {cur.mold_image || cur.product_image ? <Box component="img" src={resolveImageUrl(cur.mold_image || cur.product_image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      : <ViewInArOutlinedIcon sx={{ fontSize: 28, color: "#1570EF" }} />}
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="caption" fontWeight={800} sx={{ display: "block", color: "#1570EF", cursor: "pointer" }} onClick={() => navigate(`/production-management/work-orders/execution?wo=${cur.id}`)}>{cur.wo_no} · {label("woStatus", cur.status)}</Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ display: "block" }} noWrap title={cur.product_name}>{cur.product_name}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }} noWrap>{L("Mold")}: {cur.mold_code || EMPTY}</Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1.5, rowGap: 0.2 }}>
+                  {[[L("Cavity"), cur.mold_cavity ?? cur.cavity], [L("Good"), `${num(cur.good_qty)} / ${num(cur.planned_qty)} pcs`], [L("Shot counter"), cur.current_shot != null ? num(cur.current_shot) : EMPTY],
+                    [L("Mold life"), cur.design_shot ? num(cur.design_shot) : EMPTY],
+                    [L("Remaining life"), cur.design_shot ? `${num(Math.max(cur.design_shot - (cur.current_shot || 0), 0))} (${num(100 - (cur.mold_usage_pct || 0), 1)}%)` : EMPTY]].map(([a, b]) => [
+                    <Typography key={`${a}k`} variant="caption" color="text.secondary">{a}</Typography>, <Typography key={`${a}v`} variant="caption" fontWeight={700}>{b ?? EMPTY}</Typography>])}
+                </Box>
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <Typography variant="caption" color="text.secondary">{L("Progress")}</Typography>
+                  <LinearProgress variant="determinate" value={Math.min(cur.progress_pct || 0, 100)} sx={{ flex: 1, height: 7, borderRadius: 4 }} />
+                  <Typography variant="caption" fontWeight={800}>{num(cur.progress_pct, 1)}%</Typography>
+                </Stack>
               </Box>
-            </Paper>
-            <Paper elevation={0} sx={{ ...cardSx, flex: 1 }}>
-              <Head title={L("Downtime Analysis (Today)")} action={<Button size="small" onClick={() => navigate("/machine-equipment/downtime-management")} sx={{ textTransform: "none", fontSize: 12 }}>{L("View all")}</Button>} />
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                {!data.downtime_by_reason.length ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>{tx("No data.")}</Typography> : data.downtime_by_reason.slice(0, 6).map(([r, m], idx) => (
-                  <Box key={r} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1.3fr) minmax(0,1fr) 52px 44px", gap: 1, alignItems: "center", mb: 0.6 }}>
+            )}
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "1" }, gridRow: { lg: "3" } }}>
+            <Head title={L("Downtime Analysis (Today)")} action={<Typography variant="caption" sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => navigate("/machine-equipment/downtime-management")}>{minText(dtTotal)} · {L("View all")}</Typography>} />
+            {data.downtime_by_reason.length ? (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                {data.downtime_by_reason.map(([r, m], idx) => (
+                  <Box key={r} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1.3fr) minmax(0,1fr) 52px 40px", gap: 1, alignItems: "center", mb: 0.6 }}>
                     <Typography variant="caption" noWrap title={r}>{r === "UNSPECIFIED" ? tx("Unspecified") : r}</Typography>
                     <LinearProgress variant="determinate" value={dtTotal ? (m / dtTotal) * 100 : 0} sx={{ height: 8, borderRadius: 4, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: REASON_COLORS[idx % REASON_COLORS.length] } }} />
                     <Typography variant="caption" fontWeight={700} align="right">{minText(m)}</Typography>
                     <Typography variant="caption" color="text.secondary" align="right">{dtTotal ? num((m / dtTotal) * 100, 1) : 0}%</Typography>
                   </Box>
                 ))}
-                <Typography variant="caption" fontWeight={700}>{L("Total downtime")}: <Box component="span" sx={{ color: "#1570EF" }}>{minText(dtTotal)}</Box></Typography>
               </Box>
-            </Paper>
-          </Stack>
+            ) : <EmptyBody text={tx("No data.")} />}
+          </Paper>
 
-          <Stack spacing={1.5}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={`${L("Recent Alarms")} (${data.alarms.length})`} action={<Button size="small" onClick={() => navigate("/machine-equipment/alarm-history")} sx={{ textTransform: "none", fontSize: 12 }}>{L("View all")}</Button>} />
-              <Box sx={{ px: 1.5, pb: 1.5, maxHeight: 250, overflow: "auto" }}>
-                {!data.alarms.length ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : data.alarms.map((a) => (
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "2" }, gridRow: { lg: "3" } }}>
+            <Head title={sideView === "maint" ? L("Maintenance Due (Today)") : L("Recent Alarms")} action={(
+              <ToggleButtonGroup exclusive size="small" value={sideView} onChange={(e, v) => v && setSideView(v)}>
+                <ToggleButton value="alarm" sx={toggleSx}>{tx("Alarms")} ({data.alarms.length})</ToggleButton>
+                <ToggleButton value="maint" sx={toggleSx}>{tx("Maintenance")} ({data.maintenance_due.length})</ToggleButton>
+              </ToggleButtonGroup>
+            )} />
+            {sideView === "alarm" ? (data.alarms.length ? (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                {data.alarms.map((a) => (
                   <Stack key={a.id} direction="row" spacing={1} onClick={() => setDialog({ type: "alarm", id: a.id })}
-                    sx={{ alignItems: "center", py: 0.6, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
-                    <WarningAmberOutlinedIcon sx={{ fontSize: 18, color: PRIORITY_COLORS[a.priority] }} />
+                    sx={{ alignItems: "center", py: 0.5, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
+                    <WarningAmberOutlinedIcon sx={{ fontSize: 14.5, color: PRIORITY_COLORS[a.priority] }} />
                     <Typography variant="caption" fontWeight={800} sx={{ width: 64, flexShrink: 0 }}>{a.equipment_code}</Typography>
                     <Typography variant="caption" sx={{ flex: 1, minWidth: 0 }} noWrap title={a.message}>{a.message}</Typography>
                     <Typography variant="caption" color="text.secondary">{hhmm(a.raised_at)}</Typography>
                   </Stack>
                 ))}
               </Box>
-            </Paper>
-            <Paper elevation={0} sx={{ ...cardSx, flex: 1 }}>
-              <Head title={L("Maintenance Due (Today)")} />
-              <Box sx={{ px: 1.5, pb: 1.5 }}>
-                {data.maintenance_due.length ? data.maintenance_due.map((m) => (
-                  <Typography key={`${m.kind}-${m.id}`} variant="caption" sx={{ display: "block", py: 0.3, cursor: "pointer", color: m.overdue ? "#F04438" : undefined }}
+            ) : <EmptyBody text={tx("No data.")} />) : (data.maintenance_due.length ? (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                {data.maintenance_due.map((m) => (
+                  <Typography key={`${m.kind}-${m.id}`} variant="caption" noWrap sx={{ display: "block", py: 0.4, borderBottom: 1, borderColor: "divider", cursor: "pointer", color: m.overdue ? "#F04438" : undefined }}
                     onClick={() => navigate(m.kind === "WO" ? `/maintenance-management/machine-equipment-maintenance?wo=${m.id}` : `/maintenance-management/planning?plan=${m.id}`)}>
-                    <b>{m.equipment_code}</b> · {m.title} · {m.ref}</Typography>))
-                  : <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography>}
+                    <b>{m.equipment_code}</b> · {m.title} · {m.ref}</Typography>
+                ))}
               </Box>
-            </Paper>
-          </Stack>
-        </Box>
-
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={L("Machine List")} subtitle={`(${listItems.length} ${L("machines")})`} />
-            <Box sx={{ px: 1, pb: 1, height: 300, overflow: "auto" }}>
-              <Table size="small" stickyHeader sx={tableSx}>
-                <TableHead><TableRow>
-                  <TableCell>{tx("Machine")}</TableCell>{areas.length > 1 ? <TableCell>{tx("Area")}</TableCell> : null}<TableCell align="center">{tx("Status")}</TableCell><TableCell>{L("Product")}</TableCell>
-                  <TableCell>{L("Work Order")}</TableCell><TableCell align="right">OEE (%)</TableCell><TableCell align="right">{L("Good")}</TableCell><TableCell align="right">{L("Reject")}</TableCell>
-                  <TableCell align="right">{L("Util. %")}</TableCell><TableCell align="center">{tx("Alarms")}</TableCell>
-                </TableRow></TableHead>
-                <TableBody>{listItems.map((i) => (
-                  <TableRow key={i.id} hover selected={i.id === selectedId} onClick={() => setSelectedId(i.id)} onDoubleClick={() => navigate(detailUrl(i.id))} sx={{ cursor: "pointer" }}>
-                    <TableCell sx={{ fontWeight: 800, color: "#1570EF" }}>{i.equipment_code}</TableCell>{areas.length > 1 ? <TableCell>{i.layout_area || i.area_name || EMPTY}</TableCell> : null}
-                    <TableCell align="center"><MachineStatusPill value={i.operational_status} /></TableCell>
-                    <TableCell sx={{ maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{i.product_name || EMPTY}</TableCell>
-                    <TableCell>{i.wo_no ? <Box component="span" sx={{ color: "#1570EF", fontWeight: 700 }} onClick={(e) => { e.stopPropagation(); navigate(`/production-management/work-orders/execution?wo=${i.wo_id}`); }}>{i.wo_no}</Box> : EMPTY}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>{i.oee != null ? num(i.oee, 1) : EMPTY}</TableCell>
-                    <TableCell align="right">{num(i.good)}</TableCell><TableCell align="right" sx={{ color: i.reject ? "#F04438" : undefined }}>{num(i.reject)}</TableCell>
-                    <TableCell align="right">{i.elapsed_sec ? `${num((i.running_sec / i.elapsed_sec) * 100, 0)}%` : EMPTY}</TableCell>
-                    <TableCell align="center">{i.alarms ? <PriorityPill value={i.alarm_top} /> : EMPTY}</TableCell>
-                  </TableRow>
-                ))}</TableBody>
-              </Table>
-            </Box>
+            ) : <EmptyBody text={tx("No data.")} />)}
           </Paper>
 
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={L("Real-time Status")} subtitle={sel ? `(${sel.equipment_code})` : ""} action={sel ? <MachineStatusPill value={sel.operational_status} /> : null} />
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              {!sel ? <Typography variant="caption" color="text.secondary">{L("Select a machine")}</Typography> : !params.length ? <Typography variant="caption" color="text.secondary">{L("No data yet (waiting for PLC / IoT data).")}</Typography> : (
-                <Table size="small" sx={tableSx}><TableBody>{params.map((p) => (
-                  <TableRow key={p.code}><TableCell>{p.name}{p.unit ? ` (${p.unit})` : ""}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, color: p.state === "HIGH" || p.state === "LOW" ? "#F04438" : undefined }}>{num(p.value, p.value >= 100 ? 0 : 2)}</TableCell></TableRow>
-                ))}</TableBody></Table>
-              )}
-              {detail?.open_downtime ? <Alert severity="error" sx={{ mt: 1, py: 0, fontSize: 12 }}>{tx("Open")}: {detail.open_downtime.downtime_no} · {detail.open_downtime.reason_text || EMPTY}</Alert> : null}
-            </Box>
-          </Paper>
-
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={L("Current Production")} subtitle={sel ? `(${sel.equipment_code})` : ""} />
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              {!cur ? <Typography variant="caption" color="text.secondary">{L("No machine in production.")}</Typography> : (
-                <>
-                  <Box sx={{ display: "grid", gridTemplateColumns: "96px 1fr", gap: 1.25, alignItems: "center", mb: 1 }}>
-                    <Box sx={{ height: 80, borderRadius: 1.5, border: 1, borderColor: "divider", display: "grid", placeItems: "center", overflow: "hidden", bgcolor: "action.hover" }}>
-                      {cur.mold_image || cur.product_image ? <Box component="img" src={resolveImageUrl(cur.mold_image || cur.product_image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                        : <ViewInArOutlinedIcon sx={{ fontSize: 40, color: "#1570EF" }} />}
-                    </Box>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="caption" fontWeight={800} sx={{ display: "block", color: "#1570EF", cursor: "pointer" }} onClick={() => navigate(`/production-management/work-orders/execution?wo=${cur.id}`)}>{cur.wo_no} · {label("woStatus", cur.status)}</Typography>
-                      <Typography variant="caption" fontWeight={700} sx={{ display: "block" }} noWrap>{cur.product_name}</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }} noWrap>{L("Mold")}: {cur.mold_code || EMPTY}</Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1.5, rowGap: 0.3 }}>
-                    {[[L("Cavity"), cur.mold_cavity ?? cur.cavity], [L("Good"), `${num(cur.good_qty)} / ${num(cur.planned_qty)} pcs`], [L("Shot counter"), cur.current_shot != null ? num(cur.current_shot) : EMPTY],
-                      [L("Mold life"), cur.design_shot ? num(cur.design_shot) : EMPTY],
-                      [L("Remaining life"), cur.design_shot ? `${num(Math.max(cur.design_shot - (cur.current_shot || 0), 0))} (${num(100 - (cur.mold_usage_pct || 0), 1)}%)` : EMPTY]].map(([a, b]) => [
-                      <Typography key={`${a}k`} variant="caption" color="text.secondary">{a}</Typography>, <Typography key={`${a}v`} variant="caption" fontWeight={700}>{b ?? EMPTY}</Typography>])}
-                  </Box>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: "center", mt: 1 }}>
-                    <Typography variant="caption" color="text.secondary">{L("Progress")}</Typography>
-                    <LinearProgress variant="determinate" value={Math.min(cur.progress_pct || 0, 100)} sx={{ flex: 1, height: 7, borderRadius: 4 }} />
-                    <Typography variant="caption" fontWeight={800}>{num(cur.progress_pct, 1)}%</Typography>
-                  </Stack>
-                </>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "3" }, gridRow: { lg: "3" } }}>
+            <Head title={perfView === "util" ? L("Machine Utilization (Today)") : L("OEE Trend (7 days)")} action={(
+              <ToggleButtonGroup exclusive size="small" value={perfView} onChange={(e, v) => v && setPerfView(v)}>
+                <ToggleButton value="oee" sx={toggleSx}>OEE</ToggleButton>
+                <ToggleButton value="util" sx={toggleSx}>{L("Utilization")}</ToggleButton>
+              </ToggleButtonGroup>
+            )} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1, overflow: "hidden" }}>
+              {perfView === "oee" ? (
+                <Chart type="bar" height="100%" series={[{ name: "OEE", data: data.oee_trend.map((t) => t.oee) }]} options={{
+                  ...base, colors: ["#2E90FA"], plotOptions: { bar: { columnWidth: "45%", borderRadius: 3, dataLabels: { position: "top" } } },
+                  dataLabels: { enabled: true, formatter: (v) => (v != null ? `${num(v, 1)}%` : ""), offsetY: -16, style: { fontSize: "10px", colors: [axisColor] } },
+                  xaxis: { ...base.xaxis, categories: data.oee_trend.map((t) => t.date.slice(8, 10) + "/" + t.date.slice(5, 7)) },
+                  yaxis: { min: 0, max: 100, tickAmount: 4, labels: { ...base.yaxis.labels, formatter: (v) => `${num(v, 0)}%` } } }} />
+              ) : (
+                <Chart type="radialBar" height="100%" series={[utilization]} options={{
+                  chart: { background: "transparent", parentHeightOffset: 0 }, colors: [utilization >= 75 ? "#12B76A" : utilization >= 50 ? "#F79009" : "#F04438"],
+                  plotOptions: { radialBar: { startAngle: -110, endAngle: 110, hollow: { size: "60%" }, track: { background: dark ? "#263244" : "#EEF2F6" },
+                    dataLabels: { name: { show: true, offsetY: 20, color: axisColor, fontSize: "11px" }, value: { offsetY: -12, fontSize: "18px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: (v) => `${num(v, 1)}%` } } } },
+                  labels: [L("Utilization")] }} />
               )}
             </Box>
           </Paper>
-        </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.4fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={L("OEE Trend (7 days)")} />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="bar" height={200} series={[{ name: "OEE", data: data.oee_trend.map((t) => t.oee) }]} options={{
-                chart: { background: "transparent", toolbar: { show: false } }, colors: ["#2E90FA"], plotOptions: { bar: { columnWidth: "45%", borderRadius: 3, dataLabels: { position: "top" } } },
-                dataLabels: { enabled: true, formatter: (v) => (v != null ? `${num(v, 1)}%` : ""), offsetY: -16, style: { fontSize: "10px", colors: [axisColor] } },
-                xaxis: { categories: data.oee_trend.map((t) => t.date.slice(8, 10) + "/" + t.date.slice(5, 7)), labels: { style: { colors: axisColor, fontSize: "10px" } } },
-                yaxis: { min: 0, max: 100, labels: { style: { colors: axisColor }, formatter: (v) => `${num(v, 0)}%` } }, grid, tooltip: { theme: dark ? "dark" : "light" } }} />
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={L("Machine Utilization (Today)")} />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="radialBar" height={210} series={[utilization]} options={{
-                chart: { background: "transparent" }, colors: [utilization >= 75 ? "#12B76A" : utilization >= 50 ? "#F79009" : "#F04438"],
-                plotOptions: { radialBar: { startAngle: -110, endAngle: 110, hollow: { size: "62%" }, track: { background: dark ? "#263244" : "#EEF2F6" },
-                  dataLabels: { name: { show: true, offsetY: 22, color: axisColor, fontSize: "12px" }, value: { offsetY: -12, fontSize: "26px", fontWeight: 800, color: dark ? "#fff" : "#101828", formatter: (v) => `${num(v, 1)}%` } } } },
-                labels: [L("Utilization")] }} />
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Quick Actions")} subtitle={sel ? `(${sel.equipment_code})` : ""} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 0.75, px: 1.5, pb: 1.5 }}>
-              {quick.map(([text, Icon, color, onClick, disabled]) => (
-                <Button key={text} disabled={disabled} onClick={onClick} sx={{ flexDirection: "column", gap: 0.4, py: 0.9, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none",
-                  fontSize: 10.5, fontWeight: 700, color: "text.primary", lineHeight: 1.2, minWidth: 0 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
-              ))}
-            </Box>
-          </Paper>
+          <Box sx={{ gridColumn: { lg: "4" }, gridRow: { lg: "3" }, display: "flex", minHeight: 0, "& > *": { flex: 1 } }}>
+            <QuickCard title={sel ? `${tx("Quick Actions")} · ${sel.equipment_code}` : tx("Quick Actions")} actions={quick} columns={3} />
+          </Box>
         </Box>
 
         <SystemStatusBar system={data.system} />

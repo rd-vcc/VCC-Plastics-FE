@@ -52,13 +52,13 @@ export default function Login() {
         description={t("login.description")}
       />
 
-      <div className="relative min-h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+      <div className="relative min-h-[var(--app-vh,100vh)] overflow-hidden bg-gray-50 dark:bg-gray-950">
         <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggleButton />
         </div>
 
-        <div className="grid min-h-screen lg:grid-cols-2">
+        <div className="grid min-h-[var(--app-vh,100vh)] lg:grid-cols-2">
           {/* LEFT SIDE */}
           <div className="relative hidden overflow-hidden bg-gray-900 lg:flex lg:items-center lg:justify-center">
             <div className="absolute inset-0 opacity-30">
@@ -85,7 +85,7 @@ export default function Login() {
           </div>
 
           {/* RIGHT SIDE */}
-          <div className="flex min-h-screen items-center justify-center px-5 py-12 sm:px-8 lg:px-12">
+          <div className="flex min-h-[var(--app-vh,100vh)] items-center justify-center px-5 py-12 sm:px-8 lg:px-12">
             <div className="w-full max-w-md">
               {/* MOBILE LOGO */}
               <div className="mb-9 lg:hidden">

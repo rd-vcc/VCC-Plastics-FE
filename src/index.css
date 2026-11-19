@@ -31,10 +31,10 @@ layer(base);
   --text-title-sm--line-height: 32px;
   --text-theme-xl: 17px;
   --text-theme-xl--line-height: 24px;
-  --text-theme-sm: 12px;
-  --text-theme-sm--line-height: 18px;
-  --text-theme-xs: 11px;
-  --text-theme-xs--line-height: 16px;
+  --text-theme-sm: 11px;
+  --text-theme-sm--line-height: 16px;
+  --text-theme-xs: 10px;
+  --text-theme-xs--line-height: 14px;
 
   --color-current: currentColor;
   --color-transparent: transparent;
@@ -192,7 +192,8 @@ layer(base);
   }
   html {
     /* Compact UI: scale Tailwind rem-based typography, spacing and controls globally. */
-    font-size: 14px;
+    /* 12.5px base: MUI body2 / buttons and Tailwind text-sm render at ~11px */
+    font-size: 12.5px;
     font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif;
   }
 
@@ -201,8 +202,10 @@ layer(base);
     font-family: "Bai Jamjuree", "Noto Sans JP", sans-serif;
   }
 
+  /* AG Grid icons are glyphs of their own icon font — forcing the app font on
+     them renders every header/filter icon as an empty square. */
   #root,
-  #root *,
+  #root *:not(.ag-icon),
   button,
   input,
   textarea,
@@ -213,7 +216,7 @@ layer(base);
 }
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-2.5 px-2.5 py-2 font-medium rounded-md text-theme-sm;
+  @apply relative flex items-center w-full gap-2.5 px-2.5 py-1.5 font-medium rounded-md text-theme-sm;
 }
 
 @utility menu-item-active {
@@ -235,7 +238,7 @@ layer(base);
 
 @utility menu-item-icon-size {
   & svg {
-    @apply !size-5;
+    @apply !size-[16px];
   }
 }
 
@@ -256,7 +259,7 @@ layer(base);
 }
 
 @utility menu-dropdown-item {
-  @apply relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-theme-sm font-medium;
+  @apply relative flex items-center gap-2 rounded-md px-2.5 py-1.5 text-theme-sm font-medium;
 }
 
 @utility menu-dropdown-item-active {
@@ -358,8 +361,16 @@ layer(base);
 
 .apexcharts-tooltip-marker {
   margin-right: 6px;
-  height: 6px;
-  width: 6px;
+  height: 8px;
+  width: 8px;
+  line-height: 8px;
+  font-size: 8px;
+}
+/* ApexCharts 4 draws the marker as a 26px glyph; shrink it so it stays inside the 8px box */
+.apexcharts-tooltip-marker::before {
+  font-size: 10px !important;
+  line-height: 8px !important;
+  transform: none !important;
 }
 .apexcharts-legend-text {
   @apply !pl-5 !text-gray-700 dark:!text-gray-400;
@@ -826,7 +837,7 @@ span.flatpickr-weekday,
   color: black;
 }
 .fc.fc-media-screen {
-  @apply min-h-screen;
+  min-height: var(--app-vh, 100vh);
 }
 
 .simplebar-scrollbar::before {
@@ -855,4 +866,107 @@ span.flatpickr-weekday,
 .dark .MuiInputBase-input[type="month"]::-webkit-calendar-picker-indicator,
 .dark .MuiInputBase-input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
+}
+
+/* =========================================================
+   COMPACT DENSITY (whole app)
+   Body text is 11px (html font-size above); these rules tighten MUI controls the
+   same way on every page, including pages that build their own MUI theme.
+   The `html` prefix outranks MUI's own single-class rules.
+   ========================================================= */
+html .MuiInputBase-inputSizeSmall:not(.MuiInputBase-inputMultiline):not(.MuiAutocomplete-input) {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+html .MuiOutlinedInput-input:not(.MuiInputBase-inputSizeSmall):not(.MuiInputBase-inputMultiline):not(.MuiAutocomplete-input) {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+html .MuiAutocomplete-root .MuiOutlinedInput-root.MuiInputBase-sizeSmall {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+html .MuiInputBase-root,
+html .MuiMenuItem-root,
+html .MuiAutocomplete-option,
+html .MuiAutocomplete-noOptions {
+  font-size: 11px;
+}
+html .MuiInputLabel-root:not(.MuiInputLabel-shrink) {
+  font-size: 11px;
+}
+html .MuiTabs-root {
+  min-height: 32px;
+}
+html .MuiTab-root {
+  min-height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Compact 24-hour date-time picker of DateTimeField (dd/mm/yyyy HH:mm) */
+.flatpickr-calendar.mes-dt {
+  width: 272px !important;
+  padding: 10px 10px 6px !important;
+  margin-top: 0 !important;
+  font-size: 12px;
+}
+.flatpickr-calendar.mes-dt .flatpickr-months .flatpickr-month { height: 30px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-current-month { font-size: 14px !important; padding-top: 4px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-current-month .cur-month,
+.flatpickr-calendar.mes-dt .flatpickr-current-month input.cur-year { font-size: 14px !important; font-weight: 700 !important; }
+.flatpickr-calendar.mes-dt .flatpickr-months .flatpickr-prev-month,
+.flatpickr-calendar.mes-dt .flatpickr-months .flatpickr-next-month { top: 12px !important; padding: 2px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-months .flatpickr-prev-month.flatpickr-prev-month { left: 10px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-months .flatpickr-next-month.flatpickr-next-month { right: 10px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-months svg { width: 12px; height: 12px; }
+.flatpickr-calendar.mes-dt .flatpickr-weekdays { margin: 6px 0 2px !important; height: 22px !important; }
+.flatpickr-calendar.mes-dt span.flatpickr-weekday { font-size: 11px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-innerContainer,
+.flatpickr-calendar.mes-dt .flatpickr-rContainer,
+.flatpickr-calendar.mes-dt .flatpickr-days,
+.flatpickr-calendar.mes-dt .dayContainer { width: 252px !important; min-width: 252px !important; max-width: 252px !important; }
+.flatpickr-calendar.mes-dt .flatpickr-day {
+  height: 30px !important;
+  line-height: 30px !important;
+  max-width: 36px !important;
+  flex-basis: 14.2857% !important;
+  justify-content: center;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+.flatpickr-calendar.mes-dt .flatpickr-day.selected,
+.flatpickr-calendar.mes-dt .flatpickr-day.selected:hover {
+  background: #1565c0 !important;
+  border-color: #1565c0 !important;
+  color: #fff !important;
+}
+.flatpickr-calendar.mes-dt .flatpickr-day.today:not(.selected) { border-color: #1565c0 !important; }
+.flatpickr-calendar.mes-dt .flatpickr-time {
+  height: 36px !important;
+  max-height: 36px !important;
+  line-height: 36px !important;
+  margin-top: 6px;
+  border-top: 1px solid #e5e7eb !important;
+}
+.flatpickr-calendar.mes-dt .flatpickr-time input,
+.flatpickr-calendar.mes-dt .flatpickr-time .flatpickr-time-separator {
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: inherit;
+}
+.dark .flatpickr-calendar.mes-dt .flatpickr-time { border-top-color: rgba(255, 255, 255, 0.08) !important; }
+
+/* ---- Proportional scaling on laptop / small desktop screens (see src/utils/uiScale.js) ---- */
+#root,
+.MuiDialog-root {
+  zoom: var(--app-zoom, 1);
+}
+/* Menus / selects / autocompletes / tooltips are portalled to <body> and placed by screen coordinates:
+   keep the positioned box unzoomed and shrink only what is inside it. */
+.MuiPopover-paper > *,
+.MuiPopper-root > * {
+  zoom: var(--app-zoom, 1);
 }

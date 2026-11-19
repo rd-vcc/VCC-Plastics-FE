@@ -1,12 +1,18 @@
 import "./locales";
+import { CountBadge, PanelHeader, masterGridSx, panelSx, SettingsMenu } from "../../../../components/masterData/MasterPanels";
+import useFillHeight from "../../../../hooks/useFillHeight";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
   DialogContent, Divider, FormControl, IconButton, InputAdornment,
-  InputLabel, List, ListItemButton, ListItemText, MenuItem, Paper, Select, Snackbar,
+  InputLabel, List, ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Select, Snackbar,
   Stack, Tab, Tabs, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography, createTheme,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
+import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import CloseIcon from "@mui/icons-material/Close";
@@ -17,10 +23,7 @@ import LabelOutlinedIcon from "@mui/icons-material/LabelOutlined";
 import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircle";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircle";
 import SearchIcon from "@mui/icons-material/Search";
-import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import ThumbDownOutlinedIcon from "@mui/icons-material/ThumbDownOutlined";
-import ThumbUpOutlinedIcon from "@mui/icons-material/ThumbUpOutlined";
 import UpdateOutlinedIcon from "@mui/icons-material/UpdateOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 
@@ -42,12 +45,12 @@ import {
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const API = `${BASE}/api/reason-code-master`;
 const EMPTY = "—";
-const STATUSES = ["DRAFT", "PENDING_APPROVAL", "ACTIVE", "INACTIVE"];
+const STATUSES = ["ACTIVE", "INACTIVE"];
 const CATEGORY_STATUSES = ["ACTIVE", "INACTIVE"];
 const CODE_TYPES = ["SYSTEM", "MANUAL", "AUTO"];
 const IMPACT_LEVELS = ["LOW", "MEDIUM", "HIGH"];
 const MODULES = ["MACHINE_MONITORING", "DOWNTIME_MANAGEMENT", "NG_MANAGEMENT", "SCRAP_MANAGEMENT", "MAINTENANCE_MANAGEMENT", "PRODUCTION_EXECUTION"];
-const cardSx = { border: "1px solid", borderColor: "divider", borderRadius: 2, boxShadow: "0 1px 3px rgba(15,23,42,.06)", overflow: "hidden" };
+const cardSx = panelSx;
 
 function btn(type, extra = {}) {
   const s = buttonSystem[type] || buttonSystem.edit || { base: {} };
@@ -88,16 +91,16 @@ function pageTheme(mode) {
 function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primary" }) {
   const toneColor = tone === "danger" ? "#EE1B1B" : "#005BAB";
   return (
-    <Box sx={{ px: 3, pt: 2.5, pb: 2, display: "flex", alignItems: "center", gap: 1.5, borderBottom: 1, borderColor: "divider",
+    <Box sx={{ px: 2, py: 1.25, display: "flex", alignItems: "center", gap: 1.25, borderBottom: 1, borderColor: "divider",
       bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "rgba(238,27,27,0.10)" : "rgba(0,91,171,0.14)") : (tone === "danger" ? "#FFF3F3" : "#F1F7FF") }}>
-      <Box sx={{ width: 44, height: 44, borderRadius: "50%",
+      <Box sx={{ width: 28, height: 28, borderRadius: "50%",
         bgcolor: (theme) => theme.palette.mode === "dark" ? (tone === "danger" ? "#4C1D1D" : "#173A63") : (tone === "danger" ? "#FDECEC" : "#EEF4FF"),
         color: toneColor, display: "grid", placeItems: "center", flexShrink: 0 }}>
         {icon}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>{title}</Typography>
-        {subtitle ? <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{subtitle}</Typography> : null}
+        <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800 }}>{title}</Typography>
+        {subtitle ? <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>{subtitle}</Typography> : null}
       </Box>
       <IconButton size="small" disabled={disabled} onClick={onClose} sx={{ mr: -0.5 }}><CloseIcon fontSize="small" /></IconButton>
     </Box>
@@ -106,18 +109,63 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
 
 const dialogPaperSx = { borderRadius: 3, overflow: "hidden", boxShadow: (theme) => theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)" };
 
-function Head({ icon, title, action }) {
+const Head = PanelHeader;
+
+const STATUS_COLORS = { DRAFT: "#667085", PENDING_APPROVAL: "#DC6803", ACTIVE: "#12B76A", INACTIVE: "#F04438" };
+function StatusChip({ value, width = 104 }) {
+  const color = STATUS_COLORS[value] || "#667085";
   return (
-    <Box sx={{ minHeight: 34, px: 1.25, bgcolor: (t) => t.palette.mode === "dark" ? "#182235" : "#EAF2FF", borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Stack direction="row" spacing={0.7} alignItems="center">{icon}<Typography variant="subtitle2" fontWeight={800}>{title}</Typography></Stack>
-      {action}
+    <Box component="span" title={statusText(value)} sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box",
+      width, height: 22, px: 0.5, lineHeight: 1, verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden",
+      borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{statusText(value)}</Box>
+  );
+}
+
+function DetailSection({ title, children }) {
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ display: "block", mb: 0.5, fontWeight: 800, fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "text.secondary" }}>{title}</Typography>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25 }}>{children}</Box>
     </Box>
   );
 }
 
-const STATUS_TONES = { DRAFT: "default", PENDING_APPROVAL: "warning", ACTIVE: "success", INACTIVE: "default" };
-function StatusChip({ value }) {
-  return <Chip size="small" variant="outlined" color={STATUS_TONES[value] || "default"} label={statusText(value)} sx={{ height: 21, fontSize: 10, fontWeight: 800 }} />;
+function DetailRow({ label, children, last }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, py: 0.9, borderBottom: last ? 0 : 1, borderColor: "divider" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 700, textAlign: "right", minWidth: 0, wordBreak: "break-word" }}>{children}</Typography>
+    </Box>
+  );
+}
+
+function ActionIcon({ title, icon, onClick, disabled, color = "default" }) {
+  return (
+    <Tooltip title={title}>
+      <span><IconButton disabled={disabled} color={color} onClick={onClick} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{icon}</IconButton></span>
+    </Tooltip>
+  );
+}
+
+const person = (name, code) => (name ? `${name} - ${code}` : code || EMPTY);
+const localeTag = () => { const tag = tx("LOCALE_TAG"); return tag === "LOCALE_TAG" ? "en-GB" : tag; };
+const dateText = (value) => {
+  if (!value) return EMPTY;
+  const d = new Date(String(value).replace(" ", "T"));
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(localeTag(), { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+const timeDateText = (value) => {
+  if (!value) return EMPTY;
+  const d = new Date(String(value).replace(" ", "T"));
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${tx("on")} ${dateText(value)}`;
+};
+const AUDIT_LABELS = { CREATE: "Created by", UPDATE: "Updated by", SUBMIT: "Submitted by", APPROVE: "Approved by", REJECT: "Rejected by", ACTIVATE: "Activated by", DEACTIVATE: "Deactivated by", DELETE: "Deleted by" };
+
+function FieldLabel({ children }) {
+  return <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "text.secondary", fontSize: "0.68rem" }}>{children}</Typography>;
 }
 
 function ReasonCodeForm({ item, categories, actor, saving, onClose, onSave }) {
@@ -137,48 +185,51 @@ function ReasonCodeForm({ item, categories, actor, saving, onClose, onSave }) {
     ...(item ? { version: Number(f.version), updated_by: actor } : { created_by: actor }),
   });
   return (
-    <Dialog open fullWidth maxWidth="sm" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<LabelOutlinedIcon />} title={tx(item ? "Edit Reason Code" : "Add New Reason Code Dialog")} disabled={saving} onClose={onClose} />
-      <DialogContent>
-        <Stack spacing={1.7} sx={{ pt: 1 }}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField fullWidth required size="small" disabled={Boolean(item)} label={tx("Reason Code")} value={f.code} onChange={ch("code")} />
-            <TextField fullWidth required size="small" label={tx("Reason Name")} value={f.name} onChange={ch("name")} />
+    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<LabelOutlinedIcon />} title={tx(item ? "Edit Reason Code" : "Add New Reason Code Dialog")} subtitle={tx("Reason codes are master data and are active as soon as they are saved.")} disabled={saving} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Stack spacing={1.25}>
+            <FieldLabel>{tx("Basic information")}</FieldLabel>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" }, gap: 1.5 }}>
+              <TextField fullWidth required size="small" disabled={Boolean(item)} label={tx("Reason Code")} placeholder="VD: DT-009" value={f.code} onChange={ch("code")} />
+              <TextField fullWidth required size="small" label={tx("Reason Name")} value={f.name} onChange={ch("name")} />
+            </Box>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Category")}</InputLabel>
-              <Select label={tx("Category")} value={f.categoryId} onChange={ch("categoryId")}>
-                {categories.map((c) => <MenuItem key={c.id} value={c.id}>{c.category_name}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Code Type")}</InputLabel>
-              <Select label={tx("Code Type")} value={f.codeType} onChange={ch("codeType")}>
-                {CODE_TYPES.map((t) => <MenuItem key={t} value={t}>{codeTypeText(t)}</MenuItem>)}
-              </Select>
-            </FormControl>
+          <Stack spacing={1.25}>
+            <FieldLabel>{tx("Classification")}</FieldLabel>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0,1fr))" }, gap: 1.5 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>{tx("Category")}</InputLabel>
+                <Select label={tx("Category")} value={f.categoryId} onChange={ch("categoryId")}>
+                  {categories.map((c) => <MenuItem key={c.id} value={c.id}>{c.category_name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>{tx("Code Type")}</InputLabel>
+                <Select label={tx("Code Type")} value={f.codeType} onChange={ch("codeType")}>
+                  {CODE_TYPES.map((t) => <MenuItem key={t} value={t}>{codeTypeText(t)}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <TextField fullWidth size="small" type="number" label={tx("Sort Order")} value={f.sortOrder} onChange={ch("sortOrder")} />
+              <FormControl fullWidth size="small" sx={{ gridColumn: { sm: "span 2" } }}>
+                <InputLabel>{tx("Applicable Module")}</InputLabel>
+                <Select label={tx("Applicable Module")} value={f.module} onChange={ch("module")}>
+                  {MODULES.map((m) => <MenuItem key={m} value={m}>{moduleText(m)}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>{tx("Impact Level")}</InputLabel>
+                <Select label={tx("Impact Level")} value={f.impactLevel} onChange={ch("impactLevel")}>
+                  {IMPACT_LEVELS.map((l) => <MenuItem key={l} value={l}>{impactLevelText(l)}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Box>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Applicable Module")}</InputLabel>
-              <Select label={tx("Applicable Module")} value={f.module} onChange={ch("module")}>
-                {MODULES.map((m) => <MenuItem key={m} value={m}>{moduleText(m)}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Impact Level")}</InputLabel>
-              <Select label={tx("Impact Level")} value={f.impactLevel} onChange={ch("impactLevel")}>
-                {IMPACT_LEVELS.map((l) => <MenuItem key={l} value={l}>{impactLevelText(l)}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Stack>
-          <TextField fullWidth size="small" type="number" label={tx("Sort Order")} value={f.sortOrder} onChange={ch("sortOrder")} sx={{ maxWidth: 160 }} />
-          <TextField fullWidth multiline minRows={2} label={tx("Description")} value={f.description} onChange={ch("description")} />
+          <TextField fullWidth multiline minRows={3} label={tx("Description")} value={f.description} onChange={ch("description")} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (t) => (t.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
         <Button onClick={submit} disabled={saving || !f.code.trim() || !f.name.trim() || !f.categoryId} sx={btn("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
           {tx("Save")}
         </Button>
@@ -190,34 +241,18 @@ function ReasonCodeForm({ item, categories, actor, saving, onClose, onSave }) {
 function CopyReasonCodeDialog({ saving, onClose, onConfirm }) {
   const [code, setCode] = useState("");
   return (
-    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={<ContentCopyOutlinedIcon />} title={tx("Copy Reason Code")} disabled={saving} onClose={onClose} />
       <DialogContent>
         <TextField fullWidth required size="small" sx={{ mt: 1 }} label={tx("New Reason Code")} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={() => onConfirm(code)} disabled={saving || !code.trim()} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-function RejectDialog({ saving, onClose, onConfirm }) {
-  const [remark, setRemark] = useState("");
-  return (
-    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<ThumbDownOutlinedIcon />} title={tx("Reject Reason Code")} disabled={saving} onClose={onClose} tone="danger" />
-      <DialogContent>
-        <TextField fullWidth required multiline minRows={2} size="small" sx={{ mt: 1 }} label={tx("Remark")} value={remark} onChange={(e) => setRemark(e.target.value)} helperText={!remark.trim() ? tx("Reject Remark Required") : " "} />
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        <Button onClick={() => onConfirm(remark)} disabled={saving || !remark.trim()} sx={btn("delete")}>{tx("Reject")}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
 function CategoryForm({ item, actor, saving, onClose, onSave }) {
   const [f, setF] = useState(item ? {
@@ -231,7 +266,7 @@ function CategoryForm({ item, actor, saving, onClose, onSave }) {
     ...(item ? { version: Number(f.version), updated_by: actor } : { created_by: actor }),
   });
   return (
-    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open fullWidth maxWidth="xs" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={<CategoryOutlinedIcon />} title={tx(item ? "Edit Category" : "Add Category")} disabled={saving} onClose={onClose} />
       <DialogContent>
         <Stack spacing={1.7} sx={{ pt: 1 }}>
@@ -247,8 +282,7 @@ function CategoryForm({ item, actor, saving, onClose, onSave }) {
           <TextField fullWidth multiline minRows={2} label={tx("Description")} value={f.description} onChange={ch("description")} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={submit} disabled={saving || !f.code.trim() || !f.name.trim()} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -258,26 +292,38 @@ function CategoryForm({ item, actor, saving, onClose, onSave }) {
 function CategoryManagerDialog({ categories, actor, canEdit, onClose, onCreate, onUpdate, onToggleStatus, onDelete }) {
   const [editItem, setEditItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const columns = useMemo(() => [
+    { headerName: tx("Category Code"), field: "category_code", width: 150, pinned: "left" },
+    { headerName: tx("Category Name"), field: "category_name", minWidth: 180, flex: 1.4 },
+    { headerName: tx("Description"), field: "description", minWidth: 160, flex: 1.2, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Reason Code Count"), field: "reason_code_count", minWidth: 110, flex: 0.6, cellStyle: { justifyContent: "center" } },
+    { headerName: tx("Sort Order"), field: "sort_order", minWidth: 80, flex: 0.5, cellStyle: { justifyContent: "center" } },
+    { headerName: tx("Status"), field: "status", minWidth: 110, flex: 0.7, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip value={p.value} width={92} /></Box> },
+    { headerName: tx("Actions"), width: 120, sortable: false, filter: false, cellRenderer: (p) => (
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <Tooltip title={tx("Edit")}><span><IconButton size="small" disabled={!canEdit} onClick={() => { setEditItem(p.data); setShowForm(true); }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
+        <Tooltip title={tx(p.data.status === "ACTIVE" ? "Deactivate" : "Activate")}><span>
+          <IconButton size="small" color={p.data.status === "ACTIVE" ? "warning" : "success"} disabled={!canEdit} onClick={() => onToggleStatus(p.data)}>
+            {p.data.status === "ACTIVE" ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+          </IconButton>
+        </span></Tooltip>
+        <Tooltip title={p.data.reason_code_count > 0 ? tx("Category in use cannot be deleted") : tx("Delete")}><span>
+          <IconButton size="small" color="error" disabled={!canEdit || p.data.reason_code_count > 0} onClick={() => onDelete(p.data)}><DeleteOutlineIcon fontSize="small" /></IconButton>
+        </span></Tooltip>
+      </Stack>
+    ) },
+  ], [canEdit, onDelete, onToggleStatus]);
   return (
-    <Dialog open fullWidth maxWidth="sm" onClose={onClose} PaperProps={{ sx: dialogPaperSx }}>
-      <DialogHeader icon={<SettingsOutlinedIcon />} title={tx("Manage Categories")} onClose={onClose} />
-      <DialogContent sx={{ p: 0 }}>
-        <List disablePadding>
-          {categories.map((c) => (
-            <Box key={c.id} sx={{ display: "flex", alignItems: "center", px: 2, py: 1, borderBottom: 1, borderColor: "divider" }}>
-              <ListItemText primary={`${c.category_code} — ${c.category_name}`} secondary={`${tx("Reason Code Count")}: ${c.reason_code_count}`} />
-              <Chip size="small" label={categoryStatusText(c.status)} color={c.status === "ACTIVE" ? "success" : "default"} sx={{ mr: 1 }} />
-              <IconButton size="small" disabled={!canEdit} onClick={() => { setEditItem(c); setShowForm(true); }}><EditOutlinedIcon fontSize="small" /></IconButton>
-              <IconButton size="small" disabled={!canEdit} onClick={() => onToggleStatus(c)}>{c.status === "ACTIVE" ? <PauseCircleOutlineIcon fontSize="small" /> : <PlayCircleOutlineIcon fontSize="small" />}</IconButton>
-              <IconButton size="small" color="error" disabled={!canEdit || c.reason_code_count > 0} onClick={() => onDelete(c)}><DeleteOutlineIcon fontSize="small" /></IconButton>
-            </Box>
-          ))}
-        </List>
+    <Dialog open fullWidth maxWidth="lg" onClose={onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<CategoryOutlinedIcon />} title={tx("Manage Categories")} subtitle={tx("Groups used to organise reason codes (e.g. Downtime, NG, Scrap).")} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Box sx={{ height: 420, mt: 1 }}>
+          <AgGridTable rowData={categories} columnDefs={columns} height="100%" getRowId={(p) => String(p.data.id)} />
+        </Box>
+        <Stack direction="row" sx={{ mt: 1.5 }}>
+          <Button variant="contained" disabled={!canEdit} startIcon={<AddIcon />} onClick={() => { setEditItem(null); setShowForm(true); }} sx={btn("primary", { whiteSpace: "nowrap" })}>{tx("Add Category")}</Button>
+        </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button disabled={!canEdit} startIcon={<AddIcon />} onClick={() => { setEditItem(null); setShowForm(true); }} sx={btn("primary")}>{tx("Add Category")}</Button>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
-      </DialogActions>
       {showForm && (
         <CategoryForm item={editItem} actor={actor} saving={false} onClose={() => setShowForm(false)}
           onSave={async (payload) => { if (editItem) { await onUpdate(editItem.id, payload); } else { await onCreate(payload); } setShowForm(false); }} />
@@ -293,6 +339,7 @@ export default function ReasonCodeMaster() {
   const { theme } = useAppTheme();
   const muiTheme = useMemo(() => pageTheme(theme), [theme]);
   const { canEdit } = usePagePermission();
+  const [panelsRef, panelHeight] = useFillHeight();
   const actor = getCurrentUser()?.employee_code || "SYSTEM";
 
   const [rows, setRows] = useState([]);
@@ -348,7 +395,7 @@ export default function ReasonCodeMaster() {
   useEffect(() => { loadDetail(selectedId); setTab(0); }, [selectedId, loadDetail]);
 
   useEffect(() => {
-    if (!selectedId || tab !== 2) return;
+    if (!selectedId || tab !== 1) return;
     request(`${API}/reason-codes/${selectedId}/audit-log`).then(setAuditLog).catch((e) => notify("error", e.message));
   }, [selectedId, tab, request, notify]);
 
@@ -373,29 +420,6 @@ export default function ReasonCodeMaster() {
       const result = await request(item ? `${API}/reason-codes/${item.id}` : `${API}/reason-codes`, { method: item ? "PUT" : "POST", body: JSON.stringify(payload) });
       setDialog(null); await reloadAll(); if (result.id) setSelectedId(result.id);
       notify("success", tx("Reason code saved."));
-    } catch (e) { notify("error", e.message); } finally { setSaving(false); }
-  };
-  const submitForApproval = async () => {
-    if (!detail) return;
-    setSaving(true);
-    try {
-      await request(`${API}/reason-codes/${detail.id}/submit`, { method: "POST", body: JSON.stringify({ actor, version: detail.version }) });
-      await reloadAll(); notify("success", tx("Submitted for approval."));
-    } catch (e) { notify("error", e.message); } finally { setSaving(false); }
-  };
-  const approve = async () => {
-    if (!detail) return;
-    setSaving(true);
-    try {
-      await request(`${API}/reason-codes/${detail.id}/approve`, { method: "POST", body: JSON.stringify({ actor, version: detail.version }) });
-      await reloadAll(); notify("success", tx("Approved."));
-    } catch (e) { notify("error", e.message); } finally { setSaving(false); }
-  };
-  const reject = async (remark) => {
-    setSaving(true);
-    try {
-      await request(`${API}/reason-codes/${detail.id}/reject`, { method: "POST", body: JSON.stringify({ actor, remark, version: detail.version }) });
-      setDialog(null); await reloadAll(); notify("success", tx("Rejected."));
     } catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
   const toggleStatus = async () => {
@@ -445,26 +469,22 @@ export default function ReasonCodeMaster() {
   const percent = (n) => (stats.total_codes ? `${((n / stats.total_codes) * 100).toFixed(1)}% ${tx("of total")}` : `0% ${tx("of total")}`);
 
   const cols = useMemo(() => [
-    { headerName: tx("Reason Code"), field: "reason_code", width: 110, pinned: "left" },
-    { headerName: tx("Reason Name"), field: "reason_name", minWidth: 170, flex: 1.1 },
-    { headerName: tx("Category"), field: "category_name", width: 130, valueFormatter: (p) => p.value || EMPTY },
-    { headerName: tx("Code Type"), field: "code_type", width: 100, valueFormatter: (p) => codeTypeText(p.value) },
-    { headerName: tx("Applicable Module"), field: "applicable_module", minWidth: 160, valueFormatter: (p) => moduleText(p.value) },
-    { headerName: tx("Status"), field: "status", width: 130, cellRenderer: (p) => <Box height="100%" display="flex" alignItems="center"><StatusChip value={p.value} /></Box> },
-    { headerName: tx("Sort Order"), field: "sort_order", width: 90 },
-    { headerName: tx("Actions"), width: 90, sortable: false, filter: false, cellRenderer: (p) => (
-      <Stack direction="row" alignItems="center" height="100%">
-        <IconButton size="small" onClick={() => setSelectedId(p.data.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton>
-      </Stack>
-    ) },
+    { headerName: tx("Reason Code"), field: "reason_code", width: 120, pinned: "left" },
+    { headerName: tx("Reason Name"), field: "reason_name", minWidth: 170, flex: 1.6 },
+    { headerName: tx("Category"), field: "category_name", minWidth: 120, flex: 1, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Code Type"), field: "code_type", minWidth: 100, flex: 0.7, valueFormatter: (p) => codeTypeText(p.value) },
+    { headerName: tx("Applicable Module"), field: "applicable_module", minWidth: 150, flex: 1.2, valueFormatter: (p) => moduleText(p.value) },
+    { headerName: tx("Status"), field: "status", minWidth: 125, flex: 0.9, cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip value={p.value} /></Box> },
+    { headerName: tx("Sort Order"), field: "sort_order", minWidth: 80, flex: 0.5 },
   ], [language]);
 
   const kpis = [
-    { label: tx("Total Reason Codes"), value: stats.total_codes, note: "", icon: LabelOutlinedIcon, tone: "primary" },
+    { label: tx("Total Reason Codes"), value: stats.total_codes, note: `+${stats.recently_added || 0} ${tx("last 30 days")}`, icon: LabelOutlinedIcon, tone: "primary" },
     { label: tx("Active Codes"), value: stats.active_codes, note: percent(stats.active_codes), icon: CheckCircleOutlineIcon, tone: "success" },
-    { label: tx("Categories"), value: stats.category_count, note: "", icon: CategoryOutlinedIcon, tone: "info" },
-    { label: tx("System Usage"), value: `${stats.usage_percent}%`, note: "", icon: UpdateOutlinedIcon, tone: "warning" },
-    { label: tx("Recently Added"), value: stats.recently_added, note: tx("last 30 days"), icon: AddIcon, tone: "danger" },
+    { label: tx("High Impact"), value: stats.high_impact_codes || 0, note: percent(stats.high_impact_codes || 0), icon: WarningAmberOutlinedIcon, tone: "warning" },
+    { label: tx("Automatic Codes"), value: stats.auto_codes || 0, note: tx("recorded from machines"), icon: SensorsOutlinedIcon, tone: "info" },
+    { label: tx("Categories"), value: stats.category_count, note: tx("active categories"), icon: CategoryOutlinedIcon, tone: "accent" },
+    { label: tx("Inactive Codes"), value: stats.inactive_codes || 0, note: percent(stats.inactive_codes || 0), icon: BlockOutlinedIcon, tone: "danger" },
   ];
 
   return (
@@ -474,10 +494,11 @@ export default function ReasonCodeMaster() {
         <PageBreadcrumb pageTitle={tx("Reason Code Master")} />
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr auto" }, gap: 1.5, alignItems: "center", mb: 1.5 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={800}>{tx("Reason Code Master")}</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>{tx("Reason Code Master")}</Typography>
             <Typography variant="body2" color="text.secondary">{tx("Manage all reason codes used across the system (Downtime, NG, Scrap, Maintenance, Setup, etc.)")}</Typography>
           </Box>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}>
+            <SettingsMenu items={[{ key: "categories", label: tx("Manage Categories"), onClick: () => setDialog({ type: "manageCategories" }) }]} />
             <Button disabled={!canEdit} startIcon={<AddIcon />} onClick={() => setDialog({ type: "reasonCode" })} sx={btn("primary")}>{tx("Add New Reason Code")}</Button>
           </Stack>
         </Box>
@@ -486,145 +507,130 @@ export default function ReasonCodeMaster() {
           {kpis.map((k) => { const Icon = k.icon; return <KpiCard key={k.label} label={k.label} value={k.value} note={k.note} icon={<Icon />} tone={k.tone} />; })}
         </KpiCardGroup>
 
-        <Paper elevation={0} sx={{ ...cardSx, my: 1.5, p: 1 }}>
-          <Stack direction={{ xs: "column", lg: "row" }} spacing={1} flexWrap="wrap">
-            <TextField size="small" placeholder={tx("Search by reason code or name...")} value={keyword} onChange={(e) => setKeyword(e.target.value)} sx={{ minWidth: 230 }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }} />
-            <FormControl size="small" sx={{ minWidth: 150 }}>
+        <Paper variant="outlined" sx={{ my: 1.5, p: 1.5, borderRadius: 2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,1.6fr) repeat(4,minmax(140px,1fr)) auto" }, gap: 1 }}>
+            <TextField size="small" placeholder={tx("Search by reason code or name...")} value={keyword} onChange={(e) => setKeyword(e.target.value)}
+              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+            <FormControl size="small">
               <InputLabel>{tx("Category")}</InputLabel>
               <Select label={tx("Category")} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                 <MenuItem value="all">{tx("All Categories")}</MenuItem>
                 {categories.map((c) => <MenuItem key={c.id} value={c.id}>{c.category_name}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small">
               <InputLabel>{tx("Code Type")}</InputLabel>
               <Select label={tx("Code Type")} value={codeTypeFilter} onChange={(e) => setCodeTypeFilter(e.target.value)}>
                 <MenuItem value="all">{tx("All Code Types")}</MenuItem>
                 {CODE_TYPES.map((t) => <MenuItem key={t} value={t}>{codeTypeText(t)}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 170 }}>
+            <FormControl size="small">
               <InputLabel>{tx("Applicable Module")}</InputLabel>
               <Select label={tx("Applicable Module")} value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
                 <MenuItem value="all">{tx("All Modules")}</MenuItem>
                 {MODULES.map((m) => <MenuItem key={m} value={m}>{moduleText(m)}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
+            <FormControl size="small">
               <InputLabel>{tx("Status")}</InputLabel>
               <Select label={tx("Status")} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <MenuItem value="all">{tx("All Status")}</MenuItem>
-                {STATUSES.map((s) => <MenuItem key={s} value={s}>{statusText(s)}</MenuItem>)}
+                {STATUSES.map((st) => <MenuItem key={st} value={st}>{statusText(st)}</MenuItem>)}
               </Select>
             </FormControl>
-            <Button onClick={() => { setKeyword(""); setCategoryFilter("all"); setCodeTypeFilter("all"); setModuleFilter("all"); setStatusFilter("all"); }} sx={btn("cancel")}>{tx("Clear")}</Button>
-          </Stack>
+            <Button startIcon={<FilterListIcon />} onClick={() => { setKeyword(""); setCategoryFilter("all"); setCodeTypeFilter("all"); setModuleFilter("all"); setStatusFilter("all"); }}
+              sx={btn("cancel", { minHeight: 29, whiteSpace: "nowrap" })}>{tx("Clear")}</Button>
+          </Box>
         </Paper>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "260px minmax(0,1fr) 340px" }, gap: 1.5 }}>
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column" }}>
+        <Box ref={panelsRef} sx={masterGridSx}>
+          <Paper elevation={0} sx={{ ...cardSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
             <Head icon={<CategoryOutlinedIcon color="primary" fontSize="small" />} title={tx("Reason Categories")} />
-            <List disablePadding sx={{ flex: 1, overflow: "auto" }}>
-              <ListItemButton selected={categoryFilter === "all"} onClick={() => setCategoryFilter("all")}>
-                <ListItemText primary={tx("All Categories")} secondary={rows.length} />
-              </ListItemButton>
-              {categories.map((c) => (
-                <ListItemButton key={c.id} selected={Number(categoryFilter) === Number(c.id)} onClick={() => setCategoryFilter(c.id)}>
-                  <ListItemText primary={c.category_name} secondary={c.reason_code_count} />
-                </ListItemButton>
-              ))}
+            <List disablePadding sx={{ flex: 1, overflow: "auto", p: 0.75 }}>
+              {[{ id: "all", category_name: tx("All Categories"), reason_code_count: rows.length }, ...categories].map((c) => {
+                const selected = c.id === "all" ? categoryFilter === "all" : Number(categoryFilter) === Number(c.id);
+                return (
+                  <ListItemButton key={c.id} selected={selected} onClick={() => setCategoryFilter(c.id)} sx={{ borderRadius: 1, py: 0.75, mb: 0.25 }}>
+                    <ListItemText primary={c.category_name} slotProps={{ primary: { noWrap: true, sx: { fontSize: 11.5, fontWeight: selected ? 800 : 600 } } }} />
+                    <CountBadge value={c.reason_code_count ?? 0} />
+                  </ListItemButton>
+                );
+              })}
             </List>
-            <Divider />
-            <Button disabled={!canEdit} size="small" sx={{ m: 1 }} startIcon={<SettingsOutlinedIcon fontSize="small" />} onClick={() => setDialog({ type: "manageCategories" })}>
-              {tx("Manage Categories")}
-            </Button>
           </Paper>
 
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <Paper elevation={0} sx={{ ...cardSx, height: panelHeight, display: "flex", flexDirection: "column", minWidth: 0 }}>
             <Head icon={<LabelOutlinedIcon color="primary" fontSize="small" />} title={`${tx("Reason Code List")} (${filtered.length})`} />
             <Box sx={{ p: 0.75, flex: 1, minHeight: 0 }}>
               <AgGridTable rowData={filtered} columnDefs={cols} loading={loading} pagination paginationPageSize={20} onRowClicked={(e) => setSelectedId(e.data.id)} getRowId={(p) => String(p.data.id)} height="100%" />
             </Box>
           </Paper>
 
-          <Paper elevation={0} sx={{ ...cardSx, height: 600, display: "flex", flexDirection: "column" }}>
+          <Paper elevation={0} sx={{ ...cardSx, height: panelHeight, display: "flex", flexDirection: "column" }}>
             <Head icon={<VisibilityOutlinedIcon color="primary" fontSize="small" />} title={tx("Reason Code Detail")} />
             {detail ? (
               <>
-                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-                  <Stack direction="row" spacing={0.7} alignItems="center">
-                    <Typography fontWeight={800}>{detail.reason_code}</Typography>
+                <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: STATUS_COLORS[detail.status] || "#005BAB" }}>
+                      <LabelOutlinedIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 0.25 }}>
+                      <Typography noWrap title={detail.reason_name} sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{detail.reason_name}</Typography>
+                      <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{detail.reason_code}</Typography>
+                    </Box>
                     <StatusChip value={detail.status} />
-                  </Stack>
-                  <Typography noWrap variant="body2" color="text.secondary">{detail.reason_name}</Typography>
+                  </Box>
                 </Box>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ minHeight: 36, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 36, p: 0, fontSize: 10, fontWeight: 700 } }}>
-                  <Tab label={tx("General")} /><Tab label={tx("Usage Tab")} /><Tab label={tx("History")} />
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ minHeight: 27, borderTop: 1, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 27, py: 0, fontSize: 11, fontWeight: 700, textTransform: "none" } }}>
+                  <Tab label={tx("Information")} /><Tab label={tx("History")} />
                 </Tabs>
-                <Box sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
+                <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: "auto" }}>
                   {tab === 0 && (
-                    <Stack spacing={0.85}>
-                      {[
-                        [tx("Reason Code"), detail.reason_code], [tx("Reason Name"), detail.reason_name],
-                        [tx("Category"), detail.category_name], [tx("Code Type"), codeTypeText(detail.code_type)],
-                        [tx("Sort Order"), detail.sort_order],
-                      ].map(([label, value]) => (
-                        <Box key={label} sx={{ display: "grid", gridTemplateColumns: "45% 55%", gap: 1 }}>
-                          <Typography variant="caption" color="text.secondary">{label}</Typography>
-                          <Typography variant="caption" fontWeight={700}>{value ?? EMPTY}</Typography>
-                        </Box>
-                      ))}
+                    <Stack spacing={1.5}>
+                      <DetailSection title={tx("General")}>
+                        <DetailRow label={tx("Category")}>{detail.category_name || EMPTY}</DetailRow>
+                        <DetailRow label={tx("Code Type")}>{codeTypeText(detail.code_type)}</DetailRow>
+                        <DetailRow label={tx("Applicable Module")}>{moduleText(detail.applicable_module)}</DetailRow>
+                        <DetailRow label={tx("Impact Level")}>{impactLevelText(detail.impact_level)}</DetailRow>
+                        <DetailRow label={tx("Sort Order")}>{detail.sort_order ?? EMPTY}</DetailRow>
+                        <DetailRow label={tx("Description")} last>{detail.description || EMPTY}</DetailRow>
+                      </DetailSection>
+                      <DetailSection title={tx("Record")}>
+                        <DetailRow label={tx("Created by")}>{person(detail.created_by_name, detail.created_by_code)}</DetailRow>
+                        <DetailRow label={tx("Created at")}>{timeDateText(detail.created_at)}</DetailRow>
+                        <DetailRow label={tx("Updated by")}>{detail.updated_by ? person(detail.updated_by_name, detail.updated_by_code) : EMPTY}</DetailRow>
+                        <DetailRow label={tx("Updated at")} last>{timeDateText(detail.updated_at)}</DetailRow>
+                      </DetailSection>
                     </Stack>
                   )}
                   {tab === 1 && (
-                    <Stack spacing={0.85}>
-                      {[
-                        [tx("Applicable Module"), moduleText(detail.applicable_module)], [tx("Impact Level"), impactLevelText(detail.impact_level)],
-                        [tx("Description"), detail.description], [tx("Submitted By"), detail.submitted_by], [tx("Submitted At"), detail.submitted_at],
-                        [tx("Approved By"), detail.approved_by], [tx("Approved At"), detail.approved_at],
-                      ].map(([label, value]) => (
-                        <Box key={label} sx={{ display: "grid", gridTemplateColumns: "45% 55%", gap: 1 }}>
-                          <Typography variant="caption" color="text.secondary">{label}</Typography>
-                          <Typography variant="caption" fontWeight={700}>{value || EMPTY}</Typography>
+                    <Stack spacing={1}>
+                      {auditLog.length ? auditLog.map((a) => (
+                        <Box key={a.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25, py: 0.9 }}>
+                          <Typography variant="caption" sx={{ display: "block" }}>
+                            <b>{tx(AUDIT_LABELS[a.action] || a.action)}:</b> {person(a.actor_name, a.actor_code || a.actor)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {timeDateText(a.acted_at)}{a.remark ? ` · ${a.remark}` : ""}
+                          </Typography>
                         </Box>
-                      ))}
-                    </Stack>
-                  )}
-                  {tab === 2 && (
-                    <Stack divider={<Divider />}>
-                      {auditLog.map((a) => (
-                        <Box key={a.id} py={0.6}>
-                          <Typography variant="caption" fontWeight={700} display="block">{a.action} — {a.from_status || EMPTY} → {a.to_status || EMPTY}</Typography>
-                          <Typography variant="caption" color="text.secondary" display="block">{a.actor} · {a.acted_at}{a.remark ? ` · ${a.remark}` : ""}</Typography>
-                        </Box>
-                      ))}
+                      )) : <Typography variant="caption" color="text.secondary">{EMPTY}</Typography>}
                     </Stack>
                   )}
                 </Box>
                 <Divider />
                 <Stack direction="row" sx={{ flexWrap: "wrap", justifyContent: "center", gap: 1.2, p: 1.5 }}>
-                  {detail.status === "DRAFT" && (
-                    <>
-                      <Tooltip title={tx("Edit")}><span><IconButton disabled={!canEdit} onClick={() => setDialog({ type: "reasonCode", item: detail })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-                      <Tooltip title={tx("Submit for Approval")}><span><IconButton disabled={!canEdit || saving} color="primary" onClick={submitForApproval} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><SendOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-                    </>
-                  )}
-                  {detail.status === "PENDING_APPROVAL" && (
-                    <>
-                      <Tooltip title={tx("Approve")}><span><IconButton disabled={!canEdit || saving} color="success" onClick={approve} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ThumbUpOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-                      <Tooltip title={tx("Reject")}><span><IconButton disabled={!canEdit || saving} color="error" onClick={() => setDialog({ type: "reject" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ThumbDownOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
-                    </>
-                  )}
-                  {(detail.status === "ACTIVE" || detail.status === "INACTIVE") && (
-                    <Tooltip title={tx("Toggle Active / Inactive")}><span><IconButton disabled={!canEdit || saving} color={detail.status === "ACTIVE" ? "success" : "default"} onClick={toggleStatus} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{detail.status === "ACTIVE" ? <PlayCircleOutlineIcon fontSize="small" /> : <PauseCircleOutlineIcon fontSize="small" />}</IconButton></span></Tooltip>
-                  )}
+                  <ActionIcon title={tx("Edit")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit} onClick={() => setDialog({ type: "reasonCode", item: detail })} />
+                  <ActionIcon title={tx(detail.status === "ACTIVE" ? "Deactivate" : "Activate")} color={detail.status === "ACTIVE" ? "warning" : "success"}
+                    icon={detail.status === "ACTIVE" ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />} disabled={!canEdit || saving} onClick={toggleStatus} />
                   <Tooltip title={tx("Copy")}><span><IconButton disabled={!canEdit} onClick={() => setDialog({ type: "copyReasonCode" })} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><ContentCopyOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
                   <Tooltip title={tx("Delete")}><span><IconButton disabled={!canEdit || saving} color="error" onClick={deleteCode} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
                 </Stack>
               </>
             ) : (
-              <Box flex={1} display="grid" sx={{ placeItems: "center" }}><Typography color="text.secondary">{tx("Select a reason code to view details.")}</Typography></Box>
+              <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}><Typography color="text.secondary">{tx("Select a reason code to view details.")}</Typography></Box>
             )}
           </Paper>
         </Box>
@@ -634,9 +640,6 @@ export default function ReasonCodeMaster() {
         )}
         {dialog?.type === "copyReasonCode" && (
           <CopyReasonCodeDialog saving={saving} onClose={() => setDialog(null)} onConfirm={copyCode} />
-        )}
-        {dialog?.type === "reject" && (
-          <RejectDialog saving={saving} onClose={() => setDialog(null)} onConfirm={reject} />
         )}
         {dialog?.type === "manageCategories" && (
           <CategoryManagerDialog categories={categories} actor={actor} canEdit={canEdit} onClose={() => setDialog(null)}
@@ -650,3 +653,15 @@ export default function ReasonCodeMaster() {
     </MuiThemeProvider>
   );
 }
+
+// ---------------- //
+
+// ---------------- //
+
+// Helper functions // 
+
+// ---------------- //
+
+// ---------------- //
+
+// ---------------- //

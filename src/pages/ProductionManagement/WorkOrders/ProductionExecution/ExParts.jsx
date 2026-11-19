@@ -2,7 +2,7 @@ import { resolveImageUrl } from "../../../../components/common/ImageUploadField"
 import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 import {
-  Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, LinearProgress, MenuItem, Select,
+  Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, LinearProgress, MenuItem, Select,
   Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -13,7 +13,7 @@ import PrecisionManufacturingOutlinedIcon from "@mui/icons-material/PrecisionMan
 import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 
-import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num } from "../../ProductionPlanning/ui";
+import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num, person } from "../../ProductionPlanning/ui";
 import { WO_STATUS_COLORS } from "../woStatus";
 import { PriorityPill, WoStatusPill } from "../WorkOrderManagement/WoParts";
 import { label, tx } from "./exLocales";
@@ -29,11 +29,11 @@ const MOLD_COLORS = { IN_PRODUCTION: "#12B76A", AVAILABLE: "#2E90FA", IN_MAINTEN
 
 function Gauge({ value, color, dark }) {
   return (
-    <Box sx={{ width: 110, mx: "auto" }}>
-      <Chart type="radialBar" height={130} series={[Math.min(Math.max(value || 0, 0), 100)]} options={{
+    <Box sx={{ width: 64, flexShrink: 0 }}>
+      <Chart type="radialBar" height={74} series={[Math.min(Math.max(value || 0, 0), 100)]} options={{
         chart: { background: "transparent", sparkline: { enabled: true } }, colors: [color],
         plotOptions: { radialBar: { hollow: { size: "58%" }, track: { background: dark ? "#263244" : "#EAECF0" },
-          dataLabels: { name: { show: false }, value: { offsetY: 6, fontSize: "18px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033", formatter: (v) => `${num(v, 0)}%` } } } },
+          dataLabels: { name: { show: false }, value: { offsetY: 4, fontSize: "11.5px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033", formatter: (v) => `${num(v, 0)}%` } } } },
       }} />
     </Box>
   );
@@ -41,31 +41,31 @@ function Gauge({ value, color, dark }) {
 
 function Thumb({ image, icon: Icon, color, onClick }) {
   return (
-    <Box onClick={onClick} sx={{ height: 96, borderRadius: 2, display: "grid", placeItems: "center", border: 1, borderColor: "divider", cursor: onClick ? "pointer" : "default", overflow: "hidden",
+    <Box onClick={onClick} sx={{ height: { xs: 62, lg: "clamp(44px, calc(var(--app-vh, 100vh) - 856px), 64px)" }, borderRadius: 1.5, display: "grid", placeItems: "center", border: 1, borderColor: "divider", cursor: onClick ? "pointer" : "default", overflow: "hidden",
       background: image ? "transparent" : `radial-gradient(circle at 30% 25%, ${color}33, ${color}0D 60%, transparent 75%)` }}>
-      {image ? <Box component="img" src={resolveImageUrl(image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Icon sx={{ fontSize: 56, color }} />}
+      {image ? <Box component="img" src={resolveImageUrl(image)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Icon sx={{ fontSize: 32, color }} />}
     </Box>
   );
 }
 
 const Row = ({ k, v, color }) => [
-  <Typography key={`${k}-k`} variant="caption" color="text.secondary" noWrap>{k}</Typography>,
-  <Typography key={`${k}-v`} variant="caption" fontWeight={700} noWrap sx={{ color }} component="div">{v ?? EMPTY}</Typography>,
+  <Typography key={`${k}-k`} variant="caption" color="text.secondary" noWrap sx={{ lineHeight: 1.5 }}>{k}</Typography>,
+  <Typography key={`${k}-v`} variant="caption" fontWeight={700} noWrap sx={{ color, lineHeight: 1.5 }} component="div">{v ?? EMPTY}</Typography>,
 ];
 
-export function SelectedPanel({ wo, dark, onMachine, onMold, onOrder, onWorkOrder }) {
+export function SelectedPanel({ wo, dark, onMachine, onMold, onOrder, onWorkOrder, sx }) {
   const m = wo.metrics || {};
   const lifeLeft = wo.design_shot ? Math.max(Number(wo.design_shot) - Number(wo.current_shot || 0), 0) : null;
-  const sec = (t) => <Typography variant="overline" sx={{ fontWeight: 800, color: "text.secondary", lineHeight: 1.8, display: "block" }}>{t}</Typography>;
+  const sec = (t) => <Typography variant="overline" sx={{ fontWeight: 800, color: "text.secondary", lineHeight: 1.5, display: "block" }}>{t}</Typography>;
   return (
-    <Stack spacing={1.25}>
+    <Stack spacing={0.6} sx={sx}>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1 }}>
         {[[tx("Product"), wo.product_name, wo.product_image, ViewInArOutlinedIcon, "#1570EF", null],
           [tx("Machine"), `${wo.machine_code || EMPTY}${wo.machine_model ? ` · ${wo.machine_model}` : ""}`, wo.machine_image, PrecisionManufacturingOutlinedIcon, "#0BA5EC", wo.machine_id ? onMachine : null],
           [tx("Mold"), `${wo.mold_code || EMPTY} · ${wo.mold_cavity ?? wo.cavity} cav`, wo.mold_image, GridViewOutlinedIcon, "#7A5AF8", wo.mold_id ? onMold : null]].map(([title, sub, img, Icon, color, onClick]) => (
           <Box key={title} sx={{ minWidth: 0 }}>
-            <Typography variant="overline" sx={{ fontWeight: 800, color: "text.secondary", lineHeight: 1.6 }}>{title}</Typography>
-            <Typography variant="caption" fontWeight={700} noWrap sx={{ display: "block", mb: 0.5 }}>{sub}</Typography>
+            <Typography variant="overline" sx={{ fontWeight: 800, color: "text.secondary", lineHeight: 1.5 }}>{title}</Typography>
+            <Typography variant="caption" fontWeight={700} noWrap title={sub} sx={{ display: "block", mb: 0.4 }}>{sub}</Typography>
             <Thumb image={img} icon={Icon} color={color} onClick={onClick} />
           </Box>
         ))}
@@ -73,52 +73,50 @@ export function SelectedPanel({ wo, dark, onMachine, onMold, onOrder, onWorkOrde
       <Box>
         <Stack direction="row" sx={{ justifyContent: "space-between" }}><Typography variant="caption" color="text.secondary">{tx("Progress")}</Typography>
           <Typography variant="caption" fontWeight={800}>{num(wo.good_qty)} / {num(wo.planned_qty)} · {num(wo.progress_pct, 1)}%</Typography></Stack>
-        <LinearProgress variant="determinate" value={Math.min(wo.progress_pct || 0, 100)} sx={{ height: 7, borderRadius: 4, "& .MuiLinearProgress-bar": { bgcolor: WO_STATUS_COLORS[wo.status] } }} />
+        <LinearProgress variant="determinate" value={Math.min(wo.progress_pct || 0, 100)} sx={{ height: 6, borderRadius: 3, "& .MuiLinearProgress-bar": { bgcolor: WO_STATUS_COLORS[wo.status] } }} />
       </Box>
       {sec(tx("Production Information"))}
-      <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr auto 1fr", columnGap: 1.5, rowGap: 0.4 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "auto minmax(0,1fr) auto minmax(0,1fr)", columnGap: 1.25, rowGap: 0, "& .MuiTypography-root": { lineHeight: 1.5 } }}>
         <Typography variant="caption" color="text.secondary">{tx("Production Order No.")}</Typography>
         <Typography variant="caption" fontWeight={700} noWrap sx={{ color: "#1570EF", cursor: wo.order_no ? "pointer" : "default" }} onClick={wo.order_no ? onOrder : undefined}>{wo.order_no || EMPTY}</Typography>
         {Row({ k: tx("Area"), v: wo.area_name })}
         {Row({ k: tx("Customer"), v: wo.customer_short_name || wo.customer_name })}
         {Row({ k: tx("Shift"), v: wo.shift_code })}
         {Row({ k: tx("Planned Qty"), v: `${num(wo.planned_qty)} pcs` })}
-        {Row({ k: tx("Leader"), v: wo.leader_code })}
+        {Row({ k: tx("Leader"), v: wo.leader_code ? person(wo.leader_code_name, wo.leader_code) : null })}
         {Row({ k: tx("Good (PCS)"), v: `${num(wo.good_qty)} pcs`, color: "#12B76A" })}
-        {Row({ k: tx("Operator"), v: wo.operator_code })}
+        {Row({ k: tx("Operator"), v: wo.operator_code ? person(wo.operator_code_name, wo.operator_code) : null })}
         {Row({ k: tx("Reject (PCS)"), v: `${num(wo.reject_qty)} pcs`, color: "#F04438" })}
         <Typography variant="caption" color="text.secondary">{tx("Priority")}</Typography><Box><PriorityPill value={wo.priority} /></Box>
         {Row({ k: tx("Remaining"), v: `${num(wo.remaining_qty)} pcs` })}
         {Row({ k: tx("Status since"), v: ddmmhhmm(wo.status === "ON_HOLD" ? wo.held_at : wo.started_at) })}
         {Row({ k: tx("Start Time"), v: ddmmhhmm(wo.started_at || wo.planned_start) })}
-        {Row({ k: tx("Hold reason"), v: wo.status === "ON_HOLD" ? wo.hold_reason : null })}
         {Row({ k: tx("Due Time"), v: ddmmhhmm(wo.due_date) })}
-        <Typography variant="caption" color="text.secondary">WO</Typography>
-        <Typography variant="caption" fontWeight={700} sx={{ color: "#1570EF", cursor: "pointer" }} onClick={onWorkOrder}>{wo.wo_no}</Typography>
+        {wo.status === "ON_HOLD" ? Row({ k: tx("Hold reason"), v: wo.hold_reason }) : null}
       </Box>
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
-        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, px: 1, py: 0.5 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="caption" fontWeight={800}>{tx("Machine Status")}</Typography>
-            <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: MACHINE_COLORS[wo.machine_status] || "#667085", display: "inline-flex", alignItems: "center", gap: 0.5 }}><CircleIcon sx={{ fontSize: 8 }} />{wo.machine_status || EMPTY}</Box>
+            <Box component="span" sx={{ fontSize: 10, fontWeight: 700, color: MACHINE_COLORS[wo.machine_status] || "#667085", display: "inline-flex", alignItems: "center", gap: 0.5 }}><CircleIcon sx={{ fontSize: 8 }} />{wo.machine_status || EMPTY}</Box>
           </Stack>
-          <Gauge value={m.availability_pct} color="#12B76A" dark={dark} />
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 0.3 }}>
+          <Stack direction="row" sx={{ alignItems: "center", gap: 0.75 }}><Gauge value={m.availability_pct} color="#12B76A" dark={dark} />
+          <Box sx={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "1fr auto", columnGap: 0.5, rowGap: 0.2 }}>
             {Row({ k: tx("Run Time"), v: hms(m.run_seconds) })}{Row({ k: tx("Stop Time"), v: hms(m.stop_seconds) })}
             {Row({ k: tx("Cycle Time (Avg)"), v: m.avg_cycle_sec ? `${num(m.avg_cycle_sec, 1)} s / ${num(wo.cycle_time_sec, 1)} s` : null })}
             {Row({ k: "OEE", v: m.oee_pct != null ? `${num(m.oee_pct, 1)}%` : null })}
-          </Box>
+          </Box></Stack>
         </Box>
-        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1 }}>
+        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, px: 1, py: 0.5 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="caption" fontWeight={800}>{tx("Mold Status")}</Typography>
-            <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: MOLD_COLORS[wo.mold_status] || "#667085", display: "inline-flex", alignItems: "center", gap: 0.5 }}><CircleIcon sx={{ fontSize: 8 }} />{wo.mold_status || EMPTY}</Box>
+            <Box component="span" sx={{ fontSize: 10, fontWeight: 700, color: MOLD_COLORS[wo.mold_status] || "#667085", display: "inline-flex", alignItems: "center", gap: 0.5 }}><CircleIcon sx={{ fontSize: 8 }} />{wo.mold_status || EMPTY}</Box>
           </Stack>
-          <Gauge value={wo.mold_usage_pct} color={wo.mold_usage_pct >= 90 ? "#F04438" : "#7A5AF8"} dark={dark} />
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", rowGap: 0.3 }}>
+          <Stack direction="row" sx={{ alignItems: "center", gap: 0.75 }}><Gauge value={wo.mold_usage_pct} color={wo.mold_usage_pct >= 90 ? "#F04438" : "#7A5AF8"} dark={dark} />
+          <Box sx={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "1fr auto", columnGap: 0.5, rowGap: 0.2 }}>
             {Row({ k: tx("Shot Counter"), v: num(wo.current_shot) })}{Row({ k: tx("Life (Max)"), v: num(wo.design_shot) })}
             {Row({ k: tx("Life remaining"), v: lifeLeft != null ? num(lifeLeft) : null })}{Row({ k: tx("Shots"), v: num(m.shots) })}
-          </Box>
+          </Box></Stack>
         </Box>
       </Box>
     </Stack>
@@ -131,7 +129,7 @@ export function SelectedPanel({ wo, dark, onMachine, onMold, onOrder, onWorkOrde
 
 const TITLES = { start: "Start Production", output: "Report Output", reject: "Reject", adjust: "Qty Adjustment", hold: "Hold", end: "End Production" };
 
-export function ExecDialog({ mode, wo, reasons, saving, actor, onClose, onSubmit }) {
+export function ExecDialog({ mode, wo, reasons, employees = [], saving, actor, onClose, onSubmit }) {
   const [f, setF] = useState({ operator: wo.operator_code || actor || "", leader: wo.leader_code || "", good: "", reject: "", reason_code_id: "", reason: "",
     from_good: false, qty: "", good_total: wo.good_qty, reject_total: wo.reject_qty, remark: "" });
   const ch = (k) => (e) => setF((o) => ({ ...o, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
@@ -180,12 +178,22 @@ export function ExecDialog({ mode, wo, reasons, saving, actor, onClose, onSubmit
           {mode === "start" ? (
             <>
               <Typography variant="subtitle2" fontWeight={800}>{tx("Readiness check")}</Typography>
-              {(wo.readiness || []).length ? wo.readiness.map((r) => <Stack key={r} direction="row" spacing={0.75} sx={{ alignItems: "center" }}><HighlightOffIcon sx={{ fontSize: 18, color: "#F04438" }} /><Typography variant="body2">{readinessText(r)}</Typography></Stack>)
-                : <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}><CheckCircleIcon sx={{ fontSize: 18, color: "#12B76A" }} /><Typography variant="body2">{tx("Ready to start.")}</Typography></Stack>}
+              {(wo.readiness || []).length ? wo.readiness.map((r) => <Stack key={r} direction="row" spacing={0.75} sx={{ alignItems: "center" }}><HighlightOffIcon sx={{ fontSize: 14.5, color: "#F04438" }} /><Typography variant="body2">{readinessText(r)}</Typography></Stack>)
+                : <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}><CheckCircleIcon sx={{ fontSize: 14.5, color: "#12B76A" }} /><Typography variant="body2">{tx("Ready to start.")}</Typography></Stack>}
               <Typography variant="caption" color="text.secondary">{tx("First-off approval is checked when the Quality module is live.")}</Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                <TextField size="small" required label={tx("Operator code")} value={f.operator} onChange={ch("operator")} sx={{ flex: 1 }} />
-                <TextField size="small" label={tx("Leader code")} value={f.leader} onChange={ch("leader")} sx={{ flex: 1 }} />
+                {[["operator", tx("Operator"), true], ["leader", tx("Leader"), false]].map(([key, text, required]) => (
+                  <Autocomplete key={key} size="small" sx={{ flex: 1 }} options={employees}
+                    value={employees.find((e) => e.employee_code === f[key]) || (f[key] ? { employee_code: f[key], full_name: null } : null)}
+                    getOptionLabel={(e) => person(e.full_name, e.employee_code)}
+                    filterOptions={(opts, { inputValue }) => { const q = inputValue.trim().toLowerCase(); return (q ? opts.filter((e) => `${e.full_name} ${e.employee_code}`.toLowerCase().includes(q)) : opts).slice(0, 50); }}
+                    renderOption={({ key: k, ...props }, e) => (
+                      <Box component="li" key={k} {...props}><Typography variant="caption"><b>{e.full_name}</b> - {e.employee_code}{e.position ? <Box component="span" sx={{ color: "text.secondary" }}> · {e.position}</Box> : null}</Typography></Box>
+                    )}
+                    isOptionEqualToValue={(a, b) => a.employee_code === b.employee_code}
+                    onChange={(_, e) => setF((o) => ({ ...o, [key]: e?.employee_code || "" }))}
+                    renderInput={(p) => <TextField {...p} required={required} label={text} placeholder={tx("Type a name or code")} />} />
+                ))}
               </Stack>
             </>
           ) : null}
@@ -231,8 +239,7 @@ export function ExecDialog({ mode, wo, reasons, saving, actor, onClose, onSubmit
           ) : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={submit} disabled={saving || !valid} sx={btn(danger ? "delete" : "primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -246,7 +253,7 @@ export function ExecDialog({ mode, wo, reasons, saving, actor, onClose, onSubmit
 export function ProductionLogDialog({ api, request, woId, notify, onClose }) {
   const [wo, setWo] = useState(null);
   useEffect(() => { request(`${api}/${woId}`).then(setWo).catch((e) => notify("error", e.message)); }, [api, woId, request, notify]);
-  const sx = { "& td, & th": { fontSize: 12, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const sx = { "& td, & th": { fontSize: 11, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<FactCheckOutlinedIcon />} title={`${tx("Production Log")}${wo ? ` · ${wo.wo_no}` : ""}`} subtitle={wo ? `${wo.product_name} · ${wo.machine_code || EMPTY}` : ""} onClose={onClose} />
@@ -264,7 +271,7 @@ export function ProductionLogDialog({ api, request, woId, notify, onClose }) {
                     <TableCell align="right" sx={{ color: l.reject_qty ? "#F04438" : undefined }}>{l.reject_qty ? num(l.reject_qty) : EMPTY}</TableCell>
                     <TableCell align="right">{l.cycle_time_sec ? num(l.cycle_time_sec, 1) : EMPTY}</TableCell>
                     <TableCell sx={{ maxWidth: 280, whiteSpace: "normal" }}>{l.reason_name ? `${l.reason_code} ${l.reason_name}${l.reason_text ? ` · ${l.reason_text}` : ""}` : l.reason_text || EMPTY}</TableCell>
-                    <TableCell>{l.actor}</TableCell>
+                    <TableCell>{person(l.actor_name, l.actor)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -272,7 +279,6 @@ export function ProductionLogDialog({ api, request, woId, notify, onClose }) {
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }
@@ -293,7 +299,7 @@ export function printProductionReport(wo) {
     th,td{border:1px solid #D0D5DD;padding:6px 8px;font-size:12px;text-align:left}th{background:#F2F4F7;width:32%}</style></head><body>
     <h1>${esc(tx("Print Production Report"))} · ${esc(wo.wo_no)}</h1><div>${esc(label("woStatus", wo.status))} · ${esc(new Date().toLocaleString())}</div><table>
     ${row(tx("Production Order No."), wo.order_no)}${row(tx("Product"), `${wo.product_code} — ${wo.product_name}`)}${row(tx("Machine"), wo.machine_code)}${row(tx("Mold"), wo.mold_code)}
-    ${row(tx("Shift"), wo.shift_code)}${row(tx("Operator"), wo.operator_code)}${row(tx("Leader"), wo.leader_code)}
+    ${row(tx("Shift"), wo.shift_code)}${row(tx("Operator"), wo.operator_code ? person(wo.operator_code_name, wo.operator_code) : null)}${row(tx("Leader"), wo.leader_code ? person(wo.leader_code_name, wo.leader_code) : null)}
     ${row(tx("Planned Qty"), num(wo.planned_qty))}${row(tx("Good qty"), num(wo.good_qty))}${row(tx("Reject qty"), num(wo.reject_qty))}
     ${row(tx("Start Time"), ddmmhhmm(wo.started_at))}${row(tx("Run Time"), hms(m.run_seconds))}${row(tx("Stop Time"), hms(m.stop_seconds))}
     ${row("Yield", m.yield_pct != null ? `${m.yield_pct}%` : null)}${row("OEE", m.oee_pct != null ? `${m.oee_pct}%` : null)}

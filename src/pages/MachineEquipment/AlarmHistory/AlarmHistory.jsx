@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import Chart from "react-apexcharts";
 import {
   Alert, Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, LinearProgress, MenuItem, Paper,
-  Select, Snackbar, Stack, Switch, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography,
+  Select, Snackbar, Stack, Switch, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, ThemeProvider as MuiThemeProvider, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from "@mui/material";
 import AddAlertOutlinedIcon from "@mui/icons-material/AddAlertOutlined";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
@@ -33,7 +33,8 @@ import { KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
 import AgGridTable from "../../../components/tables/BasicTables/BasicTableOne";
 import { API_CONFIG } from "../../../config/config";
 import { useTheme as useAppTheme } from "../../../context/ThemeContext";
-import { KpiTile, downloadCsv, useRequest } from "../../MaterialManagement/materialUi";
+import { KpiTile, colShares, downloadExcel, fitColumns, useRequest } from "../../MaterialManagement/materialUi";
+import { EmptyBody, FilterToggle, QuickCard, cellsSx, chartBase, fillSx, fitGridSx, fitPageSx, panelSx, toolBtnSx } from "../../shared/onePage";
 import { DialogHeader, Dot, EMPTY, Head, btn, cardSx, ddmmhhmm, dialogPaperSx, num, pageTheme } from "../../ProductionManagement/ProductionPlanning/ui";
 import { SystemStatusBar } from "../../ProductionManagement/WorkOrders/WorkOrderManagement/WoParts";
 import { label, localeTag, setActiveLanguage, tx } from "../machineLocales";
@@ -69,7 +70,6 @@ function BulkDialog({ mode, count, onClose, onSubmit, saving }) {
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={() => onSubmit({ note, hours: Number(hours) })} disabled={saving || (mode === "shelve" && !note.trim())} sx={btn("primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -103,6 +103,8 @@ export default function AlarmHistory() {
   const [sound, setSound] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [dialog, setDialog] = useState(null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [distView, setDistView] = useState("type");
   const [msg, setMsg] = useState({ open: false, type: "success", text: "" });
   const notify = useCallback((type, text) => setMsg({ open: true, type, text }), []);
   const lastCritical = useRef(null);
@@ -136,7 +138,7 @@ export default function AlarmHistory() {
 
   const rows = useMemo(() => (data?.alarms || []).filter((a) => tab === "ALL" || (tab === "SHELVED" ? a.status === "SHELVED" : a.priority === tab && a.status !== "SHELVED")), [data, tab]);
   const toggle = (id) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const columns = useMemo(() => [
+  const columns = useMemo(() => fitColumns([
     { headerName: "", colId: "sel", width: 46, minWidth: 46, pinned: "left", sortable: false, resizable: false,
       cellRenderer: (p) => <Checkbox size="small" checked={selected.has(p.data.id)} onClick={(e) => { e.stopPropagation(); toggle(p.data.id); }} sx={{ p: 0.25 }} /> },
     { headerName: tx("Time"), field: "raised_at", width: 110, valueFormatter: (p) => ddmmhhmm(p.value) },
@@ -148,13 +150,11 @@ export default function AlarmHistory() {
     { headerName: tx("Duration"), field: "duration_min", width: 95, type: "numericColumn", valueFormatter: (p) => minText(p.value) },
     { headerName: tx("Source"), field: "source", width: 90, valueFormatter: (p) => label("source", p.value) },
     { headerName: tx("Status"), field: "status", width: 126, pinned: "right", cellRenderer: (p) => <Pill group="alarmStatus" value={p.value} colors={ALARM_STATUS_COLORS} /> },
-  ].map((c) => ({ filter: false, ...c })), [language, selected]); // eslint-disable-line react-hooks/exhaustive-deps
+  ]), [language, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!lookups || !data) return <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   const k = data.kpis;
   const axisColor = dark ? "#A7B0C0" : "#667085";
-  const grid = { borderColor: dark ? "#263244" : "#EEF2F6" };
-  const toolBtnSx = { ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" };
   const pct = (n) => (k.active ? `${num((n / k.active) * 100, 1)}%` : "0%");
   const bulk = async (mode, { note, hours }) => {
     setSaving(true);
@@ -165,60 +165,69 @@ export default function AlarmHistory() {
     } catch (e) { notify("error", e.message); } finally { setSaving(false); }
   };
   const openBulk = (mode) => (selected.size ? setDialog({ type: "bulk", mode }) : notify("info", tx("Select alarms in the list first.")));
-  const exportCsv = () => downloadCsv(`alarms-${period.from}_${period.to}.csv`,
+  const exportCsv = () => downloadExcel(`alarms-${period.from}_${period.to}.csv`,
     ["Alarm ID", "Time", "Priority", "Equipment", "Area", "Message", "Duration min", "Status", "Source", "Value", "Limit", "Acknowledged by", "Closed by"],
     rows.map((a) => [a.alarm_no, a.raised_at, a.priority, a.equipment_code, a.area_name, a.message, a.duration_min, a.status, a.source, a.value, a.limit_value, a.acknowledged_by, a.closed_by]));
   const heatMax = Math.max(...data.heatmap.flatMap((h) => h.cells), 1);
   const maxArea = Math.max(...data.by_area.map(([, n]) => n), 1);
   const typeTotal = data.by_type.reduce((a, [, n]) => a + n, 0);
-  const priKeys = PRIORITIES.filter((p) => data.by_priority[p]);
-  const tableSx = { "& td, & th": { fontSize: 11.5, px: 0.75, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const tableSx = { "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } };
   const tabs = [["ALL", tx("All"), data.alarms.length], ...PRIORITIES.map((p) => [p, label("priority", p), data.alarms.filter((a) => a.priority === p && a.status !== "SHELVED").length]),
     ["SHELVED", tx("Shelved"), data.alarms.filter((a) => a.status === "SHELVED").length]];
 
+  const base = chartBase(dark, axisColor);
+  const activeFilters = Object.values(filter).filter(Boolean).length;
+  const toggleSx = { px: 1, py: 0.1, textTransform: "none", fontWeight: 700, fontSize: 10.5 };
+  const quick = [
+    [`${tx("Acknowledge")}${selected.size ? ` (${selected.size})` : ""}`, CheckCircleOutlineIcon, "#12B76A", () => openBulk("acknowledge"), !canEdit],
+    [`${tx("Shelve")}${selected.size ? ` (${selected.size})` : ""}`, ArchiveOutlinedIcon, "#7A5AF8", () => openBulk("shelve"), !canEdit],
+    [tx("Report Alarm"), AddAlertOutlinedIcon, "#F04438", () => setDialog({ type: "report" }), !canEdit],
+    [tx("Request Maintenance"), BuildOutlinedIcon, "#1570EF", () => navigate("/maintenance-management/requests?create=1")],
+    [tx("Downtime Management"), ReportProblemOutlinedIcon, "#F79009", () => navigate("/machine-equipment/downtime-management")],
+    [tx("Machine Monitoring"), NotificationsActiveOutlinedIcon, "#0E9384", () => navigate("/machine-equipment/machine-monitoring")],
+  ];
+
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      <Box sx={fitPageSx}>
         <PageMeta title={`${tx("Alarm History")} | VCC Plastics`} description={tx("Alarm lifecycle: raise, acknowledge, shelve, clear and close")} />
         <PageBreadcrumb pageTitle={tx("Alarm History")} />
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 0.75, position: "relative", overflow: "hidden" }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
             <Button startIcon={<NotificationsActiveOutlinedIcon />} onClick={() => setView("active")} sx={view === "active" ? btn("primary") : toolBtnSx}>{tx("Active View")}</Button>
             <Button startIcon={<HistoryOutlinedIcon />} onClick={() => setView("history")} sx={view === "history" ? btn("primary") : toolBtnSx}>{tx("History View")}</Button>
-            <Button startIcon={<CheckCircleOutlineIcon />} disabled={!canEdit} onClick={() => openBulk("acknowledge")} sx={toolBtnSx}>{tx("Acknowledge")}{selected.size ? ` (${selected.size})` : ""}</Button>
-            <Button startIcon={<ArchiveOutlinedIcon />} disabled={!canEdit} onClick={() => openBulk("shelve")} sx={toolBtnSx}>{tx("Shelve")}{selected.size ? ` (${selected.size})` : ""}</Button>
-            <Button startIcon={<AddAlertOutlinedIcon />} disabled={!canEdit} onClick={() => setDialog({ type: "report" })} sx={btn("delete")}>{tx("Report Alarm")}</Button>
+            <FilterToggle label={tx("Filter")} open={showFilter} count={activeFilters} onClick={() => setShowFilter((v) => !v)} />
+            {view === "history" ? (
+              <>
+                <TextField size="small" type="date" label={tx("Period from")} value={period.from} onChange={(e) => setPeriod((o) => ({ ...o, from: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 145 }} />
+                <TextField size="small" type="date" label={tx("Period to")} value={period.to} onChange={(e) => setPeriod((o) => ({ ...o, to: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 145 }} />
+              </>
+            ) : null}
             <Button startIcon={<FileDownloadOutlinedIcon />} disabled={!rows.length} onClick={exportCsv} sx={toolBtnSx}>{tx("Export")}</Button>
             <Button startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={toolBtnSx}>{tx("Print")}</Button>
             <Button startIcon={sound ? <VolumeUpOutlinedIcon /> : <VolumeOffOutlinedIcon />} onClick={() => { if (!sound) beep(); setSound((s) => !s); }} sx={toolBtnSx}>{tx(sound ? "Sound On" : "Sound Off")}</Button>
             <Box sx={{ flex: 1 }} />
-            <Stack sx={{ alignItems: "flex-end" }}>
-              <FormControlLabel sx={{ mr: 0 }} labelPlacement="start" control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
-                label={<Typography variant="caption" fontWeight={700} sx={{ mr: 1 }}>{tx("Auto Refresh")}</Typography>} />
-              <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
+            <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
+            <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
+              label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
+          </Stack>
+          {showFilter ? (
+            <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>
+              {[["equipment_id", tx("Equipment"), lookups.equipment.map((e) => [e.id, e.equipment_code])], ["area_id", tx("Area"), lookups.areas.map((a) => [a.id, a.name])],
+                ["equipment_category", tx("Equipment type"), lookups.categories.map((c) => [c, c])]].map(([key, text, options]) => (
+                <FormControl key={key} size="small" sx={{ width: 170 }}><InputLabel>{text}</InputLabel>
+                  <Select label={text} value={filter[key]} onChange={(e) => setFilter((f) => ({ ...f, [key]: e.target.value }))}>
+                    <MenuItem value="">{tx("All")}</MenuItem>{options.map(([v, n]) => <MenuItem key={v} value={v}>{n}</MenuItem>)}
+                  </Select></FormControl>
+              ))}
+              <Button onClick={() => setFilter(EMPTY_FILTER)} disabled={!activeFilters} sx={toolBtnSx}>{tx("Clear")}</Button>
             </Stack>
-          </Stack>
-          <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 1 }}>
-            {[["equipment_id", tx("Equipment"), lookups.equipment.map((e) => [e.id, e.equipment_code])], ["area_id", tx("Area"), lookups.areas.map((a) => [a.id, a.name])],
-              ["equipment_category", tx("Equipment type"), lookups.categories.map((c) => [c, c])]].map(([key, text, options]) => (
-              <FormControl key={key} size="small" sx={{ minWidth: 150, flex: "1 1 150px" }}><InputLabel>{text}</InputLabel>
-                <Select label={text} value={filter[key]} onChange={(e) => setFilter((f) => ({ ...f, [key]: e.target.value }))}>
-                  <MenuItem value="">{tx("All")}</MenuItem>{options.map(([v, n]) => <MenuItem key={v} value={v}>{n}</MenuItem>)}
-                </Select></FormControl>
-            ))}
-            {view === "history" ? (
-              <>
-                <TextField size="small" type="date" label={tx("Period from")} value={period.from} onChange={(e) => setPeriod((o) => ({ ...o, from: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ width: 145 }} />
-                <TextField size="small" type="date" label={tx("Period to")} value={period.to} onChange={(e) => setPeriod((o) => ({ ...o, to: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ width: 145 }} />
-              </>
-            ) : null}
-            <Button onClick={() => setFilter(EMPTY_FILTER)} sx={btn("cancel")}>{tx("Clear")}</Button>
-          </Stack>
+          ) : null}
+          {loading ? <LinearProgress sx={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
 
-        <KpiCardGroup sx={{ mb: 1.5 }} columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(8, minmax(0,1fr))" }}>
+        <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(8, minmax(0,1fr))" }}>
           <KpiTile tone="danger" title={tx("Active Alarms")} value={num(k.active)} sub={k.active ? tx("Need attention") : ""} icon={NotificationsActiveOutlinedIcon} onClick={() => { setView("active"); setTab("ALL"); }} />
           <KpiTile tone="danger" title={tx("Critical")} value={`${num(k.critical)} (${pct(k.critical)})`} icon={ErrorOutlineIcon} onClick={() => { setView("active"); setTab("CRITICAL"); }} />
           <KpiTile tone="warning" title={tx("High")} value={`${num(k.high)} (${pct(k.high)})`} icon={ReportProblemOutlinedIcon} onClick={() => { setView("active"); setTab("HIGH"); }} />
@@ -230,119 +239,107 @@ export default function AlarmHistory() {
             sub={k.clearance_yesterday != null ? `${tx("vs yesterday")}: ${num(k.clearance_yesterday, 1)} ${tx("min")}` : ""} icon={TimerOutlinedIcon} />
         </KpiCardGroup>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1.9fr) minmax(0,1fr) minmax(0,1fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={{ ...cardSx, gridRow: { xl: "span 2" } }}>
-            <Head title={`${tx("Alarm List")} (${view === "active" ? tx("Active View") : tx("History View")})`} />
-            <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 38, px: 1, "& .MuiTab-root": { minHeight: 38, textTransform: "none", fontWeight: 700, fontSize: 13 } }}>
-              {tabs.map(([key, text, n]) => <Tab key={key} value={key} label={`${text} (${n})`} />)}
-            </Tabs>
-            <Box sx={{ p: 1 }}>
-              <AgGridTable rowData={rows} columnDefs={columns} height={560} rowHeight={34} getRowId={(r) => String(r.data.id)} onRowClicked={(e) => setDialog({ type: "alarm", id: e.data.id })}
+        <Box sx={{ ...fitGridSx, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0,1fr))", lg: "repeat(4, minmax(0,1fr))" }, gridTemplateRows: { lg: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)" } }}>
+          {/* priority split lives in the KPI tiles and the list tabs, so no separate priority donut */}
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "1 / 4" }, gridRow: { lg: "1 / 3" }, minHeight: { xs: 380, lg: 0 } }}>
+            <Head title={`${tx("Alarm List")} (${view === "active" ? tx("Active View") : tx("History View")})`} action={(
+              <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 26, "& .MuiTab-root": { minHeight: 26, py: 0, px: 1, minWidth: 0, textTransform: "none", fontWeight: 700, fontSize: 11 } }}>
+                {tabs.map(([key, text, n]) => <Tab key={key} value={key} label={`${text} (${n})`} />)}
+              </Tabs>
+            )} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1, pb: 1 }}>
+              <AgGridTable rowData={rows} columnDefs={columns} height="100%" rowHeight={29} getRowId={(r) => String(r.data.id)} onRowClicked={(e) => setDialog({ type: "alarm", id: e.data.id })}
                 getRowStyle={(r) => (r.data.priority === "CRITICAL" && r.data.status === "ACTIVE" ? { background: dark ? "rgba(240,68,56,.12)" : "#FEF3F2" } : null)} />
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Alarm Summary by Priority")} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1.5 }}>
-              <Chart type="donut" height={170} series={priKeys.length ? priKeys.map((p) => data.by_priority[p]) : [1]} options={{
-                chart: { background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' }, labels: priKeys.length ? priKeys.map((p) => label("priority", p)) : [tx("No data.")],
-                colors: priKeys.length ? priKeys.map((p) => PRIORITY_COLORS[p]) : ["#EAECF0"], legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] },
-                tooltip: { theme: dark ? "dark" : "light" }, plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: tx("Total"), color: axisColor, formatter: () => String(k.active) }, value: { fontSize: "18px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
-              }} />
-              <Stack spacing={0.5}>
-                {PRIORITIES.map((p) => <Stack key={p} direction="row" sx={{ justifyContent: "space-between" }}><Dot color={PRIORITY_COLORS[p]} text={label("priority", p)} /><Typography variant="caption" fontWeight={700}>{data.by_priority[p]} ({pct(data.by_priority[p])})</Typography></Stack>)}
-                <Stack direction="row" sx={{ justifyContent: "space-between" }}><Dot color="#98A2B3" text={tx("Shelved")} /><Typography variant="caption" fontWeight={700}>{k.shelved}</Typography></Stack>
-              </Stack>
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Alarm Trend (Last 24 Hours)")} />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="line" height={200} series={PRIORITIES.map((p) => ({ name: label("priority", p), data: data.trend24.map((h) => h[p]) }))} options={{
-                chart: { background: "transparent", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: PRIORITIES.map((p) => PRIORITY_COLORS[p]), stroke: { width: 2, curve: "smooth" },
-                xaxis: { categories: data.trend24.map((h) => h.hour), tickAmount: 6, labels: { rotate: 0, style: { colors: axisColor, fontSize: "10px" } } }, yaxis: { labels: { style: { colors: axisColor }, formatter: (v) => num(v, 0) } },
-                legend: { position: "bottom", labels: { colors: axisColor } }, grid, tooltip: { theme: dark ? "dark" : "light", shared: true } }} />
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Active Alarms by Area")} />
-            <Stack spacing={1} sx={{ px: 1.5, pb: 1.5 }}>
-              {data.by_area.length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : data.by_area.map(([a, n], i) => (
-                <Box key={a} sx={{ display: "grid", gridTemplateColumns: "110px 1fr 28px", gap: 1, alignItems: "center" }}>
-                  <Typography variant="caption" noWrap>{a}</Typography>
-                  <Box sx={{ height: 9, borderRadius: 1, bgcolor: "action.hover", overflow: "hidden" }}><Box sx={{ width: `${(n / maxArea) * 100}%`, height: "100%", bgcolor: ["#F04438", "#F79009", "#EAAA08", "#12B76A"][i % 4] }} /></Box>
-                  <Typography variant="caption" fontWeight={800} sx={{ textAlign: "right" }}>{n}</Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Alarm by Equipment Type")} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1.5 }}>
-              <Chart type="donut" height={160} series={typeTotal ? data.by_type.map(([, n]) => n) : [1]} options={{
-                chart: { background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' }, labels: typeTotal ? data.by_type.map(([t]) => t) : [tx("No data.")], colors: typeTotal ? TYPE_COLORS : ["#EAECF0"],
-                legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light" },
-                plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: tx("Total"), color: axisColor, formatter: () => String(typeTotal) }, value: { fontSize: "16px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
-              }} />
-              <Stack spacing={0.5}>{data.by_type.map(([t, n], i) => <Stack key={t} direction="row" sx={{ justifyContent: "space-between", gap: 1 }}><Box sx={{ minWidth: 0, overflow: "hidden" }}><Dot color={TYPE_COLORS[i % TYPE_COLORS.length]} text={t} /></Box><Typography variant="caption" fontWeight={700}>{n}</Typography></Stack>)}</Stack>
-            </Box>
-          </Paper>
-        </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "1.3fr 1fr 1fr 1fr" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Alarm Heatmap (by Time of Day)")} />
-            <Box sx={{ px: 1.5, pb: 1.5, overflowX: "auto" }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "90px repeat(12, minmax(20px, 1fr))", gap: 0.4, minWidth: 360 }}>
-                <Box />{Array.from({ length: 12 }, (_, i) => <Typography key={i} variant="caption" color="text.secondary" sx={{ textAlign: "center", fontSize: 10 }}>{String(i * 2).padStart(2, "0")}</Typography>)}
-                {data.heatmap.length === 0 ? <Typography variant="caption" color="text.secondary" sx={{ gridColumn: "1 / -1" }}>{tx("No data.")}</Typography> : data.heatmap.map((row) => [
-                  <Typography key={`${row.area}l`} variant="caption" color="text.secondary" noWrap sx={{ fontSize: 10.5 }}>{row.area}</Typography>,
-                  ...row.cells.map((c, i) => (
-                    <Tooltip key={`${row.area}${i}`} title={`${row.area} ${String(i * 2).padStart(2, "0")}:00 · ${c}`}>
-                      <Box sx={{ height: 20, borderRadius: 0.5, display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, color: c / heatMax > 0.5 ? "#fff" : "text.secondary",
-                        bgcolor: c ? `rgba(240,68,56,${0.15 + 0.85 * (c / heatMax)})` : "action.hover" }}>{c || ""}</Box>
-                    </Tooltip>
-                  )),
-                ])}
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "1" } }}>
+            <Head title={tx("Alarm Trend (Last 24 Hours)")} action={<Stack direction="row" spacing={1}>{PRIORITIES.map((p) => <Dot key={p} color={PRIORITY_COLORS[p]} text={label("priority", p)} />)}</Stack>} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1 }}>
+              <Chart type="line" height="100%" series={PRIORITIES.map((p) => ({ name: label("priority", p), data: data.trend24.map((h) => h[p]) }))} options={{
+                ...base, colors: PRIORITIES.map((p) => PRIORITY_COLORS[p]), stroke: { width: 2, curve: "smooth" },
+                xaxis: { ...base.xaxis, categories: data.trend24.map((h) => h.hour), tickAmount: 6 }, yaxis: { labels: { ...base.yaxis.labels, formatter: (v) => num(v, 0) } },
+                tooltip: { ...base.tooltip, shared: true } }} />
+            </Box>
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "2" } }}>
+            <Head title={distView === "area" ? tx("Active Alarms by Area") : tx("Alarm by Equipment Type")} action={(
+              <ToggleButtonGroup exclusive size="small" value={distView} onChange={(e, v) => v && setDistView(v)}>
+                <ToggleButton value="type" sx={toggleSx}>{tx("Equipment type")}</ToggleButton>
+                <ToggleButton value="area" sx={toggleSx}>{tx("Area")}</ToggleButton>
+              </ToggleButtonGroup>
+            )} />
+            {distView === "type" ? (typeTotal ? (
+              <Box sx={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1 }}>
+                <Chart type="donut" height={150} series={data.by_type.map(([, n]) => n)} options={{
+                  chart: { background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' }, labels: data.by_type.map(([t]) => t), colors: TYPE_COLORS,
+                  legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light" },
+                  plotOptions: { pie: { donut: { size: "70%", labels: { show: true, total: { show: true, label: tx("Total"), color: axisColor, formatter: () => String(typeTotal) }, value: { fontSize: "14px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
+                }} />
+                <Stack spacing={0.5}>{data.by_type.map(([t, n], i) => <Stack key={t} direction="row" sx={{ justifyContent: "space-between", gap: 1 }}><Box sx={{ minWidth: 0, overflow: "hidden" }}><Dot color={TYPE_COLORS[i % TYPE_COLORS.length]} text={t} /></Box><Typography variant="caption" fontWeight={700}>{n}</Typography></Stack>)}</Stack>
               </Box>
-            </Box>
+            ) : <EmptyBody text={tx("No data.")} />) : (data.by_area.length ? (
+              <Stack spacing={1} sx={{ flex: 1, minHeight: 0, overflow: "auto", justifyContent: "center", px: 1.5, pb: 1 }}>
+                {data.by_area.map(([a, n], i) => (
+                  <Box key={a} sx={{ display: "grid", gridTemplateColumns: "110px 1fr 28px", gap: 1, alignItems: "center" }}>
+                    <Typography variant="caption" noWrap title={a}>{a}</Typography>
+                    <Box sx={{ height: 9, borderRadius: 1, bgcolor: "action.hover", overflow: "hidden" }}><Box sx={{ width: `${(n / maxArea) * 100}%`, height: "100%", bgcolor: ["#F04438", "#F79009", "#EAAA08", "#12B76A"][i % 4] }} /></Box>
+                    <Typography variant="caption" fontWeight={800} sx={{ textAlign: "right" }}>{n}</Typography>
+                  </Box>
+                ))}
+              </Stack>
+            ) : <EmptyBody text={tx("No data.")} />)}
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "1" }, gridRow: { lg: "3" } }}>
+            <Head title={tx("Alarm Heatmap (by Time of Day)")} />
+            {data.heatmap.length ? (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "80px repeat(12, minmax(18px, 1fr))", gap: 0.4 }}>
+                  <Box />{Array.from({ length: 12 }, (_, i) => <Typography key={i} variant="caption" color="text.secondary" sx={{ textAlign: "center", fontSize: 10 }}>{String(i * 2).padStart(2, "0")}</Typography>)}
+                  {data.heatmap.map((row) => [
+                    <Typography key={`${row.area}l`} variant="caption" color="text.secondary" noWrap sx={{ fontSize: 10 }} title={row.area}>{row.area}</Typography>,
+                    ...row.cells.map((c, i) => (
+                      <Tooltip key={`${row.area}${i}`} title={`${row.area} ${String(i * 2).padStart(2, "0")}:00 · ${c}`}>
+                        <Box sx={{ height: 18, borderRadius: 0.5, display: "grid", placeItems: "center", fontSize: 10, fontWeight: 700, color: c / heatMax > 0.5 ? "#fff" : "text.secondary",
+                          bgcolor: c ? `rgba(240,68,56,${0.15 + 0.85 * (c / heatMax)})` : "action.hover" }}>{c || ""}</Box>
+                      </Tooltip>
+                    )),
+                  ])}
+                </Box>
+              </Box>
+            ) : <EmptyBody text={tx("No data.")} />}
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "2" }, gridRow: { lg: "3" } }}>
             <Head title={tx("Alarm Rate Trend (%)")} />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="line" height={200} series={[{ name: tx("Alarm Rate (%)"), data: data.rate_trend.map((d) => d.rate) }]} options={{
-                chart: { background: "transparent", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: ["#F04438"], stroke: { width: 2.5, curve: "straight" }, markers: { size: 4 },
-                xaxis: { categories: data.rate_trend.map((d) => `${d.date.slice(8, 10)}/${d.date.slice(5, 7)}`), labels: { style: { colors: axisColor, fontSize: "10px" } } },
-                yaxis: { min: 0, labels: { style: { colors: axisColor }, formatter: (v) => `${num(v, 1)}%` } }, grid, tooltip: { theme: dark ? "dark" : "light" } }} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1 }}>
+              <Chart type="line" height="100%" series={[{ name: tx("Alarm Rate (%)"), data: data.rate_trend.map((d) => d.rate) }]} options={{
+                ...base, colors: ["#F04438"], stroke: { width: 2, curve: "straight" }, markers: { size: 3 },
+                xaxis: { ...base.xaxis, categories: data.rate_trend.map((d) => `${d.date.slice(8, 10)}/${d.date.slice(5, 7)}`) },
+                yaxis: { min: 0, tickAmount: 4, labels: { ...base.yaxis.labels, formatter: (v) => `${num(v, 1)}%` } } }} />
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Top 5 Alarm Reasons")} />
-            <Box sx={{ px: 1, pb: 1 }}>
-              <Table size="small" sx={tableSx}>
-                <TableHead><TableRow><TableCell>{tx("Reason")}</TableCell><TableCell align="right">{tx("Count")}</TableCell><TableCell align="right">{tx("Rate")}</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {data.top_reasons.length === 0 ? <TableRow><TableCell colSpan={3}>{tx("No data.")}</TableCell></TableRow> : data.top_reasons.map(([r, n]) => (
-                    <TableRow key={r}><TableCell sx={{ maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis" }} title={r}>{r}</TableCell><TableCell align="right">{n}</TableCell>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "3" }, gridRow: { lg: "3" } }}>
+            <Head title={tx("Top 5 Alarm Reasons")} action={<Typography variant="caption" color="text.secondary">{tx("Total")}: {data.period_total}</Typography>} />
+            {data.top_reasons.length ? (
+              <Box sx={fillSx}>
+                <Table size="small" stickyHeader sx={{ ...tableSx, ...cellsSx, ...colShares(64, 18, 18) }}>
+                  <TableHead><TableRow><TableCell>{tx("Reason")}</TableCell><TableCell align="right">{tx("Count")}</TableCell><TableCell align="right">{tx("Rate")}</TableCell></TableRow></TableHead>
+                  <TableBody>{data.top_reasons.map(([r, n]) => (
+                    <TableRow key={r}><TableCell title={r}>{r}</TableCell><TableCell align="right">{n}</TableCell>
                       <TableCell align="right">{num((n / Math.max(data.period_total, 1)) * 100, 1)}%</TableCell></TableRow>
-                  ))}
-                  <TableRow><TableCell sx={{ fontWeight: 800 }}>{tx("Total")}</TableCell><TableCell align="right" sx={{ fontWeight: 800 }}>{data.period_total}</TableCell><TableCell align="right" sx={{ fontWeight: 800 }}>100%</TableCell></TableRow>
-                </TableBody>
-              </Table>
-            </Box>
+                  ))}</TableBody>
+                </Table>
+              </Box>
+            ) : <EmptyBody text={tx("No data.")} />}
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Quick Actions")} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 0.75, px: 1.5, pb: 1.5 }}>
-              {[[tx("Acknowledge"), CheckCircleOutlineIcon, "#12B76A", () => openBulk("acknowledge"), !canEdit], [tx("Shelve"), ArchiveOutlinedIcon, "#7A5AF8", () => openBulk("shelve"), !canEdit],
-                [tx("Report Alarm"), AddAlertOutlinedIcon, "#F04438", () => setDialog({ type: "report" }), !canEdit], [tx("Request Maintenance"), BuildOutlinedIcon, "#1570EF", () => navigate("/maintenance-management/requests?create=1"), false],
-                [tx("Downtime Management"), ReportProblemOutlinedIcon, "#F79009", () => navigate("/machine-equipment/downtime-management"), false],
-                [tx("Machine Monitoring"), NotificationsActiveOutlinedIcon, "#1570EF", () => navigate("/machine-equipment/machine-monitoring"), false]].map(([text, Icon, color, onClick, disabled]) => (
-                <Button key={text} disabled={disabled} onClick={onClick} sx={{ flexDirection: "column", gap: 0.5, py: 1.1, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none",
-                  fontSize: 11, fontWeight: 700, color: "text.primary", lineHeight: 1.2 }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
-              ))}
-            </Box>
-          </Paper>
+
+          <Box sx={{ gridColumn: { lg: "4" }, gridRow: { lg: "3" }, display: "flex", minHeight: 0, "& > *": { flex: 1 } }}>
+            <QuickCard title={tx("Quick Actions")} actions={quick} columns={3} />
+          </Box>
         </Box>
 
         <SystemStatusBar system={data.system} />

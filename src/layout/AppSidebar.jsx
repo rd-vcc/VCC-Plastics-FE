@@ -334,7 +334,7 @@ const AppSidebar = () => {
   const isActive = (path) => path === location.pathname;
   const showLabels = isExpanded || isHovered || isMobileOpen;
   const renderItems = (items, depth = 0, parentKey = "root") => (
-    <ul className={depth === 0 ? "flex flex-col gap-1.5" : "space-y-0.5"}>
+    <ul className={depth === 0 ? "flex flex-col gap-0.5" : "space-y-px"}>
       {items.map((item, index) => {
         const key = itemKey(parentKey, index, item.name);
         const hasChildren = Boolean(item.children?.length);
@@ -455,7 +455,7 @@ const AppSidebar = () => {
   );
   return (
     <aside
-      className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-800 bg-gray-900 px-4 text-gray-100 transition-all duration-300 ease-in-out lg:mt-0 ${
+      className={`fixed left-0 top-0 z-50 mt-16 flex h-[var(--app-vh,100vh)] flex-col border-r border-gray-800 bg-gray-900 px-4 text-gray-100 transition-all duration-300 ease-in-out lg:mt-0 ${
         isExpanded || isMobileOpen
           ? "w-[252px]"
           : isHovered
@@ -466,7 +466,7 @@ const AppSidebar = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`flex py-5 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}
+        className={`flex py-4 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}
       >
         <Link to="/">
           <img

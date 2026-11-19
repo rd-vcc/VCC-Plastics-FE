@@ -19,6 +19,7 @@ import { getAccessToken } from "../../../auth/auth";
 import { resolveImageUrl } from "../../../components/common/ImageUploadField";
 import { API_CONFIG } from "../../../config/config";
 import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num } from "../../ProductionManagement/ProductionPlanning/ui";
+import { who } from "../../shared/onePage";
 import { isVi, label, tx } from "./reportLocales";
 
 const BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
@@ -144,7 +145,7 @@ export function PreviewDialog({ report, request, actor, notify, dark, axisColor,
               </Box>
             ) : null}
             <Box sx={{ maxHeight: 420, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1.5 }}>
-              <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.45, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+              <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.45, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                 <TableHead><TableRow><TableCell>#</TableCell>{data.columns.map((c) => <TableCell key={c.key} align={["int", "num", "money", "pct"].includes(c.type) ? "right" : "left"}>{isVi() ? c.vi : c.en}</TableCell>)}</TableRow></TableHead>
                 <TableBody>{data.rows.map((r, i) => (
                   <TableRow key={i} hover><TableCell>{i + 1}</TableCell>
@@ -222,7 +223,7 @@ export function SchedulesDialog({ items, catalog, preset, request, actor, notify
           </Box>
         ) : <Button startIcon={<EventRepeatOutlinedIcon />} onClick={() => setForm(emptySchedule())} sx={{ ...btn("primary"), mb: 1.5 }}>{tx("New schedule")}</Button>}
         <Box sx={{ maxHeight: 420, overflow: "auto" }}>
-          <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+          <Table size="small" stickyHeader sx={{ "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
             <TableHead><TableRow><TableCell>{tx("Name")}</TableCell><TableCell>{tx("Report")}</TableCell><TableCell>{tx("Frequency")}</TableCell><TableCell>{tx("Data range")}</TableCell>
               <TableCell>{tx("Format")}</TableCell><TableCell>{tx("Next run")}</TableCell><TableCell>{tx("Last run")}</TableCell><TableCell>{tx("Status")}</TableCell><TableCell align="right">{tx("Actions")}</TableCell></TableRow></TableHead>
             <TableBody>{items.map((s) => (
@@ -241,7 +242,6 @@ export function SchedulesDialog({ items, catalog, preset, request, actor, notify
           </Table>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }
@@ -256,7 +256,7 @@ export function HistoryDialog({ request, notify, catalog, onClose, onOpen }) {
       <DialogContent sx={{ pt: "12px !important" }}>
         {!rows ? <LinearProgress /> : (
           <Box sx={{ maxHeight: 520, overflow: "auto" }}>
-            <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+            <Table size="small" stickyHeader sx={{ "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
               <TableHead><TableRow><TableCell>{tx("Time")}</TableCell><TableCell>{tx("Report")}</TableCell><TableCell>{tx("Action")}</TableCell><TableCell>{tx("Period")}</TableCell>
                 <TableCell align="right">{tx("Rows")}</TableCell><TableCell align="right">{tx("Duration")}</TableCell><TableCell>{tx("User")}</TableCell><TableCell>{tx("Status")}</TableCell><TableCell>{tx("File")}</TableCell></TableRow></TableHead>
               <TableBody>{rows.map((r) => {
@@ -267,7 +267,7 @@ export function HistoryDialog({ request, notify, catalog, onClose, onOpen }) {
                     <TableCell sx={{ fontWeight: 700, color: c ? "#1570EF" : undefined, cursor: c ? "pointer" : "default" }} onClick={() => c && onOpen(c)}>{nameOf(r)}</TableCell>
                     <TableCell>{label("action", r.action)}{r.output_format ? ` · ${r.output_format}` : ""}</TableCell>
                     <TableCell>{r.date_from ? `${dateText(r.date_from)} – ${dateText(r.date_to)}` : EMPTY}</TableCell>
-                    <TableCell align="right">{num(r.row_count)}</TableCell><TableCell align="right">{r.duration_ms} ms</TableCell><TableCell>{r.actor || EMPTY}</TableCell>
+                    <TableCell align="right">{num(r.row_count)}</TableCell><TableCell align="right">{r.duration_ms} ms</TableCell><TableCell>{who(r.actor)}</TableCell>
                     <TableCell sx={{ color: r.status === "SUCCESS" ? "#12B76A" : "#F04438", fontWeight: 700 }} title={r.message || ""}>{label("status", r.status)}</TableCell>
                     <TableCell>{r.file_url ? <Button size="small" startIcon={<DownloadOutlinedIcon />} onClick={() => window.open(resolveImageUrl(r.file_url), "_blank", "noopener")}>
                       {tx("Download")} ({num(r.file_size / 1024, 1)} KB)</Button> : EMPTY}</TableCell></TableRow>
@@ -307,7 +307,6 @@ export function CreateReportDialog({ catalog, request, actor, notify, onClose, o
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Back")}</Button>
         <Button onClick={save} disabled={busy || !f.name.trim() || !f.base_code} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>

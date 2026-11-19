@@ -5,13 +5,14 @@ import { useTranslation } from "react-i18next";
 import Chart from "react-apexcharts";
 import {
   Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, FormControl, FormControlLabel, InputLabel, LinearProgress, MenuItem, Paper,
-  Select, Snackbar, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, ThemeProvider as MuiThemeProvider, Tooltip, Typography,
+  Select, Snackbar, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, ThemeProvider as MuiThemeProvider, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from "@mui/material";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import BuildCircleOutlinedIcon from "@mui/icons-material/BuildCircleOutlined";
 import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import PercentOutlinedIcon from "@mui/icons-material/PercentOutlined";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
@@ -30,7 +31,8 @@ import { KpiCardGroup } from "../../../components/kpi/KpiCardSystem";
 import AgGridTable from "../../../components/tables/BasicTables/BasicTableOne";
 import { API_CONFIG } from "../../../config/config";
 import { useTheme as useAppTheme } from "../../../context/ThemeContext";
-import { KpiTile, downloadCsv, useRequest } from "../../MaterialManagement/materialUi";
+import { KpiTile, colShares, downloadExcel, fitColumns, useRequest } from "../../MaterialManagement/materialUi";
+import { EmptyBody, FilterToggle, QuickCard, cellsSx, chartBase, fillSx, fitGridSx, fitPageSx, panelSx, toolBtnSx, who } from "../../shared/onePage";
 import { DialogHeader, Dot, EMPTY, Head, btn, cardSx, ddmmhhmm, dialogPaperSx, num, pageTheme } from "../../ProductionManagement/ProductionPlanning/ui";
 import { SystemStatusBar } from "../../ProductionManagement/WorkOrders/WorkOrderManagement/WoParts";
 import { label, localeTag, setActiveLanguage, tx } from "../machineLocales";
@@ -61,8 +63,6 @@ function DetailDialog({ item, canEdit, onClose, onAction, navigate }) {
         <Button disabled={!canEdit || item.status === "CANCELLED"} onClick={() => onAction("edit")} sx={btn("edit")}>{tx("Edit")}</Button>
         <Button disabled={!canEdit || item.status === "CANCELLED" || (item.source === "MES" && item.status === "OPEN")} onClick={() => onAction("cancel")} sx={btn("delete")}>{tx("Cancel Downtime")}</Button>
         <Button onClick={() => navigate(`/machine-equipment/machine-detail?machine=${item.equipment_id}`)} sx={btn("cancel")}>{tx("Machine Detail")}</Button>
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -89,6 +89,8 @@ export default function DowntimeManagement() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [dialog, setDialog] = useState(params.get("report") ? { type: "report", preset: { equipment_id: Number(params.get("machine")) || "" } } : null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [reasonView, setReasonView] = useState("chart");
   const [msg, setMsg] = useState({ open: false, type: "success", text: "" });
   const notify = useCallback((type, text) => setMsg({ open: true, type, text }), []);
 
@@ -108,7 +110,7 @@ export default function DowntimeManagement() {
     return () => clearInterval(t);
   }, [autoRefresh, load, dialog]);
 
-  const columns = useMemo(() => [
+  const columns = useMemo(() => fitColumns([
     { headerName: tx("No."), field: "downtime_no", width: 140, pinned: "left", cellStyle: { fontWeight: 700 } },
     { headerName: tx("Start Time"), field: "started_at", width: 110, valueFormatter: (p) => ddmmhhmm(p.value) },
     { headerName: tx("End Time"), field: "ended_at", width: 110, valueFormatter: (p) => (p.value ? ddmmhhmm(p.value) : EMPTY) },
@@ -118,22 +120,20 @@ export default function DowntimeManagement() {
     { headerName: tx("Reason Code"), field: "reason_code", width: 105 },
     { headerName: tx("Duration (min)"), field: "duration_min", width: 110, type: "numericColumn", valueFormatter: (p) => num(p.value, 0) },
     { headerName: tx("Category"), field: "category", width: 120, cellRenderer: (p) => <Pill group="dtCategory" value={p.value} colors={CATEGORY_COLORS} width={100} /> },
-    { headerName: tx("Reported By"), field: "reporter", width: 100 },
+    { headerName: tx("Reported By"), field: "reporter", width: 150, valueFormatter: (p) => who(p.value) },
     { headerName: tx("Source"), field: "source", width: 90, valueFormatter: (p) => label("source", p.value) },
     { headerName: tx("Status"), field: "status", width: 124, pinned: "right", cellRenderer: (p) => <Pill group="dtStatus" value={p.value} colors={DT_STATUS_COLORS} /> },
-  ].map((c) => ({ filter: false, ...c })), [language]); // eslint-disable-line react-hooks/exhaustive-deps
+  ]), [language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!lookups || !data) return <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   const k = data.kpis;
   const p = k.prev;
   const axisColor = dark ? "#A7B0C0" : "#667085";
-  const grid = { borderColor: dark ? "#263244" : "#EEF2F6" };
-  const toolBtnSx = { ...btn("cancel"), bgcolor: "background.paper", border: 1, borderColor: "divider" };
   const cats = data.trend.map((t) => `${t.date.slice(8, 10)}/${t.date.slice(5, 7)}`);
   const reasonLabel = (r) => (r === "UNSPECIFIED" ? tx("Unspecified") : r);
   const maxMachine = Math.max(...data.by_machine.map((m) => m.minutes), 1);
   const heatMax = Math.max(...data.heatmap.flatMap((h) => h.cells), 1);
-  const exportCsv = () => downloadCsv(`downtime-${period.from}_${period.to}.csv`,
+  const exportCsv = () => downloadExcel(`downtime-${period.from}_${period.to}.csv`,
     ["No", "Start", "End", "Machine", "Work Order", "Reason code", "Reason", "Duration min", "Category", "Status", "Source", "Reporter", "Root cause", "Action"],
     data.events.map((d) => [d.downtime_no, d.started_at, d.ended_at, d.equipment_code, d.wo_no, d.reason_code, reasonName(d), d.duration_min, d.category, d.status, d.source, d.reporter, d.root_cause, d.action_taken]));
   const openDetail = (item) => setDialog({ type: "detail", item });
@@ -141,46 +141,58 @@ export default function DowntimeManagement() {
   const donut = (labels, series, colors, total) => ({
     chart: { background: "transparent", fontFamily: '"Bai Jamjuree", sans-serif' }, labels, colors, legend: { show: false }, dataLabels: { enabled: false },
     stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] }, tooltip: { theme: dark ? "dark" : "light", y: { formatter: (v) => `${num(v, 0)} ${tx("min")}` } },
-    plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: `${tx("Total")} (${tx("min")})`, color: axisColor, formatter: () => num(total, 0) }, value: { fontSize: "18px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
+    plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: `${tx("Total")} (${tx("min")})`, color: axisColor, formatter: () => num(total, 0) }, value: { fontSize: "14.5px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033" } } } } },
   });
-  const tableSx = { "& td, & th": { fontSize: 11.5, px: 0.75, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800 } };
+  const tableSx = { "& .MuiTableCell-root": { fontSize: 11, px: 0.75, py: 0.5, whiteSpace: "nowrap" }, "& th": { color: "text.secondary", fontWeight: 800, bgcolor: "background.paper" } };
+
+  const base = chartBase(dark, axisColor);
+  const activeFilters = Object.values(filter).filter(Boolean).length;
+  const toggleSx = { px: 1, py: 0.1, textTransform: "none", fontWeight: 700, fontSize: 10.5 };
+  const quick = [
+    [tx("Report Downtime"), ReportProblemOutlinedIcon, "#F04438", () => setDialog({ type: "report", preset: { equipment_id: filter.equipment_id } }), !canEdit],
+    [tx("Request Maintenance"), BuildOutlinedIcon, "#1570EF", () => navigate("/maintenance-management/requests?create=1")],
+    [tx("Maintenance History"), HistoryOutlinedIcon, "#7A5AF8", () => navigate("/maintenance-management/history")],
+    [tx("Machine Monitoring"), ViewListOutlinedIcon, "#0E9384", () => navigate("/machine-equipment/machine-monitoring")],
+    [tx("Equipment Monitoring"), PrecisionManufacturingOutlinedIcon, "#12B76A", () => navigate("/machine-equipment/equipment-monitoring")],
+    [tx("Alarm History"), NotificationsOutlinedIcon, "#F79009", () => navigate("/machine-equipment/alarm-history")],
+  ];
 
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      <Box sx={fitPageSx}>
         <PageMeta title={`${tx("Downtime Management")} | VCC Plastics`} description={tx("Record, classify and analyse machine stops")} />
         <PageBreadcrumb pageTitle={tx("Downtime Management")} />
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        <Paper elevation={0} sx={{ ...cardSx, p: 0.75, position: "relative", overflow: "hidden" }}>
           <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center" }}>
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
-            <Button startIcon={<ReportProblemOutlinedIcon />} disabled={!canEdit} onClick={() => setDialog({ type: "report", preset: { equipment_id: filter.equipment_id } })} sx={btn("delete")}>{tx("Report Downtime")}</Button>
-            <TextField size="small" type="date" label={tx("Period from")} value={period.from} onChange={(e) => setPeriod((o) => ({ ...o, from: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ width: 145 }} />
-            <TextField size="small" type="date" label={tx("Period to")} value={period.to} onChange={(e) => setPeriod((o) => ({ ...o, to: e.target.value }))} InputLabelProps={{ shrink: true }} sx={{ width: 145 }} />
+            <TextField size="small" type="date" label={tx("Period from")} value={period.from} onChange={(e) => setPeriod((o) => ({ ...o, from: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 145 }} />
+            <TextField size="small" type="date" label={tx("Period to")} value={period.to} onChange={(e) => setPeriod((o) => ({ ...o, to: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 145 }} />
+            <FilterToggle label={tx("Filter")} open={showFilter} count={activeFilters} onClick={() => setShowFilter((v) => !v)} />
             <Button startIcon={<FileDownloadOutlinedIcon />} disabled={!data.events.length} onClick={exportCsv} sx={toolBtnSx}>{tx("Export")}</Button>
             <Button startIcon={<PrintOutlinedIcon />} onClick={() => window.print()} sx={toolBtnSx}>{tx("Print")}</Button>
             <Box sx={{ flex: 1 }} />
-            <Stack sx={{ alignItems: "flex-end" }}>
-              <FormControlLabel sx={{ mr: 0 }} labelPlacement="start" control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
-                label={<Typography variant="caption" fontWeight={700} sx={{ mr: 1 }}>{tx("Auto Refresh")}</Typography>} />
-              <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
+            <Typography variant="caption" color="text.secondary">{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}</Typography>
+            <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />}
+              label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
+          </Stack>
+          {showFilter ? (
+            <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 0.75 }}>
+              {[["equipment_id", tx("Machine"), lookups.equipment.map((e) => [e.id, e.equipment_code])], ["area_id", tx("Area"), lookups.areas.map((a) => [a.id, a.name])],
+                ["reason_code_id", tx("Reason Code"), lookups.reasons.map((r) => [r.id, `${r.reason_code} — ${r.reason_name}`])],
+                ["category", tx("Category"), ["PLANNED", "UNPLANNED"].map((c) => [c, label("dtCategory", c)])], ["shift_id", tx("Shift"), lookups.shifts.map((s) => [s.id, s.shift_name])],
+                ["status", tx("Status"), ["OPEN", "CLOSED"].map((s) => [s, label("dtStatus", s)])]].map(([key, text, options]) => (
+                <FormControl key={key} size="small" sx={{ width: 160 }}><InputLabel>{text}</InputLabel>
+                  <Select label={text} value={filter[key]} onChange={(e) => setFilter((f) => ({ ...f, [key]: e.target.value }))}>
+                    <MenuItem value="">{tx("All")}</MenuItem>{options.map(([v, n]) => <MenuItem key={v} value={v}>{n}</MenuItem>)}
+                  </Select></FormControl>
+              ))}
+              <Button onClick={() => setFilter(EMPTY_FILTER)} disabled={!activeFilters} sx={toolBtnSx}>{tx("Clear")}</Button>
             </Stack>
-          </Stack>
-          <Stack direction="row" sx={{ gap: 1, flexWrap: "wrap", alignItems: "center", mt: 1 }}>
-            {[["equipment_id", tx("Machine"), lookups.equipment.map((e) => [e.id, e.equipment_code])], ["area_id", tx("Area"), lookups.areas.map((a) => [a.id, a.name])],
-              ["reason_code_id", tx("Reason Code"), lookups.reasons.map((r) => [r.id, `${r.reason_code} — ${r.reason_name}`])],
-              ["category", tx("Category"), ["PLANNED", "UNPLANNED"].map((c) => [c, label("dtCategory", c)])], ["shift_id", tx("Shift"), lookups.shifts.map((s) => [s.id, s.shift_name])],
-              ["status", tx("Status"), ["OPEN", "CLOSED"].map((s) => [s, label("dtStatus", s)])]].map(([key, text, options]) => (
-              <FormControl key={key} size="small" sx={{ minWidth: 140, flex: "1 1 140px" }}><InputLabel>{text}</InputLabel>
-                <Select label={text} value={filter[key]} onChange={(e) => setFilter((f) => ({ ...f, [key]: e.target.value }))}>
-                  <MenuItem value="">{tx("All")}</MenuItem>{options.map(([v, n]) => <MenuItem key={v} value={v}>{n}</MenuItem>)}
-                </Select></FormControl>
-            ))}
-            <Button onClick={() => setFilter(EMPTY_FILTER)} sx={btn("cancel")}>{tx("Clear")}</Button>
-          </Stack>
+          ) : null}
+          {loading ? <LinearProgress sx={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 2 }} /> : null}
         </Paper>
-        {loading ? <LinearProgress sx={{ mb: 1 }} /> : null}
 
-        <KpiCardGroup sx={{ mb: 1.5 }} columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(7, minmax(0,1fr))" }}>
+        <KpiCardGroup columns={{ xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(7, minmax(0,1fr))" }}>
           <KpiTile tone="danger" title={tx("Total Downtime")} value={num(k.total_min, 0)} unit={tx("min")} sub={delta(k.total_min, p.total_min, 0, ` ${tx("min")}`)} icon={AccessTimeOutlinedIcon} />
           <KpiTile tone="success" title={tx("Downtime Events")} value={num(k.events)} sub={`${k.open} ${tx("open")} · ${delta(k.events, p.events)}`} icon={PlayCircleOutlineIcon} onClick={() => setFilter((f) => ({ ...f, status: "OPEN" }))} />
           <KpiTile tone="info" title={tx("Affected Machines")} value={num(k.machines)} unit={tx("machines")} sub={delta(k.machines, p.machines)} icon={PrecisionManufacturingOutlinedIcon} />
@@ -190,60 +202,50 @@ export default function DowntimeManagement() {
           <KpiTile tone="danger" title={tx("Unplanned Downtime")} value={num(k.unplanned_min, 0)} unit={tx("min")} sub={delta(k.unplanned_min, p.unplanned_min, 0, ` ${tx("min")}`)} icon={ReportProblemOutlinedIcon} onClick={() => setFilter((f) => ({ ...f, category: "UNPLANNED" }))} />
         </KpiCardGroup>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime Overview")} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.2fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1.5 }}>
-              <Chart type="donut" height={200} series={data.by_reason.length ? data.by_reason.map((r) => r[1]) : [1]}
-                options={donut(data.by_reason.length ? data.by_reason.map((r) => reasonLabel(r[0])) : [tx("No data.")], null, data.by_reason.length ? data.by_reason.map((_, i) => REASON_COLORS[i % REASON_COLORS.length]) : ["#EAECF0"], k.total_min)} />
-              <Stack spacing={0.5}>{data.by_reason.slice(0, 7).map(([r, m, pct], i) => (
-                <Stack key={r} direction="row" sx={{ justifyContent: "space-between", gap: 1 }}><Box sx={{ minWidth: 0, overflow: "hidden" }}><Dot color={REASON_COLORS[i % REASON_COLORS.length]} text={reasonLabel(r)} /></Box>
-                  <Typography variant="caption" fontWeight={700} sx={{ whiteSpace: "nowrap" }}>{num(m, 0)} {tx("min")} ({num(pct, 1)}%)</Typography></Stack>
-              ))}</Stack>
+        {/* recent events = top of the event list, rate trend = line of the downtime trend, category split = the planned / unplanned tiles: not repeated */}
+        <Box sx={{ ...fitGridSx, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0,1fr))", lg: "repeat(4, minmax(0,1fr))" }, gridTemplateRows: { lg: "minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)" } }}>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "1 / 4" }, gridRow: { lg: "1 / 3" }, minHeight: { xs: 380, lg: 0 } }}>
+            <Head title={tx("Downtime Event List")} action={<Typography variant="caption" color="text.secondary">{data.events.length}</Typography>} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1, pb: 1 }}>
+              <AgGridTable rowData={data.events} columnDefs={columns} height="100%" rowHeight={27} getRowId={(r) => String(r.data.id)} onRowClicked={(e) => openDetail(e.data)} />
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime Trend")} />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="line" height={240} series={[{ name: tx("Downtime (min)"), type: "column", data: data.trend.map((t) => t.minutes) }, { name: tx("Downtime Rate (%)"), type: "line", data: data.trend.map((t) => t.rate) }]}
-                options={{ chart: { background: "transparent", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: ["#1570EF", "#F04438"], stroke: { width: [0, 2.5], curve: "smooth" },
-                  markers: { size: [0, 4] }, plotOptions: { bar: { columnWidth: "50%", borderRadius: 2 } }, xaxis: { categories: cats, labels: { style: { colors: axisColor, fontSize: "10px" } } },
-                  yaxis: [{ labels: { style: { colors: axisColor }, formatter: (v) => num(v, 0) } }, { opposite: true, labels: { style: { colors: axisColor }, formatter: (v) => `${num(v, 1)}%` } }],
-                  legend: { position: "bottom", labels: { colors: axisColor } }, grid, tooltip: { theme: dark ? "dark" : "light", shared: true } }} />
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Recent Downtime Events")} />
-            <Box sx={{ px: 1, pb: 1 }}>
-              <Table size="small" sx={tableSx}>
-                <TableHead><TableRow><TableCell>{tx("Time")}</TableCell><TableCell>{tx("Machine")}</TableCell><TableCell>{tx("Reason")}</TableCell><TableCell align="right">{tx("Duration")}</TableCell><TableCell>{tx("Status")}</TableCell></TableRow></TableHead>
-                <TableBody>
-                  {data.recent.length === 0 ? <TableRow><TableCell colSpan={5}>{tx("No data.")}</TableCell></TableRow> : data.recent.map((d) => (
-                    <TableRow key={d.id} hover sx={{ cursor: "pointer" }} onClick={() => openDetail(d)}>
-                      <TableCell>{ddmmhhmm(d.started_at)}</TableCell><TableCell sx={{ fontWeight: 700, color: "#1570EF" }}>{d.equipment_code}</TableCell>
-                      <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{reasonName(d)}</TableCell><TableCell align="right">{minText(d.total_min)}</TableCell>
-                      <TableCell><Pill group="dtStatus" value={d.status} colors={DT_STATUS_COLORS} width={84} /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </Paper>
-        </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "minmax(0,2fr) minmax(0,1fr)" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime Event List")} subtitle={`(${data.events.length})`} />
-            <Box sx={{ px: 1, pb: 1 }}>
-              <AgGridTable rowData={data.events} columnDefs={columns} height={380} rowHeight={32} getRowId={(r) => String(r.data.id)} onRowClicked={(e) => openDetail(e.data)} />
-            </Box>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "1" } }}>
+            <Head title={reasonView === "table" ? tx("Top Downtime Reasons") : tx("Downtime Overview")} action={(
+              <ToggleButtonGroup exclusive size="small" value={reasonView} onChange={(e, v) => v && setReasonView(v)}>
+                <ToggleButton value="chart" sx={toggleSx}>{tx("Chart")}</ToggleButton>
+                <ToggleButton value="table" sx={toggleSx}>{tx("Table")}</ToggleButton>
+              </ToggleButtonGroup>
+            )} />
+            {!data.by_reason.length ? <EmptyBody text={tx("No data.")} /> : reasonView === "chart" ? (
+              <Box sx={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.2fr)", alignItems: "center", gap: 1, px: 1.5, pb: 1 }}>
+                <Chart type="donut" height={150} series={data.by_reason.map((r) => r[1])}
+                  options={donut(data.by_reason.map((r) => reasonLabel(r[0])), null, data.by_reason.map((_, i) => REASON_COLORS[i % REASON_COLORS.length]), k.total_min)} />
+                <Stack spacing={0.5}>{data.by_reason.slice(0, 6).map(([r, m, pct], i) => (
+                  <Stack key={r} direction="row" sx={{ justifyContent: "space-between", gap: 1 }}><Box sx={{ minWidth: 0, overflow: "hidden" }}><Dot color={REASON_COLORS[i % REASON_COLORS.length]} text={reasonLabel(r)} /></Box>
+                    <Typography variant="caption" fontWeight={700} sx={{ whiteSpace: "nowrap" }}>{num(m, 0)} ({num(pct, 1)}%)</Typography></Stack>
+                ))}</Stack>
+              </Box>
+            ) : (
+              <Box sx={fillSx}>
+                <Table size="small" stickyHeader sx={{ ...tableSx, ...cellsSx, ...colShares(56, 24, 20) }}>
+                  <TableHead><TableRow><TableCell>{tx("Reason")}</TableCell><TableCell align="right">{tx("min")}</TableCell><TableCell align="right">{tx("Rate")}</TableCell></TableRow></TableHead>
+                  <TableBody>{data.by_reason.map(([r, m, pct]) => (
+                    <TableRow key={r} hover sx={{ cursor: "pointer" }} onClick={() => { const rc = lookups.reasons.find((x) => x.reason_name === r); if (rc) setFilter((f) => ({ ...f, reason_code_id: rc.id })); }}>
+                      <TableCell title={reasonLabel(r)}>{reasonLabel(r)}</TableCell><TableCell align="right">{num(m, 0)}</TableCell><TableCell align="right">{num(pct, 1)}%</TableCell></TableRow>
+                  ))}</TableBody>
+                </Table>
+              </Box>
+            )}
           </Paper>
-          <Stack spacing={1.5}>
-            <Paper elevation={0} sx={cardSx}>
-              <Head title={tx("Downtime by Machine")} />
-              <Stack spacing={1} sx={{ px: 1.5, pb: 1.5 }}>
-                {data.by_machine.length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : data.by_machine.slice(0, 6).map((m, i) => (
-                  <Box key={m.equipment_id} sx={{ display: "grid", gridTemplateColumns: "80px 1fr 60px 50px", gap: 1, alignItems: "center", cursor: "pointer" }} onClick={() => navigate(`/machine-equipment/machine-detail?machine=${m.equipment_id}`)}>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "4" }, gridRow: { lg: "2" } }}>
+            <Head title={tx("Downtime by Machine")} action={<Typography variant="caption" color="text.secondary">{tx("min")} · %</Typography>} />
+            {data.by_machine.length ? (
+              <Stack spacing={1} sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+                {data.by_machine.map((m, i) => (
+                  <Box key={m.equipment_id} sx={{ display: "grid", gridTemplateColumns: "80px 1fr 50px 44px", gap: 1, alignItems: "center", cursor: "pointer" }} onClick={() => navigate(`/machine-equipment/machine-detail?machine=${m.equipment_id}`)}>
                     <Typography variant="caption" fontWeight={800} sx={{ color: "#1570EF" }}>{m.equipment_code}</Typography>
                     <Box sx={{ height: 9, borderRadius: 1, bgcolor: "action.hover", overflow: "hidden" }}><Box sx={{ width: `${(m.minutes / maxMachine) * 100}%`, height: "100%", bgcolor: REASON_COLORS[i % REASON_COLORS.length] }} /></Box>
                     <Typography variant="caption" fontWeight={800} sx={{ textAlign: "right" }}>{num(m.minutes, 0)}</Typography>
@@ -251,75 +253,40 @@ export default function DowntimeManagement() {
                   </Box>
                 ))}
               </Stack>
-            </Paper>
-            <Paper elevation={0} sx={{ ...cardSx, flex: 1 }}>
-              <Head title={tx("Top Downtime Reasons")} />
-              <Box sx={{ px: 1, pb: 1 }}>
-                <Table size="small" sx={tableSx}>
-                  <TableHead><TableRow><TableCell>{tx("Reason")}</TableCell><TableCell align="right">{tx("Downtime (min)")}</TableCell><TableCell align="right">{tx("Rate")}</TableCell></TableRow></TableHead>
-                  <TableBody>
-                    {data.by_reason.slice(0, 6).map(([r, m, pct]) => (
-                      <TableRow key={r} hover sx={{ cursor: "pointer" }} onClick={() => { const rc = lookups.reasons.find((x) => x.reason_name === r); if (rc) setFilter((f) => ({ ...f, reason_code_id: rc.id })); }}>
-                        <TableCell>{reasonLabel(r)}</TableCell><TableCell align="right">{num(m, 0)}</TableCell><TableCell align="right">{num(pct, 1)}%</TableCell></TableRow>
-                    ))}
-                    <TableRow><TableCell sx={{ fontWeight: 800 }}>{tx("Total")}</TableCell><TableCell align="right" sx={{ fontWeight: 800 }}>{num(k.total_min, 0)}</TableCell><TableCell align="right" sx={{ fontWeight: 800 }}>100%</TableCell></TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-            </Paper>
-          </Stack>
-        </Box>
+            ) : <EmptyBody text={tx("No data.")} />}
+          </Paper>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "1.3fr 0.8fr 1fr 1fr" }, gap: 1.5, mb: 1.5 }}>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime by Time of Day")} subtitle={`(${tx("min")})`} />
-            <Box sx={{ px: 1.5, pb: 1.5, overflowX: "auto" }}>
-              <Box sx={{ display: "grid", gridTemplateColumns: "44px repeat(12, minmax(18px, 1fr))", gap: 0.4, minWidth: 320 }}>
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { md: "1 / -1", lg: "1 / 3" }, gridRow: { lg: "3" } }}>
+            <Head title={tx("Downtime Trend")} action={<Stack direction="row" spacing={1.5}><Dot color="#1570EF" text={tx("Downtime (min)")} /><Dot color="#F04438" text={tx("Downtime Rate (%)")} /></Stack>} />
+            <Box sx={{ flex: 1, minHeight: 0, px: 1 }}>
+              <Chart type="line" height="100%" series={[{ name: tx("Downtime (min)"), type: "column", data: data.trend.map((t) => t.minutes) }, { name: tx("Downtime Rate (%)"), type: "line", data: data.trend.map((t) => t.rate) }]}
+                options={{ ...base, colors: ["#1570EF", "#F04438"], stroke: { width: [0, 2], curve: "smooth" }, markers: { size: [0, 3] }, plotOptions: { bar: { columnWidth: "45%", borderRadius: 2 } },
+                  xaxis: { ...base.xaxis, categories: cats },
+                  yaxis: [{ tickAmount: 4, labels: { ...base.yaxis.labels, formatter: (v) => num(v, 0) } }, { opposite: true, tickAmount: 4, labels: { ...base.yaxis.labels, formatter: (v) => `${num(v, 1)}%` } }],
+                  tooltip: { ...base.tooltip, shared: true } }} />
+            </Box>
+          </Paper>
+
+          <Paper elevation={0} sx={{ ...panelSx, gridColumn: { lg: "3" }, gridRow: { lg: "3" } }}>
+            <Head title={`${tx("Downtime by Time of Day")} (${tx("min")})`} />
+            <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1.5, pb: 1 }}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "40px repeat(12, minmax(16px, 1fr))", gap: 0.4 }}>
                 <Box />{Array.from({ length: 12 }, (_, i) => <Typography key={i} variant="caption" color="text.secondary" sx={{ textAlign: "center", fontSize: 10 }}>{String(i * 2).padStart(2, "0")}</Typography>)}
                 {data.heatmap.map((row) => [
                   <Typography key={`${row.date}l`} variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{row.date.slice(8, 10)}/{row.date.slice(5, 7)}</Typography>,
                   ...row.cells.map((c, i) => (
                     <Tooltip key={`${row.date}${i}`} title={`${row.date} ${String(i * 2).padStart(2, "0")}:00 · ${num(c, 0)} ${tx("min")}`}>
-                      <Box sx={{ height: 18, borderRadius: 0.5, bgcolor: c ? `rgba(240,68,56,${0.15 + 0.85 * (c / heatMax)})` : "action.hover" }} />
+                      <Box sx={{ height: 16, borderRadius: 0.5, bgcolor: c ? `rgba(240,68,56,${0.15 + 0.85 * (c / heatMax)})` : "action.hover" }} />
                     </Tooltip>
                   )),
                 ])}
               </Box>
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center", mt: 1 }}><Typography variant="caption" color="text.secondary">{tx("Low")}</Typography>
-                <Box sx={{ flex: 1, height: 8, borderRadius: 4, background: "linear-gradient(90deg, rgba(240,68,56,.15), rgba(240,68,56,1))" }} /><Typography variant="caption" color="text.secondary">{tx("High")}</Typography></Stack>
             </Box>
           </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime Category")} />
-            <Box sx={{ px: 1.5, pb: 1.5 }}>
-              <Chart type="donut" height={170} series={k.total_min ? [data.category.UNPLANNED, data.category.PLANNED] : [1]}
-                options={donut(k.total_min ? [label("dtCategory", "UNPLANNED"), label("dtCategory", "PLANNED")] : [tx("No data.")], null, k.total_min ? [CATEGORY_COLORS.UNPLANNED, CATEGORY_COLORS.PLANNED] : ["#EAECF0"], k.total_min)} />
-              {["UNPLANNED", "PLANNED"].map((c) => (
-                <Stack key={c} direction="row" sx={{ justifyContent: "space-between" }}><Dot color={CATEGORY_COLORS[c]} text={label("dtCategory", c)} />
-                  <Typography variant="caption" fontWeight={700}>{num(data.category[c], 0)} {tx("min")} ({num(k.total_min ? (data.category[c] / k.total_min) * 100 : 0, 1)}%)</Typography></Stack>
-              ))}
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Downtime Rate Trend")} subtitle="(%)" />
-            <Box sx={{ px: 1, pb: 0.5 }}>
-              <Chart type="line" height={220} series={[{ name: tx("Downtime Rate (%)"), data: data.trend.map((t) => t.rate) }]}
-                options={{ chart: { background: "transparent", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif' }, colors: ["#F04438"], stroke: { width: 2.5, curve: "straight" }, markers: { size: 4 },
-                  xaxis: { categories: cats, labels: { style: { colors: axisColor, fontSize: "10px" } } }, yaxis: { min: 0, labels: { style: { colors: axisColor }, formatter: (v) => `${num(v, 1)}%` } }, grid, tooltip: { theme: dark ? "dark" : "light" } }} />
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <Head title={tx("Quick Actions")} />
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 0.75, px: 1.5, pb: 1.5 }}>
-              {[[tx("Report Downtime"), ReportProblemOutlinedIcon, "#F04438", () => setDialog({ type: "report", preset: { equipment_id: filter.equipment_id } }), !canEdit],
-                [tx("Request Maintenance"), BuildOutlinedIcon, "#1570EF", () => navigate("/maintenance-management/requests?create=1"), false],
-                [tx("Machine Monitoring"), ViewListOutlinedIcon, "#1570EF", () => navigate("/machine-equipment/machine-monitoring"), false],
-                [tx("Alarm History"), NotificationsOutlinedIcon, "#F79009", () => navigate("/machine-equipment/alarm-history"), false]].map(([text, Icon, color, onClick, disabled]) => (
-                <Button key={text} disabled={disabled} onClick={onClick} sx={{ flexDirection: "column", gap: 0.5, py: 1.25, border: 1, borderColor: "divider", borderRadius: 1.5, textTransform: "none",
-                  fontSize: 11, fontWeight: 700, color: "text.primary" }}><Icon sx={{ color: disabled ? "action.disabled" : color }} />{text}</Button>
-              ))}
-            </Box>
-          </Paper>
+
+          <Box sx={{ gridColumn: { lg: "4" }, gridRow: { lg: "3" }, display: "flex", minHeight: 0, "& > *": { flex: 1 } }}>
+            <QuickCard title={tx("Quick Actions")} actions={quick} columns={3} />
+          </Box>
         </Box>
 
         <SystemStatusBar system={data.system} />

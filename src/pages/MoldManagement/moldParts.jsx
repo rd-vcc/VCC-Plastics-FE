@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import AcUnitOutlinedIcon from "@mui/icons-material/AcUnitOutlined";
 import ArchitectureOutlinedIcon from "@mui/icons-material/ArchitectureOutlined";
@@ -23,7 +23,8 @@ export const openDoc = (doc) => window.open(resolveImageUrl(doc.file_url), "_bla
 export const materialOf = (attrs) => (attrs || []).find((a) => /steel|material/i.test(`${a.attribute_code} ${a.attribute_name}`))?.value;
 
 /** Digital twin block: image, identity / technical data and quick access to the technical documents. */
-export function DigitalTwin({ mold, attributes, documents, onDocuments, imageHeight = 190, compact }) {
+// `dense`: one-screen cards — fewer rows, one line each, icon-only document buttons.
+export function DigitalTwin({ mold, attributes, documents, onDocuments, imageHeight = 190, compact, dense }) {
   if (!mold) return <Typography variant="caption" color="text.secondary">{tx("Select a mold in the list.")}</Typography>;
   const docs = documents || [];
   const dims = [mold.length_mm, mold.width_mm, mold.height_mm].every((v) => v != null) ? `${num(mold.length_mm, 0)} x ${num(mold.width_mm, 0)} x ${num(mold.height_mm, 0)} mm` : EMPTY;
@@ -31,23 +32,36 @@ export function DigitalTwin({ mold, attributes, documents, onDocuments, imageHei
     <Box>
       <Box sx={{ display: "grid", gridTemplateColumns: compact ? "1fr" : { xs: "1fr", sm: "minmax(0,1fr) minmax(0,1.1fr)" }, gap: 1.5, alignItems: "center" }}>
         <MoldImage src={mold.image_url} height={imageHeight} iconSize={90} />
-        {compact ? null : (
+        {compact ? null : dense ? (
+          <InfoGrid nowrap rows={[[tx("Mold Name"), mold.mold_name], [tx("Mold Type"), mold.mold_type], [tx("Cavity"), mold.cavity_count], [tx("Material"), materialOf(attributes)],
+            [tx("Mold Weight"), mold.weight_kg != null ? `${num(mold.weight_kg, 0)} kg` : null], [tx("Dimension (L x W x H)"), dims], [tx("Manufacturer"), mold.manufacturer]]} />
+        ) : (
           <InfoGrid rows={[[tx("Mold No."), mold.mold_code, "#1570EF"], [tx("Mold Name"), mold.mold_name], [tx("Mold Type"), mold.mold_type], [tx("Cavity"), mold.cavity_count],
             [tx("Material"), materialOf(attributes)], [tx("Mold Weight"), mold.weight_kg != null ? `${num(mold.weight_kg, 0)} kg` : null], [tx("Dimension (L x W x H)"), dims],
             [tx("Manufacturer"), mold.manufacturer], [tx("Manufacture Date"), dateText(mold.manufacture_date)]]} />
         )}
       </Box>
-      <Stack direction="row" sx={{ mt: 1.25, gap: 0.5, flexWrap: "wrap" }}>
+      <Stack direction="row" sx={{ mt: dense ? 0.75 : 1.25, gap: 0.5, flexWrap: "wrap" }}>
         {DOC_BUTTONS.map(([text, Icon, type]) => {
           const doc = docs.find((d) => d.doc_type === type);
+          if (dense) {
+            return (
+              <Tooltip key={type} title={doc ? `${tx(text)}: ${doc.title}` : `${tx(text)} · ${tx("No document of this type.")}`}><span>
+                <IconButton size="small" disabled={!doc} onClick={() => openDoc(doc)} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, width: 30, height: 28 }}>
+                  <Icon sx={{ fontSize: 16, color: doc ? "#1570EF" : "action.disabled" }} /></IconButton></span></Tooltip>
+            );
+          }
           return (
             <Tooltip key={type} title={doc ? doc.title : tx("No document of this type.")}><span>
-              <Button size="small" disabled={!doc} onClick={() => openDoc(doc)} sx={{ flexDirection: "column", minWidth: 58, textTransform: "none", fontSize: 10.5, fontWeight: 700, color: "text.primary", border: 1, borderColor: "divider", borderRadius: 1.5, py: 0.5 }}>
-                <Icon sx={{ fontSize: 20, color: doc ? "#1570EF" : "action.disabled" }} />{tx(text)}</Button></span></Tooltip>
+              <Button size="small" disabled={!doc} onClick={() => openDoc(doc)} sx={{ flexDirection: "column", minWidth: 58, textTransform: "none", fontSize: 10, fontWeight: 700, color: "text.primary", border: 1, borderColor: "divider", borderRadius: 1.5, py: 0.5 }}>
+                <Icon sx={{ fontSize: 16, color: doc ? "#1570EF" : "action.disabled" }} />{tx(text)}</Button></span></Tooltip>
           );
         })}
-        <Button size="small" onClick={onDocuments} sx={{ flexDirection: "column", minWidth: 58, textTransform: "none", fontSize: 10.5, fontWeight: 700, color: "text.primary", border: 1, borderColor: "divider", borderRadius: 1.5, py: 0.5 }}>
-          <FolderOpenOutlinedIcon sx={{ fontSize: 20, color: "#F79009" }} />{tx("Documents")} ({docs.length})</Button>
+        {dense ? (
+          <Button size="small" onClick={onDocuments} startIcon={<FolderOpenOutlinedIcon sx={{ color: "#F79009" }} />} sx={{ height: 28, textTransform: "none", fontSize: 10.5, fontWeight: 700, color: "text.primary", border: 1, borderColor: "divider", borderRadius: 1.5, px: 1 }}>
+            {tx("Documents")} ({docs.length})</Button>
+        ) : <Button size="small" onClick={onDocuments} sx={{ flexDirection: "column", minWidth: 58, textTransform: "none", fontSize: 10, fontWeight: 700, color: "text.primary", border: 1, borderColor: "divider", borderRadius: 1.5, py: 0.5 }}>
+          <FolderOpenOutlinedIcon sx={{ fontSize: 16, color: "#F79009" }} />{tx("Documents")} ({docs.length})</Button>}
       </Stack>
     </Box>
   );
@@ -61,11 +75,11 @@ export function PmDueList({ items, onOpen, max = 6 }) {
         const color = p.pm_overdue || p.pm_days_left <= 2 ? "#F04438" : "#F79009";
         return (
           <Stack key={p.id} direction="row" spacing={1} onClick={() => onOpen(p)} sx={{ alignItems: "center", py: 0.7, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
-            <WarningAmberOutlinedIcon sx={{ fontSize: 18, color }} />
+            <WarningAmberOutlinedIcon sx={{ fontSize: 14.5, color }} />
             <Typography variant="caption" fontWeight={800} sx={{ flex: 1, color: "#1570EF" }}>{p.mold_code}</Typography>
             <Box sx={{ textAlign: "right" }}>
               <Typography variant="caption" fontWeight={700} sx={{ color, display: "block" }}>{pmText(p)}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{label("maintenanceType", p.pm_type)} · {dateText(p.pm_due_date)}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{label("maintenanceType", p.pm_type)} · {dateText(p.pm_due_date)}</Typography>
             </Box>
           </Stack>
         );
@@ -108,7 +122,7 @@ export function Timeline({ events, onOpen, dated, max = 12 }) {
             <Box sx={{ pb: 1, minWidth: 0 }}>
               {dated ? null : <Typography variant="caption" fontWeight={800} sx={{ color: "#1570EF", display: "block" }}>{e.mold_code}</Typography>}
               <Typography variant="caption" sx={{ display: "block" }}>{eventText(e)}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5 }}>{reasonText(e) ? `${reasonText(e)} · ` : ""}{e.technician || e.actor}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{reasonText(e) ? `${reasonText(e)} · ` : ""}{e.technician || e.actor}</Typography>
             </Box>
           </Box>
         );
@@ -125,11 +139,11 @@ export function AlertSummary({ alerts, onOpen }) {
         const level = a.molds.some((m) => m.level === "CRITICAL") ? "CRITICAL" : "WARNING";
         return (
           <Stack key={a.code} direction="row" spacing={1} sx={{ alignItems: "center", py: 0.7, borderBottom: 1, borderColor: "divider" }}>
-            {level === "CRITICAL" ? <BuildCircleOutlinedIcon sx={{ fontSize: 18, color: ALERT_LEVEL_COLORS[level] }} /> : <WarningAmberOutlinedIcon sx={{ fontSize: 18, color: ALERT_LEVEL_COLORS[level] }} />}
+            {level === "CRITICAL" ? <BuildCircleOutlinedIcon sx={{ fontSize: 14.5, color: ALERT_LEVEL_COLORS[level] }} /> : <WarningAmberOutlinedIcon sx={{ fontSize: 14.5, color: ALERT_LEVEL_COLORS[level] }} />}
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="caption" fontWeight={700} sx={{ display: "block" }}>{label("alert", a.code)}</Typography>
               <Stack direction="row" sx={{ gap: 0.5, flexWrap: "wrap" }}>
-                {a.molds.slice(0, 6).map((m) => <Typography key={m.id} variant="caption" onClick={() => onOpen(m)} sx={{ color: "#1570EF", cursor: "pointer", fontSize: 10.5, fontWeight: 700 }}>{m.mold_code}</Typography>)}
+                {a.molds.slice(0, 6).map((m) => <Typography key={m.id} variant="caption" onClick={() => onOpen(m)} sx={{ color: "#1570EF", cursor: "pointer", fontSize: 10, fontWeight: 700 }}>{m.mold_code}</Typography>)}
               </Stack>
             </Box>
             <Typography variant="subtitle2" fontWeight={800}>{a.count}</Typography>

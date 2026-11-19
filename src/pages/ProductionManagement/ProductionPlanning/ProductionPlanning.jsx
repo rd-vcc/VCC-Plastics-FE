@@ -37,9 +37,10 @@ import {
   SimulationDialog, WorkOrderDetailDialog, WorkOrderForm,
 } from "./PlanningDialogs";
 import {
-  Dot, EMPTY, Head, MATERIAL_COLORS, PlanStatusChip, PriorityChip, btn, cardSx, ddmmhhmm, fmtDuration, hhmm,
+  Dot, EMPTY, Head, MATERIAL_COLORS, PlanStatusChip, PriorityChip, QuickAction, QuickActions, btn, cardSx, ddmmhhmm, fmtDuration, hhmm,
   localIsoDate, num, pageTheme,
 } from "./ui";
+import { downloadXlsx } from "../../../utils/xlsxExport";
 
 const API = `${API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "")}/api/production-planning`;
 const VIEW_KEY = "vcc.productionPlanning.view";
@@ -69,11 +70,6 @@ function descendants(nodes, rootId) {
   const walk = (parentId) => nodes.filter((n) => n.parent_id === parentId).forEach((n) => { result.push(n); walk(n.id); });
   walk(rootId);
   return result;
-}
-
-function csvCell(value) {
-  const text = value == null ? "" : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 export default function ProductionPlanning() {
@@ -245,13 +241,8 @@ export default function ProductionPlanning() {
     const lines = [...(board?.work_orders || []), ...(board?.backlog || [])].map((w) => [
       w.wo_no, w.status, w.progress_state || "", w.priority, `${w.product_code} ${w.product_name}`, w.machine_code || "", w.mold_code || "",
       w.material_code || "", w.planned_start || "", w.planned_end || "", w.due_date || "", w.planned_qty, w.actual_qty,
-    ].map(csvCell).join(","));
-    const blob = new Blob([`\uFEFF${[header.join(","), ...lines].join("\n")}`], { type: "text/csv;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${plan?.plan_code || `production-plan-${planDate}`}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    ]);
+    downloadXlsx(`${plan?.plan_code || `production-plan-${planDate}`}.xlsx`, header, lines);
   };
 
   const openOrderDetail = (wo) => navigate(`/production-management/production-orders/detail?wo=${encodeURIComponent(wo.wo_no)}`);
@@ -270,68 +261,104 @@ export default function ProductionPlanning() {
   const kpis = board?.kpis;
   const materialSummary = board?.material_summary;
 
-  const orderDonut = useMemo(() => ({
-    series: ORDER_BUCKETS.map(([, key]) => kpis?.[key] || 0),
+  const orderDonut = useMemo(() => {
+    const values = ORDER_BUCKETS.map(([, key]) => kpis?.[key] || 0);
+    const empty = values.every((v) => !v);
+    return {
+    series: empty ? [1] : values,
     options: {
       chart: { type: "donut", fontFamily: '"Bai Jamjuree", sans-serif', background: "transparent" },
-      labels: ORDER_BUCKETS.map(([state]) => label("progress", state)),
-      colors: ORDER_BUCKETS.map(([state]) => PROGRESS_COLORS[state]),
+      labels: empty ? [tx("No data.")] : ORDER_BUCKETS.map(([state]) => label("progress", state)),
+      colors: empty ? [gridColor] : ORDER_BUCKETS.map(([state]) => PROGRESS_COLORS[state]),
+      states: empty ? { hover: { filter: { type: "none" } }, active: { filter: { type: "none" } } } : {},
       legend: { show: false }, dataLabels: { enabled: false }, stroke: { width: 2, colors: [dark ? "#111827" : "#fff"] },
-      plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: tx("Total"), color: chartText, formatter: () => String(kpis?.planned_orders || 0) }, value: { color: dark ? "#F3F4F6" : "#172033", fontSize: "22px", fontWeight: 800 } } } } },
-      tooltip: { theme: dark ? "dark" : "light" },
+      plotOptions: { pie: { donut: { size: "68%", labels: { show: true, total: { show: true, label: tx("Total"), color: chartText, formatter: () => String(kpis?.planned_orders || 0) }, value: { color: dark ? "#F3F4F6" : "#172033", fontSize: "16px", fontWeight: 800 } } } } },
+      tooltip: { enabled: !empty, theme: dark ? "dark" : "light" },
     },
-  }), [kpis, dark, chartText, language]); // eslint-disable-line react-hooks/exhaustive-deps
+    };
+  }, [kpis, dark, chartText, gridColor, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const radial = (value, color) => ({
     series: [Math.min(Number(value) || 0, 100)],
     options: {
       chart: { type: "radialBar", sparkline: { enabled: true }, fontFamily: '"Bai Jamjuree", sans-serif' },
       colors: [color],
-      plotOptions: { radialBar: { hollow: { size: "58%" }, track: { background: gridColor }, dataLabels: { name: { show: false }, value: { offsetY: 6, fontSize: "18px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033", formatter: () => `${num(value, 1)}%` } } } },
+      plotOptions: { radialBar: { hollow: { size: "58%" }, track: { background: gridColor }, dataLabels: { name: { show: false }, value: { offsetY: 5, fontSize: "13px", fontWeight: 800, color: dark ? "#F3F4F6" : "#172033", formatter: () => `${num(value, 1)}%` } } } },
     },
   });
 
-  const hourlyChart = useMemo(() => ({
-    series: [
-      { name: tx("Capacity (machine-h)"), data: (board?.hourly || []).map((h) => h.capacity) },
-      { name: tx("Demand (machine-h)"), data: (board?.hourly || []).map((h) => h.demand) },
-    ],
-    options: {
-      chart: { type: "line", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif', background: "transparent" },
-      colors: ["#2E90FA", "#12B76A"], stroke: { width: [2, 3], curve: "smooth", dashArray: [5, 0] }, markers: { size: 3 },
-      xaxis: { categories: (board?.hourly || []).map((h) => h.hour), labels: { style: { colors: chartText } }, axisBorder: { color: gridColor }, axisTicks: { color: gridColor } },
-      yaxis: { min: 0, forceNiceScale: true, labels: { style: { colors: chartText }, formatter: (v) => num(v, 1) } },
-      grid: { borderColor: gridColor }, legend: { position: "top", labels: { colors: chartText } }, tooltip: { theme: dark ? "dark" : "light" },
-      annotations: serverNow && windowStart && serverNow > windowStart && serverNow < windowEnd ? { xaxis: [{ x: `${String(serverNow.getHours()).padStart(2, "0")}:00`, borderColor: "#F04438", strokeDashArray: 4 }] } : {},
-    },
-  }), [board, dark, chartText, gridColor, language]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Cumulative PCS through the shift: capacity · plan · actual (actual stops at the current hour).
+  const hourlyChart = useMemo(() => {
+    const hours = board?.hourly || [];
+    const cumulative = (key, untilNow = false) => {
+      let total = 0;
+      return hours.map((h) => {
+        if (untilNow && serverNow && new Date(h.start) > serverNow) return null;
+        if (h[key] == null) return null;
+        total += Number(h[key]) || 0;
+        return Math.round(total);
+      });
+    };
+    const series = [
+      { name: tx("Capacity (PCS)"), data: cumulative("capacity_qty") },
+      { name: tx("Planned (PCS)"), data: cumulative("planned_qty") },
+      { name: tx("Actual (PCS)"), data: cumulative("actual_qty", true) },
+    ];
+    const colors = ["#2E90FA", "#12B76A", "#F79009"];
+    const shown = series.map((s, i) => [s, colors[i]]).filter(([s]) => s.data.some((v) => v != null));
+    const nowLabel = serverNow && windowStart && serverNow > windowStart && serverNow < windowEnd ? `${String(serverNow.getHours()).padStart(2, "0")}:00` : null;
+    return {
+      series: shown.map(([s]) => s),
+      options: {
+        chart: { type: "line", toolbar: { show: false }, fontFamily: '"Bai Jamjuree", sans-serif', background: "transparent", animations: { enabled: false } },
+        colors: shown.map(([, c]) => c), stroke: { width: 2.5, curve: "smooth" }, markers: { size: 2.5 },
+        xaxis: { categories: hours.map((h) => h.hour), labels: { style: { colors: chartText, fontSize: "9px" }, rotate: 0, hideOverlappingLabels: true }, axisBorder: { color: gridColor }, axisTicks: { color: gridColor } },
+        yaxis: { min: 0, max: shown.some(([s]) => s.data.some((v) => v > 0)) ? undefined : 100, tickAmount: 4, forceNiceScale: true, labels: { style: { colors: chartText, fontSize: "9px" }, formatter: (v) => (v >= 1000 ? `${num(v / 1000, 1)}K` : num(v)) } },
+        grid: { borderColor: gridColor, padding: { left: 4, right: 8, top: -10, bottom: -6 } },
+        legend: { position: "top", fontSize: "10px", labels: { colors: chartText }, itemMargin: { horizontal: 6 } },
+        tooltip: { theme: dark ? "dark" : "light", y: { formatter: (v) => (v == null ? EMPTY : `${num(v)} PCS`) } },
+        annotations: nowLabel ? { xaxis: [{ x: nowLabel, borderColor: "#F04438", strokeDashArray: 4, label: { text: hhmm(serverNow), orientation: "horizontal", borderColor: "#F04438", style: { color: "#fff", background: "#F04438", fontSize: "9px" } } }] } : {},
+      },
+    };
+  }, [board, dark, chartText, gridColor, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- render helpers ----------------------------------------------------------
-  const selectSx = { minWidth: 150, "& .MuiInputBase-root": { height: 36 } };
-  const toolBtnSx = btn("cancel", { height: 34, px: 1.5, whiteSpace: "nowrap" });
+  const selectSx = { minWidth: 140, "& .MuiInputBase-root": { height: 29 } };
+  const toolBtnSx = btn("cancel", { height: 29, px: 1.25, whiteSpace: "nowrap" });
+  // Plan actions live only here (one place); the toolbar keeps view / data actions.
   const quickActions = [
     { key: "create", icon: AddCircleOutlineIcon, text: tx("Create Work Order"), onClick: openCreateWo, disabled: !canEdit },
     { key: "capacity", icon: TrackChangesOutlinedIcon, text: tx("Capacity Check"), onClick: () => setDialog({ type: "capacity" }), disabled: !plan },
     { key: "material", icon: Inventory2OutlinedIcon, text: tx("Material Check"), onClick: () => setDialog({ type: "material" }), disabled: !plan },
     { key: "simulate", icon: ScienceOutlinedIcon, text: tx("Plan Simulation"), onClick: () => setDialog({ type: "simulate" }), disabled: !plan },
-    plan?.status === "CONFIRMED"
-      ? { key: "reopen", icon: LockOpenOutlinedIcon, text: tx("Reopen Plan"), onClick: () => transitionPlan("reopen", tx("Plan reopened.")), disabled: !canEdit || saving }
-      : { key: "confirm", icon: AssignmentTurnedInOutlinedIcon, text: tx("Confirm Plan"), onClick: () => transitionPlan("confirm", tx("Plan confirmed.")), disabled: !canEdit || saving || !planEditable },
-    { key: "publish", icon: PublishOutlinedIcon, text: tx("Publish Plan"), onClick: () => transitionPlan("publish", tx("Plan published to Production Execution.")), disabled: !canEdit || saving || plan?.status !== "CONFIRMED", primary: true },
+    !plan
+      ? { key: "createPlan", icon: AssignmentTurnedInOutlinedIcon, text: tx("Create Plan"), onClick: createPlan, disabled: !canEdit || saving, primary: true }
+      : plan.status === "DRAFT"
+        ? { key: "confirm", icon: AssignmentTurnedInOutlinedIcon, text: tx("Confirm Plan"), onClick: () => transitionPlan("confirm", tx("Plan confirmed.")), disabled: !canEdit || saving, primary: true }
+        : plan.status === "CONFIRMED"
+          ? { key: "publish", icon: PublishOutlinedIcon, text: tx("Publish Plan"), onClick: () => transitionPlan("publish", tx("Plan published to Production Execution.")), disabled: !canEdit || saving, primary: true }
+          : { key: "published", icon: PublishOutlinedIcon, text: tx("Publish Plan"), onClick: () => {}, disabled: true, primary: true },
   ];
+  if (plan?.status === "CONFIRMED") {
+    quickActions.splice(4, 0, { key: "reopen", icon: LockOpenOutlinedIcon, text: tx("Reopen Plan"), onClick: () => transitionPlan("reopen", tx("Plan reopened.")), disabled: !canEdit || saving });
+  }
 
   if (!lookups) {
     return <Box sx={{ height: 400, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
   }
 
+  const fill = { flex: 1, minHeight: 0 };
+  const panel = { ...cardSx, display: "flex", flexDirection: "column", minHeight: { xs: 240, lg: 0 } };
+
   return (
     <MuiThemeProvider theme={muiTheme}>
-      <Box>
+      {/* One screen on lg+: toolbar · KPI · (Gantt | capacity | material) · (summary | hourly | achievement | alerts) · (backlog | quick actions) */}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: { lg: "calc(var(--app-vh, 100vh) - 74px)" }, minHeight: { lg: 640 } }}>
         <PageMeta title={`${tx("Production Planning")} | VCC Plastics`} description={tx("Build, balance and publish the production plan against real factory capacity")} />
         <PageBreadcrumb pageTitle={tx("Production Planning")} />
 
-        {/* ① Context selectors + ③ Planning toolbar */}
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
+        {/* Context selectors + view / data toolbar */}
+        <Paper elevation={0} sx={{ ...cardSx, p: 1, flexShrink: 0 }}>
           <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1, alignItems: "center" }}>
             <FormControl size="small" sx={selectSx}>
               <InputLabel shrink>{tx("Plant")}</InputLabel>
@@ -347,35 +374,27 @@ export default function ProductionPlanning() {
                 {areas.map((a) => <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ ...selectSx, minWidth: 200 }}>
+            <FormControl size="small" sx={{ ...selectSx, minWidth: 190 }}>
               <InputLabel>{tx("Shift")}</InputLabel>
               <Select label={tx("Shift")} value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
                 {lookups.shifts.map((s) => <MenuItem key={s.id} value={s.id}>{s.shift_name} ({String(s.start_time).slice(0, 5)} ~ {String(s.end_time).slice(0, 5)})</MenuItem>)}
               </Select>
             </FormControl>
-            <TextField size="small" type="date" label={tx("Business Date")} value={planDate} onChange={(e) => setPlanDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ "& .MuiInputBase-root": { height: 36 } }} />
+            <TextField size="small" type="date" label={tx("Business Date")} value={planDate} onChange={(e) => setPlanDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ "& .MuiInputBase-root": { height: 29 } }} />
+            {plan ? (
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", ml: 0.5 }}>
+                <Typography variant="subtitle2" fontWeight={800} noWrap>{plan.plan_code}</Typography>
+                <PlanStatusChip value={plan.status} />
+                {board.checks.error_count ? <Box sx={{ cursor: "pointer" }} onClick={() => setDialog({ type: "alerts", alerts: board.alerts })}><Dot color="#F04438" text={`${board.checks.error_count} ${tx("Blocking issues")}`} /></Box> : null}
+                {board.checks.warning_count ? <Box sx={{ cursor: "pointer" }} onClick={() => setDialog({ type: "alerts", alerts: board.alerts })}><Dot color="#F79009" text={`${board.checks.warning_count} ${tx("Warnings")}`} /></Box> : null}
+              </Stack>
+            ) : null}
             <Box sx={{ flex: 1 }} />
             <Button startIcon={<RefreshIcon />} onClick={() => load()} sx={toolBtnSx}>{tx("Refresh")}</Button>
             <Button startIcon={<FilterAltOutlinedIcon />} onClick={(e) => setFilterAnchor(e.currentTarget)} sx={toolBtnSx}>{tx("Filter")}{activeFilterCount ? ` (${activeFilterCount})` : ""}</Button>
             <Button startIcon={<BookmarkBorderOutlinedIcon />} onClick={saveView} sx={toolBtnSx}>{tx("Save Plan View")}</Button>
             <Button startIcon={<FileDownloadOutlinedIcon />} onClick={exportPlan} disabled={!board} sx={toolBtnSx}>{tx("Export Plan")}</Button>
-            <Button startIcon={<ScienceOutlinedIcon />} onClick={() => setDialog({ type: "simulate" })} disabled={!plan} sx={toolBtnSx}>{tx("Simulation")}</Button>
-            <Button startIcon={<PrecisionManufacturingOutlinedIcon />} onClick={() => setDialog({ type: "capacity" })} disabled={!plan} sx={toolBtnSx}>{tx("Capacity Check")}</Button>
-            <Button startIcon={<FactCheckOutlinedIcon />} onClick={() => setDialog({ type: "material" })} disabled={!plan} sx={toolBtnSx}>{tx("Material Check")}</Button>
-          </Stack>
-          <Stack direction="row" sx={{ mt: 1, flexWrap: "wrap", gap: 1.5, alignItems: "center" }}>
-            {plan ? (
-              <>
-                <Typography variant="subtitle2" fontWeight={800}>{plan.plan_code}</Typography>
-                <PlanStatusChip value={plan.status} />
-                {board.checks.error_count ? <Dot color="#F04438" text={`${board.checks.error_count} ${tx("Blocking issues")}`} /> : null}
-                {board.checks.warning_count ? <Dot color="#F79009" text={`${board.checks.warning_count} ${tx("Warnings")}`} /> : null}
-              </>
-            ) : null}
-            <Box sx={{ flex: 1 }} />
-            <Typography variant="caption" color="text.secondary">
-              {tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleString(localeTag()) : EMPTY}
-            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>{tx("Last Update")}: {lastUpdate ? lastUpdate.toLocaleTimeString(localeTag()) : EMPTY}</Typography>
             <FormControlLabel sx={{ mr: 0 }} control={<Switch size="small" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />} label={<Typography variant="caption" fontWeight={700}>{tx("Auto Refresh")}</Typography>} />
           </Stack>
           {loading ? <LinearProgress sx={{ mt: 1 }} /> : null}
@@ -408,189 +427,173 @@ export default function ProductionPlanning() {
           </Stack>
         </Popover>
 
-        {!board ? null : !plan ? (
-          <>
-            <Paper elevation={0} sx={{ ...cardSx, p: 4, textAlign: "center", mb: 1.5 }}>
-              <Typography sx={{ mb: 2 }} color="text.secondary">{tx("No plan exists for this date, shift and plant yet.")}</Typography>
-              <Stack sx={{ justifyContent: "center" }} direction="row" spacing={1.5}>
-                <Button disabled={!canEdit || saving} onClick={createPlan} sx={btn("primary")}>{tx("Create Plan")}</Button>
-                <Button disabled={!canEdit} onClick={openCreateWo} sx={btn("cancel")}>{tx("Create Work Order")}</Button>
+        {/* KPI row */}
+        {plan && kpis ? (
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))", xl: "repeat(7, minmax(0,1fr))" }, gap: 1, flexShrink: 0 }}>
+            <KpiCard tone="info" label={tx("Planned Production")} value={`${num(kpis.planned_qty)} PCS`} note={`${tx("This Shift Target")} · ${tx("Actual")} ${num(kpis.actual_qty)}`} />
+            <KpiCard tone="success" label={tx("Total Capacity")} value={kpis.capacity_qty == null ? EMPTY : `${num(kpis.capacity_qty)} PCS`} note={`${tx("Load")} ${kpis.capacity_utilization}%`} />
+            <KpiCard tone="accent" label={tx("Planned Orders")} value={kpis.planned_orders} note={`${backlog.length} backlog`} />
+            <KpiCard tone="warning" label={tx("On Track Orders")} value={kpis.on_track} note={`${kpis.on_track_pct}%`} gradient="linear-gradient(135deg, #F79009 0%, #FDB022 100%)" />
+            <KpiCard tone="danger" label={tx("At Risk Orders")} value={kpis.at_risk} note={`${kpis.at_risk_pct}% · ${tx("Need Attention")}`} />
+            <KpiCard tone="info" label={tx("Delayed Orders")} value={kpis.delayed} note={`${kpis.delayed_pct}% · ${tx("Delayed")}`} gradient="linear-gradient(135deg, #0E9384 0%, #15B79E 100%)" />
+            <Box sx={{ cursor: "pointer" }} onClick={() => setDialog({ type: "material" })}>
+              <KpiCard tone="success" label={tx("Material Availability")} value={`${num(materialSummary?.availability_pct, 1)}%`}
+                note={`${label("material", "ENOUGH")} ${materialSummary?.enough || 0} · ${label("material", "RUNNING_LOW")} ${materialSummary?.running_low || 0} · ${label("material", "SHORTAGE")} ${materialSummary?.shortage || 0}`}
+                gradient="linear-gradient(135deg, #039855 0%, #32D583 100%)" sx={{ height: "100%" }} />
+            </Box>
+          </Box>
+        ) : null}
+
+        {/* One 3-column grid, same column widths on every row so all card edges line up:
+            work (Gantt · backlog · alerts) | capacity | follow-up (material · achievement · quick actions, bottom-right as on the other pages) */}
+        <Box sx={{ flex: { lg: "1 1 0" }, minHeight: 0, display: "grid", gap: 1,
+          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "minmax(0,1.6fr) minmax(0,1fr) minmax(0,0.85fr)" },
+          gridTemplateRows: { xl: "minmax(0,1.3fr) minmax(0,1fr) 172px" } }}>
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Planning Board (Gantt)")} action={
+              <Stack sx={{ alignItems: "center" }} direction="row" spacing={1}>
+                <ToggleButtonGroup size="small" exclusive value={zoom} onChange={(_, v) => v && setZoom(v)} sx={{ "& .MuiToggleButton-root": { py: 0.2, px: 1, fontSize: 10, textTransform: "none" } }}>
+                  <ToggleButton value="shift">{tx("Shift View")}</ToggleButton>
+                  <ToggleButton value="day">{tx("Day View")}</ToggleButton>
+                </ToggleButtonGroup>
+                <Typography variant="caption" color="text.secondary">{new Date(`${planDate}T00:00:00`).toLocaleDateString(localeTag())}</Typography>
               </Stack>
-            </Paper>
-            <BacklogCard rows={backlog} canSchedule={false} saving={saving} onOpen={openWorkOrder} onApply={applyRecommendation} onSchedule={() => {}} />
-          </>
-        ) : (
-          <>
-            {/* ④ Planning KPI */}
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(3, minmax(0,1fr))", xl: "repeat(6, minmax(0,1fr)) 1.45fr" }, gap: 1.5, mb: 1.5 }}>
-              <KpiCard tone="info" label={tx("Planned Production")} value={`${num(kpis.planned_qty)} PCS`} note={`${tx("This Shift Target")} · ${tx("Actual")} ${num(kpis.actual_qty)}`} />
-              <KpiCard tone="success" label={tx("Total Capacity")} value={kpis.capacity_qty == null ? EMPTY : `${num(kpis.capacity_qty)} PCS`} note={`${tx("Load")} ${kpis.capacity_utilization}%`} />
-              <KpiCard tone="accent" label={tx("Planned Orders")} value={kpis.planned_orders} note={`${backlog.length} backlog`} />
-              <KpiCard tone="warning" label={tx("On Track Orders")} value={kpis.on_track} note={`${kpis.on_track_pct}%`} gradient="linear-gradient(135deg, #F79009 0%, #FDB022 100%)" />
-              <KpiCard tone="danger" label={tx("At Risk Orders")} value={kpis.at_risk} note={`${kpis.at_risk_pct}% · ${tx("Need Attention")}`} />
-              <KpiCard tone="info" label={tx("Delayed Orders")} value={kpis.delayed} note={`${kpis.delayed_pct}% · ${tx("Delayed")}`} gradient="linear-gradient(135deg, #0E9384 0%, #15B79E 100%)" />
-              <Paper elevation={0} sx={{ ...cardSx, p: 1.25, display: "flex", alignItems: "center", gap: 1, gridColumn: { xs: "1 / -1", xl: "auto" }, cursor: "pointer" }} onClick={() => setDialog({ type: "material" })}>
-                <Box sx={{ width: 96, flexShrink: 0 }}><Chart type="radialBar" height={110} {...radial(materialSummary.availability_pct, "#12B76A")} /></Box>
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography variant="caption" fontWeight={800} sx={{ display: "block", mb: 0.5 }}>{tx("Material Availability")}</Typography>
-                  {[["ENOUGH", materialSummary.enough], ["RUNNING_LOW", materialSummary.running_low], ["SHORTAGE", materialSummary.shortage]].map(([k, v]) => (
-                    <Stack sx={{ justifyContent: "space-between" }} key={k} direction="row"><Dot color={MATERIAL_COLORS[k]} text={label("material", k)} /><Typography variant="caption" fontWeight={800}>{v}</Typography></Stack>
-                  ))}
-                </Box>
-              </Paper>
-            </Box>
-
-            {/* ⑤ Gantt | ⑥ Capacity | ⑦ Material */}
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr", xl: "1.55fr 1.1fr 0.85fr" }, gap: 1.5, mb: 1.5 }}>
-              <Paper elevation={0} sx={{ ...cardSx, gridColumn: { lg: "1 / -1", xl: "auto" } }}>
-                <Head title={tx("Planning Board (Gantt)")} action={
-                  <Stack sx={{ alignItems: "center" }} direction="row" spacing={1}>
-                    <ToggleButtonGroup size="small" exclusive value={zoom} onChange={(_, v) => v && setZoom(v)} sx={{ "& .MuiToggleButton-root": { py: 0.2, px: 1, fontSize: 11, textTransform: "none" } }}>
-                      <ToggleButton value="shift">{tx("Shift View")}</ToggleButton>
-                      <ToggleButton value="day">{tx("Day View")}</ToggleButton>
-                    </ToggleButtonGroup>
-                    <Typography variant="caption" color="text.secondary">{new Date(`${planDate}T00:00:00`).toLocaleDateString(localeTag())}</Typography>
-                  </Stack>
-                } />
-                <Box sx={{ px: 1, pb: 1 }}>
-                  <PlanningGantt rows={ganttRows} now={serverNow} onSelect={openWorkOrder} height={330}
-                    rangeStart={zoom === "shift" ? windowStart : new Date(`${planDate}T00:00:00`)}
-                    rangeEnd={zoom === "shift" ? windowEnd : new Date(new Date(`${planDate}T00:00:00`).getTime() + 86400000)}
-                    tickHours={zoom === "shift" ? 1 : 2} />
-                </Box>
-              </Paper>
-
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Capacity Overview (By Machine Group)")} />
-                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 120px" }, alignItems: "center", px: 1, pb: 1 }}>
-                  <Table size="small" sx={{ "& td, & th": { px: 0.75, fontSize: 12 } }}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{tx("Machine Group")}</TableCell><TableCell align="right">{tx("Machines")}</TableCell>
-                        <TableCell align="right">{tx("Available (h)")}</TableCell><TableCell align="right">{tx("Planned (h)")}</TableCell>
-                        <TableCell align="right">{tx("Utilization")}</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {board.capacity.map((c) => (
-                        <TableRow key={c.group_code} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/machine-equipment/machine-monitoring?group=${c.group_id || ""}`)}>
-                          <TableCell sx={{ fontWeight: 700 }}>{c.group_name}</TableCell>
-                          <TableCell align="right">{c.available_machines}/{c.total_machines}</TableCell>
-                          <TableCell align="right">{num(c.available_hours, 1)}</TableCell>
-                          <TableCell align="right">{num(c.planned_hours, 1)}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 800, color: c.utilization > 100 ? "#F04438" : c.utilization > 85 ? "#F79009" : "#12B76A" }}>{c.utilization}%</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800, color: "primary.main" }}>{tx("Total")}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800 }}>{board.capacity_totals.available_machines}/{board.capacity_totals.total_machines}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800 }}>{num(board.capacity_totals.available_hours, 1)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800 }}>{num(board.capacity_totals.planned_hours, 1)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800 }}>{board.capacity_totals.utilization}%</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                  <Box sx={{ textAlign: "center" }}>
-                    <Chart type="radialBar" height={130} {...radial(board.capacity_totals.utilization, board.capacity_totals.utilization > 100 ? "#F04438" : "#12B76A")} />
-                    <Typography variant="caption" color="text.secondary">{tx("Total Utilization")}</Typography>
-                  </Box>
-                </Box>
-              </Paper>
-
-              <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
-                <Head title={tx("Material Readiness")} />
-                <Box sx={{ px: 1.5, flex: 1, overflow: "auto", maxHeight: 300 }}>
-                  <Stack direction="row" sx={{ justifyContent: "space-between", py: 0.5, borderBottom: 1, borderColor: "divider" }}>
-                    <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("Material")}</Typography>
-                    <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("Availability")}</Typography>
-                  </Stack>
-                  {board.materials.length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : board.materials.map((m) => (
-                    <Tooltip key={m.material_id} placement="left" title={`${tx("Required")} ${num(m.required_qty, 2)} ${m.unit} · ${tx("Available")} ${num(m.available_qty, 2)} ${m.unit}`}>
-                      <Stack direction="row" onClick={() => navigate(`/material-management/status?material=${encodeURIComponent(m.material_code)}`)}
-                        sx={{ justifyContent: "space-between", alignItems: "center", py: 0.75, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
-                        <Typography variant="caption" fontWeight={600} noWrap sx={{ mr: 1 }}>{m.material_code}</Typography>
-                        <Dot color={MATERIAL_COLORS[m.status]} text={label("material", m.status)} />
-                      </Stack>
-                    </Tooltip>
-                  ))}
-                </Box>
-                <Button size="small" endIcon={<ChevronRightIcon />} onClick={() => setDialog({ type: "material" })} sx={{ m: 1, alignSelf: "center", textTransform: "none" }}>{tx("View Details")}</Button>
-              </Paper>
-            </Box>
-
-            {/* ⑧ Order summary | ⑨ Capacity vs Demand | ⑩ Plan vs Achievement | ⑪ Alerts */}
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", xl: "0.95fr 1.35fr 1fr 1.05fr" }, gap: 1.5, mb: 1.5 }}>
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Order Summary")} />
-                <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", alignItems: "center", gap: 1, px: 1, pb: 1 }}>
-                  <Box sx={{ minWidth: 0 }}><Chart type="donut" height={200} series={orderDonut.series} options={orderDonut.options} /></Box>
-                  <Stack spacing={1} sx={{ minWidth: 0 }}>
-                    {ORDER_BUCKETS.map(([state, key]) => (
-                      <Stack sx={{ justifyContent: "space-between" }} key={state} direction="row" spacing={1}>
-                        <Dot color={PROGRESS_COLORS[state]} text={label("progress", state)} />
-                        <Typography variant="caption" fontWeight={700}>{kpis[key]} ({kpis[`${key}_pct`]}%)</Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Box>
-              </Paper>
-
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Capacity vs Demand (Hourly)")} />
-                <Box sx={{ px: 1 }}><Chart type="line" height={210} series={hourlyChart.series} options={hourlyChart.options} /></Box>
-              </Paper>
-
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Plan vs Achievement (This Shift)")} />
-                <Stack spacing={1.25} sx={{ px: 1.5, pb: 1.5 }}>
-                  {[[tx("Planned"), board.achievement.planned_qty, 100, "#1570EF"],
-                    [tx("Expected by now"), board.achievement.expected_qty, board.achievement.planned_qty ? (board.achievement.expected_qty / board.achievement.planned_qty) * 100 : 0, "#98A2B3"],
-                    [tx("Actual"), board.achievement.actual_qty, board.achievement.achievement_pct, "#12B76A"]].map(([k, v, p, color]) => (
-                    <Box key={k}>
-                      <Stack sx={{ justifyContent: "space-between" }} direction="row">
-                        <Typography variant="caption" color="text.secondary">{k}</Typography>
-                        <Typography variant="caption" fontWeight={800}>{num(v)} PCS · {num(p, 1)}%</Typography>
-                      </Stack>
-                      <LinearProgress variant="determinate" value={Math.min(p, 100)} sx={{ height: 14, borderRadius: 1, bgcolor: dark ? "#1F2937" : "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 1 } }} />
-                    </Box>
-                  ))}
-                  <Alert icon={<TrackChangesOutlinedIcon fontSize="small" />} severity={board.achievement.remaining_qty ? "info" : "success"} sx={{ py: 0 }}>
-                    {tx("Need {qty} PCS to achieve target", { qty: num(board.achievement.remaining_qty) })}
-                    {board.achievement.schedule_adherence_pct != null ? <><br />{tx("Schedule adherence")}: <b>{board.achievement.schedule_adherence_pct}%</b></> : null}
-                  </Alert>
+            } />
+            <Box sx={{ ...fill, px: 1, pb: 1 }}>
+              {!board ? null : !plan ? (
+                <Stack sx={{ height: "100%", alignItems: "center", justifyContent: "center", gap: 1.5, textAlign: "center", px: 2 }}>
+                  <Typography color="text.secondary">{tx("No plan exists for this date, shift and plant yet.")}</Typography>
+                  <Button disabled={!canEdit || saving} onClick={createPlan} sx={btn("primary")}>{tx("Create Plan")}</Button>
                 </Stack>
-              </Paper>
-
-              <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column" }}>
-                <Head title={tx("Planning Alerts")} action={<Button size="small" sx={{ textTransform: "none" }} onClick={() => setDialog({ type: "alerts", alerts: board.alerts })}>{tx("View All")} ({board.alerts.length})</Button>} />
-                <Box sx={{ px: 1, pb: 1, overflow: "auto", maxHeight: 230 }}>
-                  <AlertList alerts={board.alerts.slice(0, 6)} onAlertClick={onAlertClick} dense />
-                </Box>
-              </Paper>
+              ) : (
+                <PlanningGantt rows={ganttRows} now={serverNow} onSelect={openWorkOrder} height="100%"
+                  rangeStart={zoom === "shift" ? windowStart : new Date(`${planDate}T00:00:00`)}
+                  rangeEnd={zoom === "shift" ? windowEnd : new Date(new Date(`${planDate}T00:00:00`).getTime() + 86400000)}
+                  tickHours={zoom === "shift" ? 1 : 2} />
+              )}
             </Box>
+          </Paper>
 
-            {/* ⑫ Backlog | ⑬ Quick actions */}
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", xl: "1.6fr 1fr" }, gap: 1.5 }}>
-              <BacklogCard rows={backlog} canSchedule={canEdit && planEditable} saving={saving} onOpen={openWorkOrder} onApply={applyRecommendation}
-                onSchedule={(b) => setDialog({ type: "schedule", item: b })} />
-              <Paper elevation={0} sx={cardSx}>
-                <Head title={tx("Quick Actions")} />
-                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" }, gap: 1, p: 1.5, pt: 0.5 }}>
-                  {quickActions.map((a) => {
-                    const Icon = a.icon;
-                    return (
-                      <Button key={a.key} disabled={a.disabled} onClick={a.onClick}
-                        sx={{ flexDirection: "column", gap: 0.75, py: 1.5, border: 1, borderColor: a.primary ? "primary.main" : "divider", borderRadius: 1.5, textTransform: "none", color: a.primary ? "primary.main" : "text.primary", fontWeight: 700, fontSize: 12.5 }}>
-                        <Icon sx={{ fontSize: 28, color: a.disabled ? "inherit" : "primary.main" }} />
-                        {a.text}
-                      </Button>
-                    );
-                  })}
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Capacity Overview (By Machine Group)")} />
+            {board?.capacity_totals ? (
+              <Box sx={{ ...fill, display: "grid", gridTemplateColumns: "minmax(0,1fr) 108px", alignItems: "start", gap: 1, px: 1, pb: 1, overflow: "auto" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", "& td, & th": { px: 0.6, py: 0.55, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, "& th": { color: "text.secondary", fontWeight: 800 }, "& th:nth-of-type(1)": { width: "33%" }, "& th:nth-of-type(2)": { width: "10%" }, "& th:nth-of-type(3)": { width: "20%" }, "& th:nth-of-type(4)": { width: "19%" }, "& th:nth-of-type(5)": { width: "18%" } }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{tx("Machine Group")}</TableCell>
+                      <TableCell align="right" title={tx("Machines")}>{tx("Mach.")}</TableCell>
+                      <TableCell align="right" title={tx("Available (h)")}>{tx("Avail. (h)")}</TableCell>
+                      <TableCell align="right" title={tx("Planned (h)")}>{tx("Plan (h)")}</TableCell>
+                      <TableCell align="right" title={tx("Utilization")}>{tx("Util.")}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {(board.capacity || []).map((c) => (
+                      <TableRow key={c.group_code} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/machine-equipment/machine-monitoring?group=${c.group_id || ""}`)}>
+                        <TableCell sx={{ fontWeight: 700 }} title={c.group_name}>{c.group_name}</TableCell>
+                        <TableCell align="right">{c.available_machines}/{c.total_machines}</TableCell>
+                        <TableCell align="right">{num(c.available_hours, 1)}</TableCell>
+                        <TableCell align="right">{num(c.planned_hours, 1)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 800, color: c.utilization > 100 ? "#F04438" : c.utilization > 85 ? "#F79009" : "#12B76A" }}>{c.utilization}%</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 800, color: "primary.main" }}>{tx("Total")}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>{board.capacity_totals.available_machines}/{board.capacity_totals.total_machines}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>{num(board.capacity_totals.available_hours, 1)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>{num(board.capacity_totals.planned_hours, 1)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>{board.capacity_totals.utilization}%</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                <Box sx={{ textAlign: "center", pt: 0.5 }}>
+                  <Chart type="radialBar" height={110} {...radial(board.capacity_totals.utilization, board.capacity_totals.utilization > 100 ? "#F04438" : "#12B76A")} />
+                  <Typography variant="caption" color="text.secondary">{tx("Total Utilization")}</Typography>
                 </Box>
-              </Paper>
+              </Box>
+            ) : <Box sx={{ ...fill, display: "grid", placeItems: "center", px: 2, textAlign: "center" }}><Typography variant="caption" color="text.disabled">{tx("No plan exists for this date, shift and plant yet.")}</Typography></Box>}
+          </Paper>
+
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Material Readiness")} action={<Button size="small" endIcon={<ChevronRightIcon />} disabled={!plan} onClick={() => setDialog({ type: "material" })} sx={{ textTransform: "none" }}>{tx("View Details")}</Button>} />
+            <Box sx={{ ...fill, px: 1.5, pb: 1, overflow: "auto" }}>
+              <Stack direction="row" sx={{ justifyContent: "space-between", py: 0.5, borderBottom: 1, borderColor: "divider" }}>
+                <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("Material")}</Typography>
+                <Typography variant="caption" fontWeight={800} color="text.secondary">{tx("Availability")}</Typography>
+              </Stack>
+              {(board?.materials || []).length === 0 ? <Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography> : board.materials.map((m) => (
+                <Tooltip key={m.material_id} placement="left" title={`${tx("Required")} ${num(m.required_qty, 2)} ${m.unit} · ${tx("Available")} ${num(m.available_qty, 2)} ${m.unit}`}>
+                  <Stack direction="row" onClick={() => navigate(`/material-management/status?material=${encodeURIComponent(m.material_code)}`)}
+                    sx={{ justifyContent: "space-between", alignItems: "center", py: 0.6, borderBottom: 1, borderColor: "divider", cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}>
+                    <Typography variant="caption" fontWeight={600} noWrap sx={{ mr: 1 }}>{m.material_code}</Typography>
+                    <Dot color={MATERIAL_COLORS[m.status]} text={label("material", m.status)} />
+                  </Stack>
+                </Tooltip>
+              ))}
             </Box>
-          </>
-        )}
+          </Paper>
+          <BacklogCard rows={backlog} canSchedule={canEdit && planEditable} saving={saving} onOpen={openWorkOrder} onApply={applyRecommendation}
+            onSchedule={(b) => setDialog({ type: "schedule", item: b })} />
+          <Paper elevation={0} sx={panel}>
+            <Head title={`${tx("Capacity vs Demand (Hourly)")} · ${tx("Cumulative")}`} />
+            <Box sx={{ ...fill, px: 0.5 }}>
+              {hourlyChart.series.length ? <Chart type="line" height="100%" series={hourlyChart.series} options={hourlyChart.options} />
+                : <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}><Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography></Box>}
+            </Box>
+          </Paper>
+
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Plan vs Achievement (This Shift)")} />
+            {board?.achievement ? (
+              <Stack spacing={1} sx={{ ...fill, px: 1.5, pb: 1, justifyContent: "center" }}>
+                {[[tx("Planned"), board.achievement.planned_qty, 100, "#1570EF"],
+                  [tx("Expected by now"), board.achievement.expected_qty, board.achievement.planned_qty ? (board.achievement.expected_qty / board.achievement.planned_qty) * 100 : 0, "#98A2B3"],
+                  [tx("Actual"), board.achievement.actual_qty, board.achievement.achievement_pct, "#12B76A"]].map(([k, v, p, color]) => (
+                  <Box key={k}>
+                    <Stack sx={{ justifyContent: "space-between" }} direction="row">
+                      <Typography variant="caption" color="text.secondary">{k}</Typography>
+                      <Typography variant="caption" fontWeight={800}>{num(v)} PCS · {num(p, 1)}%</Typography>
+                    </Stack>
+                    <LinearProgress variant="determinate" value={Math.min(p, 100)} sx={{ height: 10, borderRadius: 1, bgcolor: dark ? "#1F2937" : "#F2F4F7", "& .MuiLinearProgress-bar": { bgcolor: color, borderRadius: 1 } }} />
+                  </Box>
+                ))}
+                <Alert icon={<TrackChangesOutlinedIcon fontSize="small" />} severity={board.achievement.remaining_qty ? "info" : "success"} sx={{ py: 0, "& .MuiAlert-message": { py: 0.5 } }}>
+                  {tx("Need {qty} PCS to achieve target", { qty: num(board.achievement.remaining_qty) })}
+                  {board.achievement.schedule_adherence_pct != null ? <> · {tx("Schedule adherence")}: <b>{board.achievement.schedule_adherence_pct}%</b></> : null}
+                </Alert>
+              </Stack>
+            ) : <Box sx={{ ...fill, display: "grid", placeItems: "center", px: 2, textAlign: "center" }}><Typography variant="caption" color="text.disabled">{tx("No plan exists for this date, shift and plant yet.")}</Typography></Box>}
+          </Paper>
+
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Planning Alerts")} action={<Button size="small" sx={{ textTransform: "none" }} onClick={() => setDialog({ type: "alerts", alerts: board?.alerts || [] })}>{tx("View All")} ({board?.alerts?.length || 0})</Button>} />
+            <Box sx={{ ...fill, px: 1, pb: 1, overflow: "auto" }}>
+              <AlertList alerts={(board?.alerts || []).slice(0, 8)} onAlertClick={onAlertClick} dense />
+            </Box>
+          </Paper>
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Order Summary")} />
+            <Box sx={{ ...fill, display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.1fr)", alignItems: "center", gap: 1, px: 1, pb: 0.75, overflow: "hidden" }}>
+              <Box sx={{ minWidth: 0 }}><Chart type="donut" height={124} series={orderDonut.series} options={orderDonut.options} /></Box>
+              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                {ORDER_BUCKETS.map(([state, key]) => (
+                  <Stack sx={{ justifyContent: "space-between" }} key={state} direction="row" spacing={1}>
+                    <Dot color={PROGRESS_COLORS[state]} text={label("progress", state)} />
+                    <Typography variant="caption" fontWeight={700}>{kpis?.[key] || 0} ({kpis?.[`${key}_pct`] || 0}%)</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Box>
+          </Paper>
+
+          <Paper elevation={0} sx={panel}>
+            <Head title={tx("Quick Actions")} />
+            <QuickActions columns={3} sx={{ ...fill, pb: 1 }}>
+              {quickActions.map((a) => <QuickAction key={a.key} icon={a.icon} text={a.text} onClick={a.onClick} disabled={a.disabled} primary={a.primary} />)}
+            </QuickActions>
+          </Paper>
+        </Box>
 
         {/* dialogs */}
         {dialog?.type === "woForm" && (
@@ -641,10 +644,10 @@ export default function ProductionPlanning() {
 
 function BacklogCard({ rows, canSchedule, saving, onOpen, onApply, onSchedule }) {
   return (
-    <Paper elevation={0} sx={cardSx}>
+    <Paper elevation={0} sx={{ ...cardSx, display: "flex", flexDirection: "column", minHeight: { xs: 200, lg: 0 } }}>
       <Head title={tx("Unscheduled / Backlog Orders")} subtitle={`(${rows.length})`} />
-      <Box sx={{ px: 1, pb: 1, overflowX: "auto", maxHeight: 300 }}>
-        <Table size="small" stickyHeader sx={{ "& td, & th": { px: 0.75, fontSize: 12, whiteSpace: "nowrap" } }}>
+      <Box sx={{ px: 1, pb: 1, overflow: "auto", flex: 1, minHeight: 0 }}>
+        <Table size="small" stickyHeader sx={{ "& td, & th": { px: 0.75, py: 0.4, fontSize: 11, whiteSpace: "nowrap" } }}>
           <TableHead>
             <TableRow>
               <TableCell>{tx("Order No.")}</TableCell><TableCell>{tx("Product")}</TableCell><TableCell align="right">{tx("Qty (PCS)")}</TableCell>
@@ -672,8 +675,8 @@ function BacklogCard({ rows, canSchedule, saving, onOpen, onApply, onSchedule })
                       : rec ? tx("Schedule next shift") : EMPTY}
                   </TableCell>
                   <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                    {canSchedule && rec?.type === "SLOT" ? <Button size="small" disabled={saving} onClick={() => onApply(b)} sx={{ minWidth: 0, textTransform: "none" }}>{tx("Apply")}</Button> : null}
-                    {canSchedule ? <Button size="small" disabled={saving} onClick={() => onSchedule(b)} sx={{ minWidth: 0, textTransform: "none" }}>{tx("Schedule")}</Button> : null}
+                    {canSchedule && rec?.type === "SLOT" ? <Button size="small" disabled={saving} onClick={() => onApply(b)} sx={btn("cancel", { height: 24, minWidth: 0, px: 1, mr: 0.5 })}>{tx("Apply")}</Button> : null}
+                    {canSchedule ? <Button size="small" disabled={saving} onClick={() => onSchedule(b)} sx={btn("primary", { height: 24, minWidth: 0, px: 1 })}>{tx("Schedule")}</Button> : null}
                   </TableCell>
                 </TableRow>
               );

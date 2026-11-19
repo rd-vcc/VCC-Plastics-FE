@@ -32,7 +32,7 @@ export default function MonthlyTarget() {
             show: false,
           },
           value: {
-            fontSize: "36px",
+            fontSize: "27.5px",
             fontWeight: "600",
             offsetY: -40,
             color: "#1D2939",

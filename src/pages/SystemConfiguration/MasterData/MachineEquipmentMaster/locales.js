@@ -2,6 +2,21 @@ let activeLanguage = "en";
 export function setActiveLanguage(language) { activeLanguage = language; }
 export const UI_TEXT = {
   vi: {
+    "All": "Tất cả",
+    "Not in use": "Không sử dụng", "Draft / inactive / retired": "Nháp / ngừng dùng / thanh lý", "Status updated.": "Đã cập nhật trạng thái.",
+    "Choose where the machine is installed on the left; fill in its details on the right.": "Chọn vị trí đặt máy ở cây bên trái, nhập thông tin máy ở bên phải.",
+    "Not selected": "Chưa chọn", "Factory structure": "Cơ cấu nhà máy", "Expand all": "Mở rộng tất cả", "Collapse all": "Thu gọn tất cả",
+    "rows": "dòng",
+    "What kind of machine it is; every machine belongs to one type.": "Phân loại máy theo chức năng; mỗi máy thuộc một loại.",
+    "Finer grouping inside a type, e.g. injection machines by clamping force.": "Chia nhỏ trong một loại, VD: máy ép theo lực kẹp.",
+    "Technical specifications each machine of a type has.": "Các thông số kỹ thuật mà máy thuộc loại đó cần có.",
+    "Machines": "Số máy", "Select a row to view details.": "Chọn một dòng để xem chi tiết.", "Discard": "Bỏ thay đổi", "Saved.": "Đã lưu.", "Deleted.": "Đã xóa.",
+    "Deactivate": "Ngừng dùng", "Activate": "Kích hoạt", "In use by machines, deactivate instead": "Đang được máy sử dụng, hãy chuyển Ngừng dùng",
+    "Basic information": "Thông tin cơ bản", "Classification": "Phân loại",
+    "CAT_MACHINE": "Máy chính", "CAT_ROBOT": "Robot", "CAT_AUXILIARY": "Thiết bị phụ trợ", "CAT_UTILITY": "Tiện ích nhà xưởng", "CAT_OTHER": "Khác",
+    "DT_TEXT": "Văn bản", "DT_INTEGER": "Số nguyên", "DT_DECIMAL": "Số thập phân", "DT_BOOLEAN": "Có / Không", "DT_DATE": "Ngày",
+    "Information": "Thông tin", "Record": "Thông tin bản ghi", "Created by": "Người tạo", "Updated by": "Người sửa", "Open full image": "Mở ảnh gốc",
+    "Set to Idle": "Chuyển sang Chờ", "Set to Running": "Chuyển sang Đang chạy", "LOCALE_TAG": "vi-VN",
     "Machine & Equipment Master": "Danh mục máy & thiết bị", "Manage all machines and equipment in the system": "Quản lý toàn bộ máy móc và thiết bị trong hệ thống",
     "Equipment Types": "Loại thiết bị", "Machine Groups": "Nhóm máy", "Specifications": "Thông số kỹ thuật", "Specification Definitions": "Định nghĩa thông số",
     "Refresh": "Làm mới", "Add New Machine": "Thêm máy mới", "Total Machines": "Tổng số máy", "All machines": "Tất cả máy", "Running": "Đang chạy", "Idle": "Chờ",
@@ -20,6 +35,9 @@ export const UI_TEXT = {
     "Machine Code": "Mã máy", "Machine Name": "Tên máy", "Area / Line": "Khu vực / Chuyền", "Install Date": "Ngày lắp đặt", "Edit machine": "Sửa máy", "Edit specifications": "Sửa thông số", "Toggle Running / Idle": "Chuyển Đang chạy / Chờ", "Settings": "Cài đặt", "Master Data Configuration": "Cấu hình danh mục",
   },
   ja: {
+    "CAT_MACHINE": "主機械", "CAT_ROBOT": "ロボット", "CAT_AUXILIARY": "補助設備", "CAT_UTILITY": "ユーティリティ", "CAT_OTHER": "その他",
+    "DT_TEXT": "テキスト", "DT_INTEGER": "整数", "DT_DECIMAL": "小数", "DT_BOOLEAN": "はい / いいえ", "DT_DATE": "日付",
+    "Information": "情報", "Record": "レコード情報", "Created by": "作成者", "Set to Idle": "待機にする", "Set to Running": "稼働にする", "LOCALE_TAG": "ja-JP",
     "Machine & Equipment Master": "機械・設備マスター", "Manage all machines and equipment in the system": "システム内の機械・設備を一元管理します",
     "Equipment Types": "設備タイプ", "Machine Groups": "機械グループ", "Specifications": "仕様", "Specification Definitions": "仕様定義",
     "Refresh": "更新", "Add New Machine": "機械を追加", "Total Machines": "機械総数", "All machines": "全機械", "Running": "稼働中", "Idle": "待機中",
@@ -39,5 +57,5 @@ export const UI_TEXT = {
   },
 };
 export function tx(text) { const lang = String(activeLanguage || "en").split("-")[0]; return UI_TEXT[lang]?.[text] || text; }
-export function statusText(value) { const labels = { vi: { UNKNOWN: "Chưa xác định", RUNNING: "Đang chạy", IDLE: "Chờ", DOWN: "Dừng máy", MAINTENANCE: "Bảo trì", OFFLINE: "Mất kết nối", DRAFT: "Nháp", ACTIVE: "Hoạt động", INACTIVE: "Không hoạt động", RETIRED: "Ngừng sử dụng", SCRAPPED: "Thanh lý" }, ja: { UNKNOWN: "不明", RUNNING: "稼働中", IDLE: "待機中", DOWN: "停止中", MAINTENANCE: "保守中", OFFLINE: "オフライン", DRAFT: "下書き", ACTIVE: "有効", INACTIVE: "無効", RETIRED: "廃止", SCRAPPED: "廃棄" } }; const lang = String(activeLanguage || "en").split("-")[0]; return labels[lang]?.[value] || value; }
+export function statusText(value) { const labels = { vi: { UNKNOWN: "Chưa xác định", RUNNING: "Đang chạy", IDLE: "Chờ", DOWN: "Dừng máy", MAINTENANCE: "Bảo trì", OFFLINE: "Mất kết nối", DRAFT: "Nháp", ACTIVE: "Hoạt động", INACTIVE: "Ngừng dùng", RETIRED: "Ngừng sử dụng", SCRAPPED: "Thanh lý" }, ja: { UNKNOWN: "不明", RUNNING: "稼働中", IDLE: "待機中", DOWN: "停止中", MAINTENANCE: "保守中", OFFLINE: "オフライン", DRAFT: "下書き", ACTIVE: "有効", INACTIVE: "無効", RETIRED: "廃止", SCRAPPED: "廃棄" } }; const lang = String(activeLanguage || "en").split("-")[0]; return labels[lang]?.[value] || value; }
 

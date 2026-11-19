@@ -1,4 +1,5 @@
 import "./locales";
+import { CountBadge, PanelHeader, masterGridSx, panelSx, SettingsMenu } from "../../../../components/masterData/MasterPanels";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -44,9 +45,11 @@ import DeleteOutlineIcon from "@mui/icons-material/Delete";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import UnfoldLessIcon from "@mui/icons-material/UnfoldLess";
+import CheckIcon from "@mui/icons-material/Check";
+import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import RemoveRedEyeOutlinedIcon from "@mui/icons-material/RemoveRedEyeOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
@@ -61,10 +64,15 @@ import PageBreadcrumb from "../../../../components/common/PageBreadCrumb";
 import PageMeta from "../../../../components/common/PageMeta";
 import { KpiCard, KpiCardGroup } from "../../../../components/kpi/KpiCardSystem";
 import AgGridTable from "../../../../components/tables/BasicTables/BasicTableOne";
+import useFillHeight from "../../../../hooks/useFillHeight";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import { API_CONFIG } from "../../../../config/config";
 import { useTheme as useAppTheme } from "../../../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { BomManagerDialog, BomOverviewDialog, BomSummary } from "./BomManager";
+import { downloadXlsx } from "../../../../utils/xlsxExport";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const API = `${API_BASE}/api/product-master`;
@@ -75,13 +83,7 @@ let activeTranslator = (key, params = {}) =>
     key,
   );
 const tx = (key, params) => activeTranslator(key, params);
-const cardSx = {
-  border: "1px solid",
-  borderColor: "divider",
-  borderRadius: 2,
-  boxShadow: "0 1px 3px rgba(15,23,42,.06)",
-  overflow: "hidden",
-};
+const cardSx = panelSx;
 
 function buttonSx(type, overrides = {}) {
   const style = buttonSystem[type];
@@ -149,12 +151,10 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
   return (
     <Box
       sx={{
-        px: 3,
-        pt: 2.5,
-        pb: 2,
+        px: 2, py: 1.25,
         display: "flex",
         alignItems: "center",
-        gap: 1.5,
+        gap: 1.25,
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: (theme) =>
@@ -169,8 +169,7 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
     >
       <Box
         sx={{
-          width: 44,
-          height: 44,
+          width: 28, height: 28,
           borderRadius: "50%",
           bgcolor: (theme) =>
             theme.palette.mode === "dark"
@@ -189,11 +188,11 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
         {icon}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>
+        <Typography variant="subtitle2" noWrap sx={{ fontWeight: 800 }}>
           {title}
         </Typography>
         {subtitle ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.35 }}>
             {subtitle}
           </Typography>
         ) : null}
@@ -210,44 +209,48 @@ function DialogHeader({ icon, title, subtitle, onClose, disabled, tone = "primar
   );
 }
 
-function SectionHeader({ icon, title, action }) {
+const SectionHeader = PanelHeader;
+
+function StatusChip({ status, width = 92 }) {
+  const active = status === "ACTIVE";
+  const color = active ? "#12B76A" : "#F04438";
+  const label = active ? tx("Active") : tx("Inactive");
   return (
-    <Box
-      sx={{
-        minHeight: 36,
-        px: 1.25,
-        bgcolor: (theme) =>
-          theme.palette.mode === "dark" ? "#182235" : "#EAF2FF",
-        borderBottom: 1,
-        borderColor: "divider",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <Stack direction="row" alignItems="center" spacing={0.75}>
-        {icon}
-        <Typography variant="subtitle2" noWrap fontWeight={800}>
-          {title}
-        </Typography>
-      </Stack>
-      {action}
+    <Box component="span" title={label} sx={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxSizing: "border-box",
+      width, height: 22, px: 0.5, lineHeight: 1, verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden",
+      borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40`,
+    }}>{label}</Box>
+  );
+}
+
+function DetailSection({ title, children }) {
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ display: "block", mb: 0.5, fontWeight: 800, fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: "text.secondary" }}>{title}</Typography>
+      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, px: 1.25 }}>{children}</Box>
     </Box>
   );
 }
 
-function StatusChip({ status }) {
-  const active = status === "ACTIVE";
+function DetailRow({ label, children, last }) {
   return (
-    <Chip
-      size="small"
-      label={active ? tx("Active") : tx("Inactive")}
-      color={active ? "success" : "error"}
-      variant="outlined"
-      sx={{ height: 20, fontWeight: 700, "& .MuiChip-label": { px: 0.75 } }}
-    />
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5, py: 0.9, borderBottom: last ? 0 : 1, borderColor: "divider" }}>
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ fontWeight: 700, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{children}</Typography>
+    </Box>
   );
 }
+
+function ActionIcon({ title, icon, onClick, disabled, color = "default" }) {
+  return (
+    <Tooltip title={title}>
+      <span><IconButton disabled={disabled} color={color} onClick={onClick} sx={{ border: 1, borderColor: "currentColor", borderRadius: 1.5 }}>{icon}</IconButton></span>
+    </Tooltip>
+  );
+}
+
+const person = (name, code) => (name ? `${name} - ${code}` : code || EMPTY);
 
 function formatDate(value, language = "vi") {
   if (!value) return EMPTY;
@@ -308,36 +311,28 @@ function FamilyTreeNode({
         >
           {hasChildren ? (
             open ? (
-              <ExpandMoreIcon sx={{ fontSize: 16 }} />
+              <ExpandMoreIcon sx={{ fontSize: 13.5 }} />
             ) : (
-              <ChevronRightIcon sx={{ fontSize: 16 }} />
+              <ChevronRightIcon sx={{ fontSize: 13.5 }} />
             )
           ) : (
             <Box sx={{ width: 16 }} />
           )}
         </IconButton>
-        <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 16 }} />
+        <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
         <Typography
           noWrap
+          title={`${node.family_code} · ${node.family_name}`}
           sx={{
             flex: 1,
             fontSize: 11.5,
             fontWeight: selectedId === node.id ? 800 : 600,
+            color: node.status === "INACTIVE" ? "text.disabled" : "text.primary",
           }}
         >
-          {node.family_code} · {node.family_name}
+          {node.family_name}
         </Typography>
-        <Chip
-          size="small"
-          label={node.product_count ?? node.direct_product_count ?? 0}
-          variant="outlined"
-          color="primary"
-          sx={{
-            height: 19,
-            minWidth: 26,
-            "& .MuiChip-label": { px: 0.55, fontSize: 10 },
-          }}
-        />
+        <CountBadge value={node.product_count ?? node.direct_product_count ?? 0} />
       </Box>
       {hasChildren && (
         <Collapse in={open} timeout="auto" unmountOnExit>
@@ -358,7 +353,11 @@ function FamilyTreeNode({
   );
 }
 
-function FamilyDialog({ family, families, saving, onClose, onSave }) {
+function FieldLabel({ children }) {
+  return <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "text.secondary", fontSize: "0.68rem" }}>{children}</Typography>;
+}
+
+function FamilyDialog({ family, families, saving, onClose, onSave, defaultParentId = "" }) {
   const [form, setForm] = useState(
     family
       ? {
@@ -372,7 +371,7 @@ function FamilyDialog({ family, families, saving, onClose, onSave }) {
       : {
           code: "",
           name: "",
-          parentId: "",
+          parentId: defaultParentId,
           sortOrder: 0,
           description: "",
           status: "ACTIVE",
@@ -394,121 +393,80 @@ function FamilyDialog({ family, families, saving, onClose, onSave }) {
     }
     return ids;
   }, [families, family]);
+  // parent options in tree order, indented by level; the family itself and its children are excluded
+  const treeOptions = useMemo(() => {
+    const active = families.filter((item) => item.status === "ACTIVE" && !blocked.has(item.id));
+    const out = [];
+    const walk = (parentId, depth) => active
+      .filter((item) => (item.parent_id ?? null) === parentId)
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.family_name).localeCompare(String(b.family_name)))
+      .forEach((item) => { out.push({ ...item, depth }); walk(item.id, depth + 1); });
+    walk(null, 0);
+    return out;
+  }, [families, blocked]);
+  const pathOf = (id) => {
+    const names = [];
+    let node = families.find((item) => item.id === Number(id));
+    while (node) { names.unshift(node.family_name); node = families.find((item) => item.id === node.parent_id); }
+    return names;
+  };
+  const path = [...(form.parentId === "" ? [] : pathOf(form.parentId)), form.name.trim() || tx("New family")];
   return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="sm"
-      onClose={saving ? undefined : onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          overflow: "hidden",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 24px 60px rgba(0,0,0,.55)"
-              : "0 24px 60px rgba(15,23,42,.18)",
-        },
-      }}
-    >
+    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader
         icon={<CategoryOutlinedIcon />}
         title={family ? tx("Edit Product Family") : tx("Add Product Family")}
+        subtitle={tx("Product families group products in a parent / child tree.")}
         disabled={saving}
         onClose={onClose}
       />
       <DialogContent sx={{ px: 3, py: 2.5 }}>
-        <Stack spacing={2}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              fullWidth
-              size="small"
-              label={tx("Family Code")}
-              disabled={Boolean(family)}
-              value={form.code}
-              onChange={change("code")}
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={tx("Family Name")}
-              value={form.name}
-              onChange={change("name")}
-            />
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Stack spacing={1.25}>
+            <FieldLabel>{tx("Basic information")}</FieldLabel>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr" }, gap: 1.5 }}>
+              <TextField fullWidth required size="small" label={tx("Family Code")} placeholder="VD: AUTO-INT" disabled={Boolean(family)} value={form.code} onChange={change("code")} />
+              <TextField fullWidth required size="small" label={tx("Family Name")} value={form.name} onChange={change("name")} />
+            </Box>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Parent Family")}</InputLabel>
-              <Select
-                label={tx("Parent Family")}
-                value={form.parentId}
-                onChange={change("parentId")}
-              >
-                <MenuItem value="">
-                  <em>{tx("Root family")}</em>
-                </MenuItem>
-                {families
-                  .filter(
-                    (item) => item.status === "ACTIVE" && !blocked.has(item.id),
-                  )
-                  .map((item) => (
-                    <MenuItem key={item.id} value={item.id}>
-                      {item.family_code} · {item.family_name}
+          <Stack spacing={1.25}>
+            <FieldLabel>{tx("Position in tree")}</FieldLabel>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "2fr 1fr 1fr" }, gap: 1.5 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel shrink>{tx("Parent Family")}</InputLabel>
+                <Select label={tx("Parent Family")} notched displayEmpty value={form.parentId} onChange={change("parentId")}
+                  renderValue={(value) => (value === "" ? <em>{tx("Root family")}</em> : pathOf(value).join(" / "))}>
+                  <MenuItem value=""><em>{tx("Root family")}</em></MenuItem>
+                  {treeOptions.map((item) => (
+                    <MenuItem key={item.id} value={item.id} sx={{ pl: 2 + item.depth * 2.25 }}>
+                      <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13, mr: 1 }} />
+                      <Typography component="span" sx={{ fontSize: 11.5, fontWeight: item.depth ? 500 : 700 }}>{item.family_name}</Typography>
+                      <Typography component="span" color="text.secondary" sx={{ fontSize: 11, ml: 0.75 }}>{item.family_code}</Typography>
                     </MenuItem>
                   ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              size="small"
-              label={tx("Sort Order")}
-              type="number"
-              value={form.sortOrder}
-              onChange={change("sortOrder")}
-            />
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Status")}</InputLabel>
-              <Select
-                label={tx("Status")}
-                value={form.status}
-                onChange={change("status")}
-              >
-                <MenuItem value="ACTIVE">{tx("Active")}</MenuItem>
-                <MenuItem value="INACTIVE">{tx("Inactive")}</MenuItem>
-              </Select>
-            </FormControl>
+                </Select>
+              </FormControl>
+              <TextField fullWidth size="small" label={tx("Sort Order")} type="number" value={form.sortOrder} onChange={change("sortOrder")} />
+              <FormControl fullWidth size="small">
+                <InputLabel>{tx("Status")}</InputLabel>
+                <Select label={tx("Status")} value={form.status} onChange={change("status")}>
+                  <MenuItem value="ACTIVE">{tx("Active")}</MenuItem>
+                  <MenuItem value="INACTIVE">{tx("Inactive")}</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, px: 1.25, py: 0.9, borderRadius: 1.5, bgcolor: (t) => (t.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+              <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
+              <Typography variant="caption" color="text.secondary">{tx("Path")}:</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 0, overflowWrap: "anywhere" }}>{path.join(" / ")}</Typography>
+            </Box>
           </Stack>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label={tx("Description")}
-            value={form.description}
-            onChange={change("description")}
-          />
+          <TextField fullWidth multiline minRows={3} label={tx("Description")} value={form.description} onChange={change("description")} />
         </Stack>
       </DialogContent>
-      <DialogActions
-        sx={{
-          px: 3,
-          py: 1.75,
-          borderTop: 1,
-          borderColor: "divider",
-          bgcolor: (theme) =>
-            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
-        }}
-      >
-        <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
-          {tx("Cancel")}
-        </Button>
-        <Button
-          onClick={() => onSave(form)}
-          disabled={saving || !form.code.trim() || !form.name.trim()}
-          sx={buttonSx("primary")}
-          startIcon={
-            saving ? <CircularProgress size={16} color="inherit" /> : null
-          }
-        >
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (theme) => (theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
+        <Button onClick={() => onSave(form)} disabled={saving || !form.code.trim() || !form.name.trim()} sx={buttonSx("primary")}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
           {tx("Save")}
         </Button>
       </DialogActions>
@@ -580,12 +538,7 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
     setForm((old) => ({ ...old, [key]: event.target.checked }));
   const needsOptions = ["SELECT", "MULTI_SELECT"].includes(form.type);
   return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="md"
-      onClose={saving ? undefined : onClose}
-      PaperProps={{
+    <Dialog open fullWidth maxWidth="md" onClose={saving ? undefined : onClose} slotProps={{ paper: {
         sx: {
           borderRadius: 3,
           overflow: "hidden",
@@ -594,8 +547,7 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
               ? "0 24px 60px rgba(0,0,0,.55)"
               : "0 24px 60px rgba(15,23,42,.18)",
         },
-      }}
-    >
+      } }}>
       <DialogHeader
         icon={<TuneOutlinedIcon />}
         title={field ? tx("Edit Product Field") : tx("Add Dynamic Product Field")}
@@ -690,7 +642,7 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
             />
           )}
           <Paper variant="outlined" sx={{ p: 1 }}>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
+            <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1 }}>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -780,9 +732,6 @@ function FieldDialog({ field, families, saving, onClose, onSave }) {
             theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
         }}
       >
-        <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
-          {tx("Cancel")}
-        </Button>
         <Button
           onClick={() =>
             onSave({ ...form, parsedOptions: parseOptions(form.options) })
@@ -876,25 +825,63 @@ function DynamicInput({ field, value, onChange }) {
     DATETIME: "datetime-local",
   };
   return (
-    <TextField
-      {...common}
-      type={typeMap[field.data_type] || "text"}
-      multiline={field.data_type === "LONG_TEXT"}
-      minRows={field.data_type === "LONG_TEXT" ? 3 : undefined}
-      value={value ?? ""}
-      onChange={(event) => onChange(event.target.value)}
-      InputLabelProps={
-        ["DATE", "DATETIME"].includes(field.data_type)
-          ? { shrink: true }
-          : undefined
-      }
-      placeholder={
+    <TextField {...common} type={typeMap[field.data_type] || "text"} multiline={field.data_type === "LONG_TEXT"} minRows={field.data_type === "LONG_TEXT" ? 3 : undefined} value={value ?? ""} onChange={(event) => onChange(event.target.value)} placeholder={
         field.placeholder ||
         (["FILE", "IMAGE"].includes(field.data_type)
           ? tx("Enter URL or storage key")
           : undefined)
-      }
-    />
+      } slotProps={{ inputLabel: ["DATE", "DATETIME"].includes(field.data_type)
+          ? { shrink: true }
+          : undefined }} />
+  );
+}
+
+// Product family picker drawn as the family tree; only active families can be chosen.
+function FamilyTreePicker({ families, value, onChange }) {
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const children = useMemo(() => {
+    const map = {};
+    families.forEach((f) => { (map[f.parent_id ?? "root"] = map[f.parent_id ?? "root"] || []).push(f); });
+    Object.values(map).forEach((list) => list.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || String(a.family_name).localeCompare(String(b.family_name))));
+    return map;
+  }, [families]);
+  const parents = families.filter((f) => children[f.id]?.length).map((f) => f.id);
+  const toggle = (id) => setCollapsed((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const renderNode = (node, depth) => {
+    const kids = children[node.id] || [];
+    const open = !collapsed.has(node.id);
+    const selected = Number(value) === node.id;
+    const disabled = node.status !== "ACTIVE";
+    return (
+      <Box key={node.id}>
+        <Box onClick={() => !disabled && onChange(node.id)} sx={{ minHeight: 27, pl: `${depth * 16 + 2}px`, pr: 0.75, display: "flex", alignItems: "center", gap: 0.5, borderRadius: 1,
+          cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
+          bgcolor: selected ? "action.selected" : "transparent", "&:hover": disabled ? {} : { bgcolor: selected ? "action.selected" : "action.hover" } }}>
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); if (kids.length) toggle(node.id); }} sx={{ width: 22, height: 22, visibility: kids.length ? "visible" : "hidden" }}>
+            {open ? <ExpandMoreIcon sx={{ fontSize: 14 }} /> : <ChevronRightIcon sx={{ fontSize: 14 }} />}
+          </IconButton>
+          {kids.length
+            ? <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5, flexShrink: 0 }} />
+            : <CategoryOutlinedIcon sx={{ fontSize: 13, flexShrink: 0, color: "text.secondary" }} />}
+          <Typography noWrap sx={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: selected ? 800 : depth ? 600 : 700 }}>{node.family_name}</Typography>
+          <Typography noWrap color="text.secondary" sx={{ fontSize: 10, flexShrink: 0 }}>{node.family_code}</Typography>
+          {selected ? <CheckIcon color="primary" sx={{ fontSize: 13.5, flexShrink: 0 }} /> : null}
+        </Box>
+        {kids.length && open ? kids.map((k) => renderNode(k, depth + 1)) : null}
+      </Box>
+    );
+  };
+  return (
+    <Box sx={{ flex: 1, minHeight: 280, display: "flex", flexDirection: "column", border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+      <Box sx={{ px: 1, py: 0.5, display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider", bgcolor: (t) => (t.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+        <Typography sx={{ flex: 1, fontSize: 11, fontWeight: 800, pl: 0.5 }}>{tx("{{count}} families", { count: families.length })}</Typography>
+        <Tooltip title={tx("Expand all")}><IconButton size="small" onClick={() => setCollapsed(new Set())}><UnfoldMoreIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+        <Tooltip title={tx("Collapse all")}><IconButton size="small" onClick={() => setCollapsed(new Set(parents))}><UnfoldLessIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: 0.75 }}>
+        {(children.root || []).map((n) => renderNode(n, 0))}
+      </Box>
+    </Box>
   );
 }
 
@@ -982,148 +969,80 @@ function ProductDialog({
           values[field.id] === "" ||
           values[field.id]?.length === 0),
     );
+  const familyPath = (id) => {
+    const names = [];
+    let n = families.find((f) => f.id === Number(id));
+    while (n) { names.unshift(n.family_name); n = families.find((f) => f.id === n.parent_id); }
+    return names.join(" / ");
+  };
   return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="md"
-      onClose={saving ? undefined : onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          overflow: "hidden",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 24px 60px rgba(0,0,0,.55)"
-              : "0 24px 60px rgba(15,23,42,.18)",
-        },
-      }}
-    >
+    <Dialog open fullWidth maxWidth="lg" onClose={saving ? undefined : onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader
         icon={<Inventory2OutlinedIcon />}
         title={product ? tx("Edit Product") : tx("Add Product")}
+        subtitle={tx("Choose the product family on the left; its specification fields appear on the right.")}
         disabled={saving}
         onClose={onClose}
       />
       <DialogContent sx={{ px: 3, py: 2.5 }}>
-        <Stack spacing={2}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-            <TextField
-              fullWidth
-              size="small"
-              label={tx("Product Code")}
-              disabled={Boolean(product)}
-              value={form.code}
-              onChange={(event) =>
-                setForm((old) => ({ ...old, code: event.target.value }))
-              }
-            />
-            <TextField
-              fullWidth
-              size="small"
-              label={tx("Product Name")}
-              value={form.name}
-              onChange={(event) =>
-                setForm((old) => ({ ...old, name: event.target.value }))
-              }
-            />
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Product Family")}</InputLabel>
-              <Select
-                label={tx("Product Family")}
-                value={form.familyId}
-                onChange={(event) => {
-                  setForm((old) => ({ ...old, familyId: event.target.value }));
-                  setValues({});
-                }}
-              >
-                {families
-                  .filter((item) => item.status === "ACTIVE")
-                  .map((item) => (
-                    <MenuItem key={item.id} value={item.id}>
-                      {item.family_code} · {item.family_name}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>{tx("Status")}</InputLabel>
-              <Select
-                label={tx("Status")}
-                value={form.status}
-                onChange={(event) =>
-                  setForm((old) => ({ ...old, status: event.target.value }))
-                }
-              >
-                <MenuItem value="ACTIVE">{tx("Active")}</MenuItem>
-                <MenuItem value="INACTIVE">{tx("Inactive")}</MenuItem>
-              </Select>
-            </FormControl>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "320px minmax(0,1fr)" }, gap: 2.5, mt: 1, height: { md: 520 } }}>
+          {/* left: product family tree */}
+          <Stack spacing={0.75} sx={{ minHeight: 0 }}>
+            <FieldLabel>{tx("Product Family")} *</FieldLabel>
+            <FamilyTreePicker families={families} value={form.familyId}
+              onChange={(id) => { if (id !== form.familyId) { setForm((old) => ({ ...old, familyId: id })); setValues({}); } }} />
           </Stack>
-          <ImageUploadField
-            value={form.image}
-            category="product"
-            label={tx("Product Image")}
-            disabled={saving}
-            onChange={(v) => setForm((old) => ({ ...old, image: v || "" }))}
-          />
-          {loading && <LinearProgress />}
-          {Object.entries(groups).map(([group, items]) => (
-            <Paper key={group} variant="outlined" sx={{ p: 1.5 }}>
-              <Typography
-                variant="subtitle2"
-                fontWeight={800}
-                color="primary"
-                sx={{ mb: 1.5 }}
-              >
-                {group.replaceAll("_", " ")}
-              </Typography>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "repeat(2,minmax(0,1fr))",
-                  },
-                  gap: 1.5,
-                }}
-              >
-                {items.map((field) => (
-                  <DynamicInput
-                    key={field.id}
-                    field={field}
-                    value={values[field.id]}
-                    onChange={(value) =>
-                      setValues((old) => ({ ...old, [field.id]: value }))
-                    }
-                  />
-                ))}
-              </Box>
-            </Paper>
-          ))}
-        </Stack>
+
+          {/* right: basic information, image and dynamic fields */}
+          <Box sx={{ minHeight: 0, overflowY: "auto", pr: 0.5 }}>
+            <Stack spacing={2.25}>
+              <Stack spacing={1.25}>
+                <FieldLabel>{tx("Basic information")}</FieldLabel>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 2fr 1fr" }, gap: 1.5, pt: 0.75 }}>
+                  <TextField fullWidth required size="small" label={tx("Product Code")} disabled={Boolean(product)} value={form.code}
+                    onChange={(event) => setForm((old) => ({ ...old, code: event.target.value }))} />
+                  <TextField fullWidth required size="small" label={tx("Product Name")} value={form.name}
+                    onChange={(event) => setForm((old) => ({ ...old, name: event.target.value }))} />
+                  <FormControl fullWidth size="small">
+                    <InputLabel>{tx("Status")}</InputLabel>
+                    <Select label={tx("Status")} value={form.status} onChange={(event) => setForm((old) => ({ ...old, status: event.target.value }))}>
+                      <MenuItem value="ACTIVE">{tx("Active")}</MenuItem>
+                      <MenuItem value="INACTIVE">{tx("Inactive")}</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, px: 1.25, py: 0.9, borderRadius: 1.5, bgcolor: (t) => (t.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+                  <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5 }} />
+                  <Typography variant="caption" color="text.secondary">{tx("Product Family")}:</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 700, minWidth: 0, overflowWrap: "anywhere", color: form.familyId ? "text.primary" : "text.disabled" }}>
+                    {form.familyId ? familyPath(form.familyId) : tx("Not selected")}
+                  </Typography>
+                </Box>
+              </Stack>
+              <ImageUploadField value={form.image} category="product" label={tx("Product Image")} disabled={saving} onChange={(v) => setForm((old) => ({ ...old, image: v || "" }))} />
+              {loading && <LinearProgress />}
+              {!form.familyId ? (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>{tx("Select a product family to show its specification fields.")}</Alert>
+              ) : !loading && !fields.length ? (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>{tx("This family has no specification fields configured.")}</Alert>
+              ) : null}
+              {Object.entries(groups).map(([group, items]) => (
+                <Stack key={group} spacing={1.25}>
+                  <FieldLabel>{group.replaceAll("_", " ")}</FieldLabel>
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2,minmax(0,1fr))" }, gap: 1.5, pt: 0.75 }}>
+                    {items.map((field) => (
+                      <DynamicInput key={field.id} field={field} value={values[field.id]}
+                        onChange={(value) => setValues((old) => ({ ...old, [field.id]: value }))} />
+                    ))}
+                  </Box>
+                </Stack>
+              ))}
+            </Stack>
+          </Box>
+        </Box>
       </DialogContent>
-      <DialogActions
-        sx={{
-          px: 3,
-          py: 1.75,
-          borderTop: 1,
-          borderColor: "divider",
-          bgcolor: (theme) =>
-            theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC",
-        }}
-      >
-        <Button onClick={onClose} disabled={saving} sx={buttonSx("cancel")}>
-          {tx("Cancel")}
-        </Button>
-        <Button
-          onClick={submit}
-          disabled={saving || invalid}
-          sx={buttonSx("primary")}
-          startIcon={
-            saving ? <CircularProgress size={16} color="inherit" /> : null
-          }
-        >
+      <DialogActions sx={{ px: 2, py: 1.25, borderTop: 1, borderColor: "divider", bgcolor: (theme) => (theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC") }}>
+        <Button onClick={submit} disabled={saving || invalid} sx={buttonSx("primary")} startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}>
           {tx("Save Product")}
         </Button>
       </DialogActions>
@@ -1131,242 +1050,161 @@ function ProductDialog({
   );
 }
 
-function HierarchyManager({
-  families,
-  canEdit,
-  saving,
-  onClose,
-  onAdd,
-  onEdit,
-  onDelete,
-}) {
-  return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="md"
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          overflow: "hidden",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 24px 60px rgba(0,0,0,.55)"
-              : "0 24px 60px rgba(15,23,42,.18)",
-        },
-      }}
-    >
-      <DialogHeader
-        icon={<AccountTreeOutlinedIcon />}
-        title={tx("Product Hierarchy")}
-        onClose={onClose}
-      />
-      <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ p: 1.5, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            disabled={!canEdit}
-            onClick={onAdd}
-            startIcon={<AddIcon />}
-            sx={buttonSx("primary")}
-          >
-            {tx("Add Family")}
-          </Button>
-        </Box>
-        <Divider />
-        <Stack divider={<Divider />} sx={{ maxHeight: 520, overflow: "auto" }}>
-          {families.map((family) => (
-            <Box
-              key={family.id}
-              sx={{
-                px: 2,
-                py: 1,
-                pl: `${family.depth * 22 + 16}px`,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <AccountTreeOutlinedIcon color="primary" fontSize="small" />
-              <Box flex={1} minWidth={0}>
-                <Typography noWrap fontSize={12.5} fontWeight={700}>
-                  {family.family_code} · {family.family_name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {family.parent_name
-                    ? tx("Parent: {{name}}", { name: family.parent_name })
-                    : tx("Root family")}{" "}
-                  ·{" "}
-                  {tx("{{count}} products", {
-                    count: family.direct_product_count || 0,
-                  })}
-                </Typography>
-              </Box>
-              <StatusChip status={family.status} />
-              <IconButton
-                size="small"
-                disabled={!canEdit || saving}
-                onClick={() => onEdit(family)}
-              >
-                <EditOutlinedIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                disabled={!canEdit || saving}
-                onClick={() => onDelete(family)}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={buttonSx("cancel")}>
-          {tx("Close")}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
+// Product family tree on the left, details of the clicked family on the right.
+function HierarchyManager({ families, canEdit, saving, onClose, onAdd, onEdit, onDelete }) {
+  const [collapsed, setCollapsed] = useState(() => new Set());
+  const [selectedId, setSelectedId] = useState(() => families[0]?.id ?? null);
+  const children = useMemo(() => {
+    const map = {};
+    families.forEach((f) => { (map[f.parent_id ?? "root"] = map[f.parent_id ?? "root"] || []).push(f); });
+    return map;
+  }, [families]);
+  const selected = families.find((f) => f.id === selectedId) || null;
+  const pathOf = (node) => {
+    const names = [];
+    let n = node;
+    while (n) { names.unshift(n.family_name); n = families.find((f) => f.id === n.parent_id); }
+    return names.join(" / ");
+  };
+  const toggle = (id) => setCollapsed((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const parents = families.filter((f) => children[f.id]?.length).map((f) => f.id);
 
-function FieldManager({
-  fields,
-  canEdit,
-  saving,
-  onClose,
-  onAdd,
-  onEdit,
-  onDelete,
-}) {
-  return (
-    <Dialog
-      open
-      fullWidth
-      maxWidth="lg"
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          overflow: "hidden",
-          boxShadow: (theme) =>
-            theme.palette.mode === "dark"
-              ? "0 24px 60px rgba(0,0,0,.55)"
-              : "0 24px 60px rgba(15,23,42,.18)",
-        },
-      }}
-    >
-      <DialogHeader
-        icon={<TuneOutlinedIcon />}
-        title={tx("Product Field Configuration")}
-        onClose={onClose}
-      />
-      <DialogContent sx={{ p: 0 }}>
-        <Box
-          sx={{
-            p: 1.5,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            {tx("Fields are rendered automatically in the Product form.")}
-          </Typography>
-          <Button
-            disabled={!canEdit}
-            onClick={onAdd}
-            startIcon={<AddIcon />}
-            sx={buttonSx("primary")}
-          >
-            {tx("Add Field")}
-          </Button>
+  const renderNode = (node, depth) => {
+    const kids = children[node.id] || [];
+    const open = !collapsed.has(node.id);
+    const isSel = node.id === selectedId;
+    return (
+      <Box key={node.id}>
+        <Box onClick={() => setSelectedId(node.id)} sx={{ minHeight: 27, pl: `${depth * 16 + 2}px`, pr: 0.75, display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", borderRadius: 1,
+          bgcolor: isSel ? "action.selected" : "transparent", "&:hover": { bgcolor: isSel ? "action.selected" : "action.hover" } }}>
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); if (kids.length) toggle(node.id); }} sx={{ width: 22, height: 22, visibility: kids.length ? "visible" : "hidden" }}>
+            {open ? <ExpandMoreIcon sx={{ fontSize: 14 }} /> : <ChevronRightIcon sx={{ fontSize: 14 }} />}
+          </IconButton>
+          {kids.length
+            ? <AccountTreeOutlinedIcon color="primary" sx={{ fontSize: 13.5, flexShrink: 0 }} />
+            : <CategoryOutlinedIcon sx={{ fontSize: 13, flexShrink: 0, color: "text.secondary" }} />}
+          <Typography noWrap sx={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: isSel ? 800 : depth ? 600 : 700, color: node.status === "ACTIVE" ? "text.primary" : "text.disabled" }}>{node.family_name}</Typography>
+          <CountBadge value={node.product_count ?? node.direct_product_count ?? 0} />
         </Box>
-        <Box sx={{ overflow: "auto" }}>
-          <Box
-            component="table"
-            sx={{
-              width: "100%",
-              borderCollapse: "collapse",
-              "& th,& td": {
-                px: 1.5,
-                py: 1,
-                borderTop: 1,
-                borderColor: "divider",
-                textAlign: "left",
-                fontSize: 12,
-              },
-              "& th": { bgcolor: "action.hover", fontWeight: 800 },
-            }}
-          >
-            <thead>
-              <tr>
-                <th>{tx("Field Code")}</th>
-                <th>{tx("Field Name")}</th>
-                <th>{tx("Data Type")}</th>
-                <th>{tx("Field Group")}</th>
-                <th>{tx("Scope")}</th>
-                <th>{tx("List")}</th>
-                <th>{tx("Status")}</th>
-                <th>{tx("Actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((field) => (
-                <tr key={field.id}>
-                  <td>{field.field_code}</td>
-                  <td>
-                    <b>{field.field_name}</b>
-                  </td>
-                  <td>{field.data_type}</td>
-                  <td>{field.field_group || EMPTY}</td>
-                  <td>
-                    {field.applies_to_all_families
-                      ? tx("All families")
-                      : tx("{{count}} families", {
-                          count: field.families?.length || 0,
-                        })}
-                  </td>
-                  <td>{field.is_list_visible ? tx("Yes") : tx("No")}</td>
-                  <td>
-                    <StatusChip
-                      status={field.is_active ? "ACTIVE" : "INACTIVE"}
-                    />
-                  </td>
-                  <td>
-                    <IconButton
-                      size="small"
-                      disabled={!canEdit || saving}
-                      onClick={() => onEdit(field)}
-                    >
-                      <EditOutlinedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      disabled={!canEdit || saving}
-                      onClick={() => onDelete(field)}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+        {kids.length && open ? kids.map((k) => renderNode(k, depth + 1)) : null}
+      </Box>
+    );
+  };
+
+  return (
+    <Dialog open fullWidth maxWidth="lg" onClose={onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<AccountTreeOutlinedIcon />} title={tx("Product Hierarchy")} subtitle={tx("Product families and their parent / child levels.")} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "380px minmax(0,1fr)" }, gap: 2.5, mt: 1, height: { md: 470 } }}>
+          {/* left: tree */}
+          <Box sx={{ display: "flex", flexDirection: "column", minHeight: 0, border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+            <Box sx={{ px: 1, py: 0.5, display: "flex", alignItems: "center", borderBottom: 1, borderColor: "divider", bgcolor: (t) => (t.palette.mode === "dark" ? "#182235" : "#F1F7FF") }}>
+              <Typography sx={{ flex: 1, fontSize: 11, fontWeight: 800, pl: 0.5 }}>{tx("{{count}} families", { count: families.length })}</Typography>
+              <Tooltip title={tx("Expand all")}><IconButton size="small" onClick={() => setCollapsed(new Set())}><UnfoldMoreIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+              <Tooltip title={tx("Collapse all")}><IconButton size="small" onClick={() => setCollapsed(new Set(parents))}><UnfoldLessIcon sx={{ fontSize: 14.5 }} /></IconButton></Tooltip>
+            </Box>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: 0.75 }}>
+              {(children.root || []).map((n) => renderNode(n, 0))}
+            </Box>
+            <Box sx={{ p: 1, borderTop: 1, borderColor: "divider" }}>
+              <Button fullWidth variant="contained" disabled={!canEdit} onClick={() => onAdd(null)} startIcon={<AddIcon />} sx={buttonSx("primary")}>{tx("Add Family")}</Button>
+            </Box>
+          </Box>
+
+          {/* right: details of the clicked family */}
+          <Box sx={{ display: "flex", flexDirection: "column", minHeight: 0, border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+            {selected ? (
+              <>
+                <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: "#005BAB" }}>
+                      {children[selected.id]?.length ? <AccountTreeOutlinedIcon sx={{ fontSize: 18 }} /> : <CategoryOutlinedIcon sx={{ fontSize: 18 }} />}
+                    </Box>
+                    <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 0.25 }}>
+                      <Typography noWrap sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{selected.family_name}</Typography>
+                      <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selected.family_code}</Typography>
+                    </Box>
+                    <StatusChip status={selected.status} />
+                  </Box>
+                </Box>
+                <Box sx={{ px: 1.5, pb: 1.5, flex: 1, minHeight: 0, overflowY: "auto" }}>
+                  <Stack spacing={1.5}>
+                    <DetailSection title={tx("General")}>
+                      <DetailRow label={tx("Path")}>{pathOf(selected)}</DetailRow>
+                      <DetailRow label={tx("Parent Family")}>{selected.parent_name || tx("Root family")}</DetailRow>
+                      <DetailRow label={tx("Sub-families")}>{children[selected.id]?.length || 0}</DetailRow>
+                      <DetailRow label={tx("Products")}>{selected.product_count ?? selected.direct_product_count ?? 0}</DetailRow>
+                      <DetailRow label={tx("Sort Order")}>{selected.sort_order ?? 0}</DetailRow>
+                      <DetailRow label={tx("Description")} last>{selected.description || EMPTY}</DetailRow>
+                    </DetailSection>
+                    <DetailSection title={tx("Record")}>
+                      <DetailRow label={tx("Created By")}>{person(selected.created_by_name, selected.created_by_code)}</DetailRow>
+                      <DetailRow label={tx("Created Date")}>{formatDate(selected.created_at)}</DetailRow>
+                      <DetailRow label={tx("Last Modified")} last>{formatDate(selected.updated_at)}</DetailRow>
+                    </DetailSection>
+                  </Stack>
+                </Box>
+                <Divider />
+                <Stack direction="row" sx={{ p: 1.5, justifyContent: "center", gap: 1.5, flexShrink: 0 }}>
+                  <ActionIcon title={tx("Add sub-family")} icon={<AddIcon fontSize="small" />} color="primary" disabled={!canEdit || saving} onClick={() => onAdd(selected)} />
+                  <ActionIcon title={tx("Edit")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit || saving} onClick={() => onEdit(selected)} />
+                  <ActionIcon title={children[selected.id]?.length ? tx("Delete its sub-families first") : tx("Delete")} icon={<DeleteOutlineIcon fontSize="small" />} color="error"
+                    disabled={!canEdit || saving || Boolean(children[selected.id]?.length)} onClick={() => onDelete(selected)} />
+                </Stack>
+              </>
+            ) : (
+              <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 2 }}>
+                <Typography variant="body2" color="text.secondary">{tx("Select a family in the tree to view its details.")}</Typography>
+              </Box>
+            )}
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={buttonSx("cancel")}>
-          {tx("Close")}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
 
+function FieldManager({ fields, canEdit, saving, onClose, onAdd, onEdit, onDelete }) {
+  const columns = useMemo(() => [
+    { headerName: tx("Field Code"), field: "field_code", width: 150, pinned: "left" },
+    { headerName: tx("Field Name"), field: "field_name", minWidth: 170, flex: 1.3 },
+    { headerName: tx("Data Type"), field: "data_type", minWidth: 110, flex: 0.7 },
+    { headerName: tx("Field Group"), field: "field_group", minWidth: 130, flex: 0.9, valueFormatter: (p) => p.value || EMPTY },
+    { headerName: tx("Scope"), minWidth: 130, flex: 0.8,
+      valueGetter: (p) => (p.data.applies_to_all_families ? tx("All families") : tx("{{count}} families", { count: p.data.families?.length || 0 })) },
+    { headerName: tx("List"), field: "is_list_visible", minWidth: 80, flex: 0.5, valueFormatter: (p) => (p.value ? tx("Yes") : tx("No")) },
+    { headerName: tx("Status"), field: "is_active", minWidth: 110, flex: 0.6,
+      cellRenderer: (p) => <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}><StatusChip status={p.value ? "ACTIVE" : "INACTIVE"} /></Box> },
+    { headerName: tx("Actions"), width: 100, sortable: false, filter: false, cellRenderer: (p) => (
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <Tooltip title={tx("Edit")}><span><IconButton size="small" disabled={!canEdit || saving} onClick={() => onEdit(p.data)}><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
+        <Tooltip title={tx("Delete")}><span><IconButton size="small" color="error" disabled={!canEdit || saving} onClick={() => onDelete(p.data)}><DeleteOutlineIcon fontSize="small" /></IconButton></span></Tooltip>
+      </Stack>
+    ) },
+  ], [canEdit, saving, onEdit, onDelete]);
+  return (
+    <Dialog open fullWidth maxWidth="lg" onClose={onClose} slotProps={{ paper: { sx: dialogPaperSx } }}>
+      <DialogHeader icon={<TuneOutlinedIcon />} title={tx("Product Field Configuration")} subtitle={tx("Fields are rendered automatically in the Product form.")} onClose={onClose} />
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+        <Box sx={{ height: 420, mt: 1 }}>
+          <AgGridTable rowData={fields} columnDefs={columns} height="100%" getRowId={(p) => String(p.data.id)} />
+        </Box>
+        <Stack direction="row" sx={{ mt: 1.5 }}>
+          <Button variant="contained" disabled={!canEdit} onClick={onAdd} startIcon={<AddIcon />} sx={buttonSx("primary", { whiteSpace: "nowrap" })}>{tx("Add Field")}</Button>
+        </Stack>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const dialogPaperSx = {
+  borderRadius: 3,
+  overflow: "hidden",
+  boxShadow: (theme) => (theme.palette.mode === "dark" ? "0 24px 60px rgba(0,0,0,.55)" : "0 24px 60px rgba(15,23,42,.18)"),
+};
+
 export default function ProductMaster() {
+  const [panelsRef, panelHeight] = useFillHeight();
   const { theme: appTheme } = useAppTheme();
   const { t, i18n } = useTranslation();
   const translate = useCallback(
@@ -1392,7 +1230,6 @@ export default function ProductMaster() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialog, setDialog] = useState(null);
-  const [settingsAnchor, setSettingsAnchor] = useState(null);
   const [detailTab, setDetailTab] = useState(0);
   const [bomRefresh, setBomRefresh] = useState(0);
   const [message, setMessage] = useState({
@@ -1521,14 +1358,14 @@ export default function ProductMaster() {
       {
         headerName: translate("Product Code"),
         field: "product_code",
-        width: 135,
+        width: 140,
         pinned: "left",
       },
       {
         headerName: translate("Product Name"),
         field: "product_name",
         minWidth: 175,
-        flex: 1.2,
+        flex: 1.6,
       },
       {
         headerName: translate("Product Family"),
@@ -1547,38 +1384,16 @@ export default function ProductMaster() {
       {
         headerName: translate("Status"),
         field: "status",
-        width: 95,
+        minWidth: 110,
+        flex: 0.6,
         cellRenderer: (params) => (
           <Box sx={{ height: "100%", display: "flex", alignItems: "center" }}>
             <StatusChip status={params.value} />
           </Box>
         ),
       },
-      {
-        headerName: translate("Actions"),
-        width: 95,
-        sortable: false,
-        filter: false,
-        cellRenderer: (params) => (
-          <Stack direction="row" alignItems="center" height="100%">
-            <IconButton
-              size="small"
-              onClick={() => setSelectedProductId(params.data.id)}
-            >
-              <RemoveRedEyeOutlinedIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              disabled={!canEdit}
-              onClick={() => openEditProduct(params.data.id)}
-            >
-              <EditOutlinedIcon fontSize="small" />
-            </IconButton>
-          </Stack>
-        ),
-      },
     ],
-    [canEdit, listFields, openEditProduct, translate],
+    [listFields, translate],
   );
 
   const saveFamily = async (form) => {
@@ -1751,78 +1566,9 @@ export default function ProductMaster() {
         (field) => product.dynamic_values?.[field.field_code]?.value ?? "",
       ),
     ]);
-    const csv = [header, ...rows]
-      .map((row) =>
-        row
-          .map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`)
-          .join(","),
-      )
-      .join("\n");
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "product-master.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadXlsx("product-master.xlsx", header, rows);
   };
 
-  const details = useMemo(
-    () =>
-      selectedProduct
-        ? [
-            { label: tx("Product Code"), value: selectedProduct.product_code },
-            { label: tx("Product Name"), value: selectedProduct.product_name },
-            {
-              label: tx("Product Family"),
-              value: `${selectedProduct.family_code} · ${selectedProduct.family_name}`,
-            },
-            ...(selectedProduct.values || []).map((item) => ({
-              label: item.field_name,
-              value: Array.isArray(item.value)
-                ? item.value.join(", ")
-                : item.value,
-              unit: item.unit_label,
-            })),
-            {
-              label: tx("Status"),
-              value:
-                selectedProduct.status === "ACTIVE"
-                  ? tx("Active")
-                  : tx("Inactive"),
-            },
-            { label: tx("Created By"), value: selectedProduct.created_by },
-            {
-              label: tx("Created Date"),
-              value: formatDate(
-                selectedProduct.created_at,
-                i18n.resolvedLanguage,
-              ),
-            },
-            {
-              label: tx("Last Modified"),
-              value: formatDate(
-                selectedProduct.updated_at,
-                i18n.resolvedLanguage,
-              ),
-            },
-          ]
-        : [],
-    [i18n.resolvedLanguage, selectedProduct],
-  );
-  const distribution = useMemo(
-    () =>
-      familyTree
-        .map((item) => ({
-          name: item.family_name,
-          count: item.product_count || 0,
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5),
-    [familyTree],
-  );
-  const maxCount = Math.max(1, ...distribution.map((item) => item.count));
 
   return (
     <MuiThemeProvider theme={muiTheme}>
@@ -1860,7 +1606,7 @@ export default function ProductMaster() {
           }}
         >
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h5" fontWeight={800}>
+            <Typography variant="h5" sx={{ fontWeight: 800 }}>
               {tx("Product Master")}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -1880,70 +1626,12 @@ export default function ProductMaster() {
             >
               {tx("Product BOM")}
             </Button>
-            <Tooltip title={tx("Settings")}>
-              <IconButton
-                onClick={(event) => setSettingsAnchor(event.currentTarget)}
-                sx={{
-                  border: 1,
-                  borderColor: "divider",
-                  borderRadius: 2,
-                }}
-              >
-                <SettingsOutlinedIcon />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              anchorEl={settingsAnchor}
-              open={Boolean(settingsAnchor)}
-              onClose={() => setSettingsAnchor(null)}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-              <MenuItem
-                disabled
-                onClick={() => setSettingsAnchor(null)}
-                title={tx("Import API will be added later")}
-              >
-                <ListItemIcon>
-                  <UploadFileOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{tx("Import Data")}</ListItemText>
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setSettingsAnchor(null);
-                  exportCsv();
-                }}
-              >
-                <ListItemIcon>
-                  <DownloadOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{tx("Export Data")}</ListItemText>
-              </MenuItem>
-              <Divider />
-              <MenuItem
-                onClick={() => {
-                  setSettingsAnchor(null);
-                  setDialog({ type: "fields" });
-                }}
-              >
-                <ListItemIcon>
-                  <TuneOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{tx("Field Configuration")}</ListItemText>
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setSettingsAnchor(null);
-                  setDialog({ type: "hierarchy" });
-                }}
-              >
-                <ListItemIcon>
-                  <AccountTreeOutlinedIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>{tx("Product Hierarchy")}</ListItemText>
-              </MenuItem>
-            </Menu>
+            <SettingsMenu title={tx("Settings")} items={[
+              { key: "import", label: tx("Import Data"), icon: <UploadFileOutlinedIcon />, disabled: true, title: tx("Import API will be added later"), onClick: () => {} },
+              { key: "export", label: tx("Export Data"), icon: <DownloadOutlinedIcon />, onClick: exportCsv },
+              { key: "fields", label: tx("Field Configuration"), icon: <TuneOutlinedIcon />, onClick: () => setDialog({ type: "fields" }), divider: true },
+              { key: "hierarchy", label: tx("Product Hierarchy"), icon: <AccountTreeOutlinedIcon />, onClick: () => setDialog({ type: "hierarchy" }) },
+            ]} />
             <Button
               disabled={!canEdit}
               startIcon={<AddIcon />}
@@ -1998,83 +1686,39 @@ export default function ProductMaster() {
             tone="danger"
           />
         </KpiCardGroup>
-        <Paper elevation={0} sx={{ ...cardSx, p: 1, mb: 1.5 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-            <TextField
-              size="small"
-              placeholder={tx("Search by product code, name or value...")}
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              sx={{ flex: 1, minWidth: 250 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <FormControl size="small" sx={{ minWidth: 210 }}>
-              <InputLabel>{tx("Product Family")}</InputLabel>
-              <Select
-                label={tx("Product Family")}
-                value={selectedFamilyId ?? ""}
-                onChange={(event) =>
-                  setSelectedFamilyId(
-                    event.target.value === ""
-                      ? null
-                      : Number(event.target.value),
-                  )
-                }
-              >
+        <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5, borderRadius: 2 }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(240px,1.6fr) repeat(2,minmax(145px,1fr)) auto" }, gap: 1 }}>
+            <TextField size="small" placeholder={tx("Search by product code, name or value...")} value={keyword} onChange={(event) => setKeyword(event.target.value)}
+              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }} />
+            <FormControl size="small">
+              <InputLabel shrink>{tx("Product Family")}</InputLabel>
+              <Select displayEmpty notched label={tx("Product Family")} value={selectedFamilyId ?? ""}
+                onChange={(event) => setSelectedFamilyId(event.target.value === "" ? null : Number(event.target.value))}>
                 <MenuItem value="">{tx("All Families")}</MenuItem>
-                {families.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {item.family_code} · {item.family_name}
-                  </MenuItem>
-                ))}
+                {families.map((item) => <MenuItem key={item.id} value={item.id}>{item.family_code} · {item.family_name}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
+            <FormControl size="small">
               <InputLabel>{tx("Status")}</InputLabel>
-              <Select
-                label={tx("Status")}
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
+              <Select label={tx("Status")} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                 <MenuItem value="all">{tx("All Statuses")}</MenuItem>
                 <MenuItem value="ACTIVE">{tx("Active")}</MenuItem>
                 <MenuItem value="INACTIVE">{tx("Inactive")}</MenuItem>
               </Select>
             </FormControl>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setKeyword("");
-                setSelectedFamilyId(null);
-                setStatusFilter("all");
-              }}
-            >
-              {tx("Clear")}
-            </Button>
-            <IconButton onClick={loadData}>
-              <RefreshIcon />
-            </IconButton>
-          </Stack>
+            <Button startIcon={<FilterListIcon />} onClick={() => { setKeyword(""); setSelectedFamilyId(null); setStatusFilter("all"); }}
+              sx={buttonSx("cancel", { minHeight: 29, whiteSpace: "nowrap" })}>{tx("Clear")}</Button>
+          </Box>
         </Paper>
         <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", lg: "250px minmax(0,1fr) 300px" },
-            gap: 1.5,
-            mb: 1.5,
-          }}
+          ref={panelsRef}
+          sx={masterGridSx}
         >
           <Paper
             elevation={0}
             sx={{
               ...cardSx,
-              height: { xs: 320, lg: 560 },
+              height: panelHeight,
               display: "flex",
               flexDirection: "column",
             }}
@@ -2084,11 +1728,6 @@ export default function ProductMaster() {
                 <AccountTreeOutlinedIcon color="primary" fontSize="small" />
               }
               title={tx("Product Family Tree")}
-              action={
-                <IconButton size="small" onClick={loadData}>
-                  <RefreshIcon sx={{ fontSize: 17 }} />
-                </IconButton>
-              }
             />
             <Box sx={{ p: 0.75, overflow: "auto", flex: 1 }}>
               <Box
@@ -2107,16 +1746,11 @@ export default function ProductMaster() {
                       : "transparent",
                 }}
               >
-                <CategoryOutlinedIcon color="primary" sx={{ fontSize: 17 }} />
+                <CategoryOutlinedIcon color="primary" sx={{ fontSize: 14 }} />
                 <Typography sx={{ flex: 1, fontSize: 11.5, fontWeight: 800 }}>
                   {tx("All Product Families")}
                 </Typography>
-                <Chip
-                  size="small"
-                  label={kpis.total_products || 0}
-                  variant="outlined"
-                  sx={{ height: 19 }}
-                />
+                <CountBadge value={kpis.total_products || 0} />
               </Box>
               {familyTree.map((node) => (
                 <FamilyTreeNode
@@ -2140,7 +1774,7 @@ export default function ProductMaster() {
             elevation={0}
             sx={{
               ...cardSx,
-              height: 560,
+              height: panelHeight,
               display: "flex",
               flexDirection: "column",
               minWidth: 0,
@@ -2157,8 +1791,6 @@ export default function ProductMaster() {
                 rowData={filteredProducts}
                 columnDefs={columns}
                 loading={loading}
-                pagination
-                paginationPageSize={20}
                 rowSelection="single"
                 onRowClicked={(event) => setSelectedProductId(event.data.id)}
                 getRowId={(params) => String(params.data.id)}
@@ -2170,7 +1802,7 @@ export default function ProductMaster() {
             elevation={0}
             sx={{
               ...cardSx,
-              height: { xs: "auto", lg: 560 },
+              height: panelHeight,
               display: "flex",
               flexDirection: "column",
             }}
@@ -2183,160 +1815,71 @@ export default function ProductMaster() {
             />
             {selectedProduct ? (
               <>
-                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
-                  <Stack direction="row" spacing={1.25} alignItems="center">
-                    <Box
-                      sx={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 2,
-                        bgcolor: "action.hover",
-                        display: "grid",
-                        placeItems: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {selectedProduct.image_url ? (
-                        <Box component="img" src={resolveImageUrl(selectedProduct.image_url)} alt="" sx={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                      ) : (
-                        <Inventory2OutlinedIcon color="primary" sx={{ fontSize: 30 }} />
-                      )}
+                <Box sx={{ p: 1.5, flexShrink: 0 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", columnGap: 1.25, alignItems: "center" }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", color: "#FFF", bgcolor: "#005BAB" }}>
+                      <Inventory2OutlinedIcon sx={{ fontSize: 18 }} />
                     </Box>
-                    <Box minWidth={0}>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        <Typography noWrap fontWeight={800}>
-                          {selectedProduct.product_code}
-                        </Typography>
-                        <StatusChip status={selectedProduct.status} />
-                      </Stack>
-                      <Typography noWrap variant="body2" color="text.secondary">
-                        {selectedProduct.product_name}
-                      </Typography>
+                    <Box sx={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 0.25 }}>
+                      <Typography noWrap title={selectedProduct.product_name} sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{selectedProduct.product_name}</Typography>
+                      <Typography noWrap color="text.secondary" sx={{ fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{selectedProduct.product_code}</Typography>
                     </Box>
-                  </Stack>
+                    <StatusChip status={selectedProduct.status} />
+                  </Box>
                 </Box>
-                <Tabs
-                  value={detailTab}
-                  onChange={(_, value) => setDetailTab(value)}
-                  variant="fullWidth"
-                  sx={{
-                    minHeight: 36,
-                    borderBottom: 1,
-                    borderColor: "divider",
-                    "& .MuiTab-root": {
-                      minHeight: 36,
-                      py: 0,
-                      fontSize: 11,
-                      fontWeight: 700,
-                    },
-                  }}
-                >
-                  <Tab label={tx("General")} />
+                <Tabs value={detailTab} onChange={(_, value) => setDetailTab(value)} variant="fullWidth"
+                  sx={{ minHeight: 27, borderTop: 1, borderBottom: 1, borderColor: "divider", "& .MuiTab-root": { minHeight: 27, py: 0, fontSize: 11, fontWeight: 700, textTransform: "none" } }}>
+                  <Tab label={tx("Information")} />
                   <Tab label={tx("BOM")} />
                 </Tabs>
-                <Box sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
+                <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: "auto" }}>
                   {detailTab === 1 ? (
-                    <BomSummary
-                      productId={selectedProduct.id}
-                      api={API}
-                      requestJson={requestJson}
-                      tx={tx}
-                      refreshKey={bomRefresh}
-                      onManage={() => setDialog({ type: "bom", item: selectedProduct })}
-                    />
+                    <BomSummary productId={selectedProduct.id} api={API} requestJson={requestJson} tx={tx} refreshKey={bomRefresh}
+                      onManage={() => setDialog({ type: "bom", item: selectedProduct })} />
                   ) : (
-                  <Stack spacing={1}>
-                    {details.map((item, index) => (
-                      <Box
-                        key={`${item.label}-${index}`}
-                        sx={{
-                          display: "grid",
-                          gridTemplateColumns: "42% 58%",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          {item.label}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          fontWeight={700}
-                          sx={{ overflowWrap: "anywhere" }}
-                        >
-                          {item.value === null ||
-                          item.value === undefined ||
-                          item.value === ""
-                            ? EMPTY
-                            : String(item.value)}
-                          {item.unit && item.value != null
-                            ? ` ${item.unit}`
-                            : ""}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
+                    <Stack spacing={1.5}>
+                      {selectedProduct.image_url ? (
+                        <Box component="a" href={resolveImageUrl(selectedProduct.image_url)} target="_blank" rel="noreferrer" title={tx("Open full image")}
+                          sx={{ display: "block", borderRadius: 1.5, overflow: "hidden", border: 1, borderColor: "divider", bgcolor: "action.hover", cursor: "zoom-in" }}>
+                          <Box component="img" src={resolveImageUrl(selectedProduct.image_url)} alt={selectedProduct.product_name}
+                            sx={{ display: "block", width: "100%", height: 180, objectFit: "contain" }} />
+                        </Box>
+                      ) : null}
+                      <DetailSection title={tx("General")}>
+                        <DetailRow label={tx("Product Family")}>{selectedProduct.family_code} · {selectedProduct.family_name}</DetailRow>
+                        <DetailRow label={tx("Description")} last>{selectedProduct.description || EMPTY}</DetailRow>
+                      </DetailSection>
+                          {Object.entries((selectedProduct.values || []).reduce((acc, item) => {
+                            const group = item.field_group || tx("Specifications");
+                            (acc[group] = acc[group] || []).push(item);
+                            return acc;
+                          }, {})).map(([group, items]) => (
+                            <DetailSection key={group} title={group}>
+                              {items.map((item, index) => (
+                                <DetailRow key={item.field_id || index} label={item.field_name} last={index === items.length - 1}>
+                                  {item.value === null || item.value === undefined || item.value === "" ? EMPTY
+                                    : item.data_type === "BOOLEAN" ? (item.value === true || item.value === 1 || item.value === "1" || item.value === "true" ? tx("Yes") : tx("No"))
+                                    : Array.isArray(item.value) ? item.value.join(", ") : String(item.value)}
+                                  {item.unit_label && item.value != null && item.value !== "" ? ` ${item.unit_label}` : ""}
+                                </DetailRow>
+                              ))}
+                            </DetailSection>
+                          ))}
+                      <DetailSection title={tx("Record")}>
+                        <DetailRow label={tx("Created By")}>{person(selectedProduct.created_by_name, selectedProduct.created_by_code)}</DetailRow>
+                        <DetailRow label={tx("Created Date")}>{formatDate(selectedProduct.created_at, i18n.resolvedLanguage)}</DetailRow>
+                        <DetailRow label={tx("Last Modified")} last>{formatDate(selectedProduct.updated_at, i18n.resolvedLanguage)}</DetailRow>
+                      </DetailSection>
+                    </Stack>
                   )}
                 </Box>
                 <Divider />
-                <Stack
-                  direction="row"
-                  sx={{ p: 1.5, justifyContent: "center", gap: 2.5 }}
-                >
-                  <Tooltip title={tx("Product BOM")}>
-                    <IconButton
-                      color="primary"
-                      onClick={() => setDialog({ type: "bom", item: selectedProduct })}
-                      sx={{
-                        border: 1,
-                        borderColor: "primary.light",
-                        borderRadius: 1.5,
-                      }}
-                    >
-                      <AccountTreeOutlinedIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={tx("Edit Product")}>
-                    <span>
-                      <IconButton
-                        disabled={!canEdit}
-                        color="primary"
-                        onClick={() => openEditProduct(selectedProduct.id)}
-                        sx={{
-                          border: 1,
-                          borderColor: "primary.light",
-                          borderRadius: 1.5,
-                        }}
-                      >
-                        <EditOutlinedIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip
-                    title={
-                      selectedProduct.status === "ACTIVE"
-                        ? tx("Deactivate")
-                        : tx("Activate")
-                    }
-                  >
-                    <span>
-                      <IconButton
-                        disabled={!canEdit || saving}
-                        color={
-                          selectedProduct.status === "ACTIVE"
-                            ? "error"
-                            : "success"
-                        }
-                        onClick={toggleStatus}
-                        sx={{
-                          border: 1,
-                          borderColor: "currentColor",
-                          borderRadius: 1.5,
-                        }}
-                      >
-                        <Inventory2OutlinedIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                <Stack direction="row" sx={{ p: 1.5, justifyContent: "center", gap: 1.5, flexShrink: 0 }}>
+                  <ActionIcon title={tx("Product BOM")} icon={<AccountTreeOutlinedIcon fontSize="small" />} color="primary" onClick={() => setDialog({ type: "bom", item: selectedProduct })} />
+                  <ActionIcon title={tx("Edit Product")} icon={<EditOutlinedIcon fontSize="small" />} disabled={!canEdit} onClick={() => openEditProduct(selectedProduct.id)} />
+                  <ActionIcon title={selectedProduct.status === "ACTIVE" ? tx("Deactivate") : tx("Activate")}
+                    icon={selectedProduct.status === "ACTIVE" ? <BlockOutlinedIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
+                    color={selectedProduct.status === "ACTIVE" ? "warning" : "success"} disabled={!canEdit || saving} onClick={toggleStatus} />
                 </Stack>
               </>
             ) : (
@@ -2348,89 +1891,6 @@ export default function ProductMaster() {
                 </Typography>
               </Box>
             )}
-          </Paper>
-        </Box>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", lg: "1.2fr 1fr" },
-            gap: 1.5,
-          }}
-        >
-          <Paper elevation={0} sx={cardSx}>
-            <SectionHeader
-              icon={
-                <AccountTreeOutlinedIcon color="primary" fontSize="small" />
-              }
-              title={tx("Products by Family")}
-            />
-            <Stack spacing={1.25} sx={{ p: 1.5 }}>
-              {distribution.length ? (
-                distribution.map((item) => (
-                  <Box key={item.name}>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="caption" fontWeight={700}>
-                        {item.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.count}
-                      </Typography>
-                    </Stack>
-                    <LinearProgress
-                      variant="determinate"
-                      value={(item.count / maxCount) * 100}
-                      sx={{ mt: 0.4, height: 7, borderRadius: 5 }}
-                    />
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  {tx("No product data.")}
-                </Typography>
-              )}
-            </Stack>
-          </Paper>
-          <Paper elevation={0} sx={cardSx}>
-            <SectionHeader
-              icon={<RefreshIcon color="primary" fontSize="small" />}
-              title={tx("Recently Updated Products")}
-            />
-            <Stack divider={<Divider />}>
-              {products.slice(0, 5).map((product) => (
-                <Box
-                  key={product.id}
-                  onClick={() => setSelectedProductId(product.id)}
-                  sx={{
-                    px: 1.5,
-                    py: 1,
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
-                >
-                  <Stack direction="row" justifyContent="space-between" gap={1}>
-                    <Box minWidth={0}>
-                      <Typography noWrap variant="caption" fontWeight={800}>
-                        {product.product_code} · {product.product_name}
-                      </Typography>
-                      <Typography
-                        display="block"
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        {product.family_name}
-                      </Typography>
-                    </Box>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      whiteSpace="nowrap"
-                    >
-                      {formatDate(product.updated_at, i18n.resolvedLanguage)}
-                    </Typography>
-                  </Stack>
-                </Box>
-              ))}
-            </Stack>
           </Paper>
         </Box>
         {dialog?.type === "product" && (
@@ -2475,15 +1935,16 @@ export default function ProductMaster() {
             canEdit={canEdit}
             saving={saving}
             onClose={() => setDialog(null)}
-            onAdd={() => setDialog({ type: "family", item: null })}
+            onAdd={(parent) => setDialog({ type: "family", item: null, parentId: parent?.id ?? "" })}
             onEdit={(item) => setDialog({ type: "family", item })}
             onDelete={deleteFamily}
           />
         )}
         {dialog?.type === "family" && (
           <FamilyDialog
-            key={dialog.item?.id || "new-family"}
+            key={dialog.item?.id || `new-family-${dialog.parentId ?? ""}`}
             family={dialog.item}
+            defaultParentId={dialog.parentId ?? ""}
             families={families}
             saving={saving}
             onClose={() => setDialog({ type: "hierarchy" })}

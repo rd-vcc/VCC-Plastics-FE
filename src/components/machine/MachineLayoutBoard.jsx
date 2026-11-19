@@ -67,10 +67,10 @@ export default function MachineLayoutBoard({ image, items, editable = false, onM
               bgcolor: "background.paper", border: 2, borderColor: color, borderStyle: editable && it.auto && drag?.id !== it.id ? "dashed" : "solid",
               boxShadow: selectedId === it.id ? `0 0 0 3px ${color}55` : "0 2px 6px rgba(15,23,42,.18)", transition: drag?.id === it.id ? "none" : "box-shadow .15s",
               "&:hover": { boxShadow: `0 0 0 3px ${color}40` } }}>
-            <Badge color="error" badgeContent={it.alarms || 0} invisible={!it.alarms} sx={{ "& .MuiBadge-badge": { fontSize: 9, height: 15, minWidth: 15 } }}>
-              <Box sx={{ width: 30, height: 22, borderRadius: 1, bgcolor: color, display: "grid", placeItems: "center", mx: "auto" }}><Icon sx={{ fontSize: 17, color: "#fff" }} /></Box>
+            <Badge color="error" badgeContent={it.alarms || 0} invisible={!it.alarms} sx={{ "& .MuiBadge-badge": { fontSize: 10, height: 15, minWidth: 15 } }}>
+              <Box sx={{ width: 30, height: 22, borderRadius: 1, bgcolor: color, display: "grid", placeItems: "center", mx: "auto" }}><Icon sx={{ fontSize: 14, color: "#fff" }} /></Box>
             </Badge>
-            <Typography sx={{ fontSize: 10.5, fontWeight: 800, lineHeight: 1.25, whiteSpace: "nowrap" }}>{it.equipment_code}</Typography>
+            <Typography sx={{ fontSize: 10, fontWeight: 800, lineHeight: 1.25, whiteSpace: "nowrap" }}>{it.equipment_code}</Typography>
           </Box>
         );
         return editable || !renderTooltip ? <Box key={it.id}>{marker}</Box> : (

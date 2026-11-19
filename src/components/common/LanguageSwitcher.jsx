@@ -10,20 +10,21 @@ export default function LanguageSwitcher({ compact = false }) {
 
   return (
     <Tooltip title={t("common.language")}>
-      <FormControl size="small" sx={{ minWidth: compact ? 82 : 116 }}>
+      <FormControl size="small" className="text-gray-700 dark:text-gray-200" sx={{ minWidth: compact ? 82 : 116 }}>
         <Select
           value={currentLanguage}
           onChange={(event) => changeTemporaryLanguage(event.target.value)}
           aria-label={t("common.language")}
           startAdornment={
-            <LanguageOutlinedIcon sx={{ mr: 0.5, fontSize: 18 }} />
+            <LanguageOutlinedIcon sx={{ mr: 0.5, fontSize: 14.5 }} />
           }
           sx={{
-            height: 36,
+            height: 27,
             borderRadius: "8px",
-            fontSize: 13,
+            fontSize: 11.5,
             color: "inherit",
             "& .MuiSelect-select": { py: 0.75, pl: 0.25 },
+            "& .MuiSelect-icon": { color: "inherit" },
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: "rgba(148,163,184,.35)",
             },

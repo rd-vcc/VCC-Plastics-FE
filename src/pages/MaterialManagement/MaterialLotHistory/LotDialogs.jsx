@@ -15,20 +15,22 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 
 import { DialogHeader, EMPTY, btn, dialogPaperSx, ddmmhhmm, num } from "../../ProductionManagement/ProductionPlanning/ui";
 import { label, tx } from "../materialLocales";
-import { LotStatusPill, qty } from "../materialUi";
+import { LotStatusPill, person, qty } from "../materialUi";
+import DateTimeField from "../../../components/common/DateTimeField";
 
 const STORE_TYPES = new Set(["WAREHOUSE", "SILO", "DRYER", "IQC_AREA", "HOLD_AREA", "OTHER"]);
 const LOCATION_TYPES = ["WAREHOUSE", "SILO", "DRYER", "MACHINE", "IQC_AREA", "HOLD_AREA", "OTHER"];
 
 function Frame({ icon, title, subtitle, saving, onClose, onSubmit, submitText, valid, children, maxWidth = "sm", tone }) {
   return (
-    <Dialog open onClose={saving ? undefined : onClose} maxWidth={maxWidth} fullWidth PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open onClose={saving ? undefined : onClose} maxWidth={maxWidth} fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={icon} title={title} subtitle={subtitle} onClose={onClose} disabled={saving} tone={tone} />
       <DialogContent sx={{ pt: "20px !important" }}>{children}</DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
-        {onSubmit ? <Button disabled={saving || !valid} onClick={onSubmit} sx={btn(tone === "danger" ? "delete" : "primary")}>{submitText || tx("Save")}</Button> : null}
-      </DialogActions>
+      {onSubmit ? (
+        <DialogActions sx={{ px: 2, py: 1.25 }}>
+          <Button disabled={saving || !valid} onClick={onSubmit} sx={btn(tone === "danger" ? "delete" : "primary")}>{submitText || tx("Save")}</Button>
+        </DialogActions>
+      ) : null}
     </Dialog>
   );
 }
@@ -67,17 +69,16 @@ export function ReceiveDialog({ lookups, saving, onClose, onSave }) {
         <Autocomplete size="small" options={lookups.materials} value={material || null} getOptionLabel={(m) => `${m.material_code} — ${m.material_name}`}
           isOptionEqualToValue={(a, b) => a.id === b.id} onChange={(_, m) => setF((o) => ({ ...o, material_id: m?.id ?? null }))}
           renderInput={(p) => <TextField {...p} required label={tx("Material")} />} sx={{ gridColumn: { sm: "1 / -1" } }} />
-        <TextField required size="small" type="number" label={tx("Quantity")} value={f.qty} onChange={ch("qty")}
-          InputProps={{ endAdornment: <InputAdornment position="end">{material?.unit || ""}</InputAdornment> }} inputProps={{ min: 0, step: "any" }} />
+        <TextField required size="small" type="number" label={tx("Quantity")} value={f.qty} onChange={ch("qty")} slotProps={{ input: { endAdornment: <InputAdornment position="end">{material?.unit || ""}</InputAdornment> }, htmlInput: { min: 0, step: "any" } }} />
         <LocationSelect value={f.location_id} onChange={(v) => setF((o) => ({ ...o, location_id: v }))} locations={lookups.locations} />
         <TextField size="small" label={tx("Lot No.")} value={f.lot_no} onChange={ch("lot_no")} helperText={tx("Leave blank to generate automatically.")} />
         <Autocomplete size="small" freeSolo options={lookups.suppliers} value={f.supplier} onInputChange={(_, v) => setF((o) => ({ ...o, supplier: v }))}
           renderInput={(p) => <TextField {...p} label={tx("Supplier")} />} />
         <TextField size="small" label={tx("Supplier lot no.")} value={f.supplier_lot_no} onChange={ch("supplier_lot_no")} />
         <TextField size="small" label={tx("Reference (receipt no.)")} value={f.reference_no} onChange={ch("reference_no")} />
-        <TextField size="small" type="datetime-local" label={tx("Receiving date")} value={f.received_at} onChange={ch("received_at")} InputLabelProps={{ shrink: true }} />
-        <TextField size="small" type="date" label={tx("Manufacture date")} value={f.manufacture_date} onChange={ch("manufacture_date")} InputLabelProps={{ shrink: true }} />
-        <TextField size="small" type="date" label={tx("Expiry date")} value={f.expiry_date} onChange={ch("expiry_date")} InputLabelProps={{ shrink: true }} />
+        <DateTimeField size="small" label={tx("Receiving date")} value={f.received_at} onChange={ch("received_at")} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" label={tx("Manufacture date")} value={f.manufacture_date} onChange={ch("manufacture_date")} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" label={tx("Expiry date")} value={f.expiry_date} onChange={ch("expiry_date")} slotProps={{ inputLabel: { shrink: true } }} />
         <FormControlLabel control={<Checkbox checked={f.iqc_required} onChange={(e) => setF((o) => ({ ...o, iqc_required: e.target.checked }))} />} label={tx("IQC required")} />
         <TextField size="small" multiline minRows={2} label={tx("Remark")} value={f.remark} onChange={ch("remark")} sx={{ gridColumn: "1 / -1" }} />
       </Box>
@@ -100,7 +101,7 @@ export function RegrindDialog({ lookups, saving, onClose, onSave }) {
             {regrinds.map((m) => <MenuItem key={m.id} value={m.id}>{m.material_code} — {m.material_name}</MenuItem>)}
           </Select>
         </FormControl>
-        <TextField required size="small" type="number" label={tx("Weight (kg)")} value={f.qty} onChange={(e) => setF((o) => ({ ...o, qty: e.target.value }))} inputProps={{ min: 0, step: "any" }} />
+        <TextField required size="small" type="number" label={tx("Weight (kg)")} value={f.qty} onChange={(e) => setF((o) => ({ ...o, qty: e.target.value }))} slotProps={{ htmlInput: { min: 0, step: "any" } }} />
         <Autocomplete size="small" options={lookups.work_orders} value={wo || null}
           getOptionLabel={(w) => `${w.wo_no} · ${w.product_name}${w.machine_code ? ` · ${w.machine_code}` : ""}${w.reject_qty ? ` · NG ${num(w.reject_qty)}` : ""}`}
           isOptionEqualToValue={(a, b) => a.id === b.id} onChange={(_, w) => setF((o) => ({ ...o, source_work_order_id: w?.id ?? null }))}
@@ -169,8 +170,7 @@ export function AdjustDialog({ lot, saving, onClose, onSave }) {
     <Frame icon={<TuneOutlinedIcon />} title={tx("Adjust Quantity")} subtitle={`${lot.lot_no} · ${qty(lot.current_qty, lot.unit)}`} saving={saving} onClose={onClose}
       valid={value !== "" && Number(value) >= 0 && Number(value) !== lot.current_qty && reason.trim()} onSubmit={() => onSave({ new_qty: Number(value), reason: reason.trim() })}>
       <Stack spacing={2}>
-        <TextField size="small" type="number" label={tx("New quantity")} value={value} onChange={(e) => setValue(e.target.value)} helperText={tx("Setting the quantity to 0 closes the lot.")}
-          InputProps={{ endAdornment: <InputAdornment position="end">{lot.unit}</InputAdornment> }} inputProps={{ min: 0, step: "any" }} />
+        <TextField size="small" type="number" label={tx("New quantity")} value={value} onChange={(e) => setValue(e.target.value)} helperText={tx("Setting the quantity to 0 closes the lot.")} slotProps={{ input: { endAdornment: <InputAdornment position="end">{lot.unit}</InputAdornment> }, htmlInput: { min: 0, step: "any" } }} />
         <TextField size="small" required label={tx("Reason")} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Stack>
     </Frame>
@@ -186,10 +186,10 @@ export function LocationsDialog({ locations, machines, canEdit, saving, onClose,
   const blank = { location_code: "", location_name: "", location_type: "WAREHOUSE", equipment_id: "", capacity_kg: "", sort_order: 0, status: "ACTIVE" };
   const valid = edit && edit.location_code.trim() && edit.location_name.trim();
   return (
-    <Dialog open onClose={saving ? undefined : onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open onClose={saving ? undefined : onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={<PlaceOutlinedIcon />} title={tx("Locations")} onClose={onClose} disabled={saving} />
       <DialogContent sx={{ pt: "16px !important" }}>
-        <Table size="small" sx={{ "& td, & th": { fontSize: 12 } }}>
+        <Table size="small" sx={{ "& td, & th": { fontSize: 11 } }}>
           <TableHead><TableRow><TableCell>{tx("Code")}</TableCell><TableCell>{tx("Name")}</TableCell><TableCell>{tx("Type")}</TableCell><TableCell>{tx("Machine")}</TableCell><TableCell align="right">{tx("Capacity (kg)")}</TableCell><TableCell>{tx("Status")}</TableCell><TableCell /></TableRow></TableHead>
           <TableBody>
             {locations.map((l) => (
@@ -236,10 +236,8 @@ export function LocationsDialog({ locations, machines, canEdit, saving, onClose,
           </Box>
         ) : null}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button startIcon={<AddIcon />} disabled={!canEdit || Boolean(edit)} onClick={() => setEdit(blank)} sx={btn("edit")}>{tx("Add Location")}</Button>
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -261,9 +259,9 @@ export function LotTimeline({ lot, dense }) {
             <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "primary.main" }} />
           </Box>
           <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" fontWeight={800} sx={{ display: "block" }}>{label("txn", t.txn_type)}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 800, display: "block" }}>{label("txn", t.txn_type)}</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-              {ddmmhhmm(t.acted_at)} · {t.actor}
+              {ddmmhhmm(t.acted_at)} · {person(t.actor_name, t.actor_code || t.actor)}
               {t.qty_change ? ` · ${Number(t.qty_change) > 0 ? "+" : ""}${num(t.qty_change, 3)} ${lot.unit}` : ""}
               {t.to_location ? ` · ${t.from_location ? `${t.from_location} → ` : ""}${t.to_location}` : ""}
               {t.wo_no ? ` · ${t.wo_no}` : ""}{t.machine_code ? ` · ${t.machine_code}` : ""}{t.reference_no && !t.wo_no ? ` · ${t.reference_no}` : ""}
@@ -291,26 +289,24 @@ export function LotDetailDialog({ lot, canEdit, saving, onClose, onAction }) {
     [tx("Reserved"), qty(lot.reserved_qty, lot.unit)], [tx("Origin"), `${label("source", lot.source)}${lot.source_wo_no ? ` · ${lot.source_wo_no}` : ""}`],
     [tx("Supplier"), lot.supplier || EMPTY], [tx("Supplier lot no."), lot.supplier_lot_no || EMPTY],
     [tx("Received"), ddmmhhmm(lot.received_at)], [tx("Expiry"), lot.expiry_date ? `${String(lot.expiry_date).slice(0, 10)}${lot.days_to_expiry != null ? ` (${lot.days_to_expiry})` : ""}` : EMPTY],
-    [tx("IQC"), `${lot.iqc_result}${lot.iqc_by ? ` · ${lot.iqc_by} · ${ddmmhhmm(lot.iqc_at)}` : ""}`], [tx("Hold reason"), lot.hold_reason || EMPTY],
+    [tx("IQC"), `${label("iqc", lot.iqc_result) || lot.iqc_result}${lot.iqc_by ? ` · ${person(lot.iqc_by_name, lot.iqc_by_code || lot.iqc_by)} · ${ddmmhhmm(lot.iqc_at)}` : ""}`], [tx("Hold reason"), lot.hold_reason || EMPTY],
   ];
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
       <DialogHeader icon={<InventoryOutlinedIcon />} title={`${tx("Lot Detail")} · ${lot.lot_no}`} subtitle={lot.material_name} onClose={onClose} />
       <DialogContent sx={{ pt: "16px !important", display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.1fr 1fr" }, gap: 3 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: "42% 58%", rowGap: 0.9, columnGap: 1, alignContent: "start" }}>
           {info.map(([k, v]) => [
             <Typography key={`${k}-k`} variant="caption" color="text.secondary">{k}</Typography>,
-            <Typography key={`${k}-v`} variant="caption" fontWeight={700} component="div">{v}</Typography>,
+            <Typography key={`${k}-v`} variant="caption" component="div" sx={{ fontWeight: 700 }}>{v}</Typography>,
           ])}
         </Box>
-        <Box><Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>{tx("Lot Traceability")}</Typography><LotTimeline lot={lot} /></Box>
+        <Box><Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>{tx("Lot Traceability")}</Typography><LotTimeline lot={lot} /></Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, flexWrap: "wrap", gap: 1 }}>
+      <DialogActions sx={{ px: 2, py: 1.25, flexWrap: "wrap", gap: 1 }}>
         {actions.map(([key, text, enabled]) => (
           <Button key={key} disabled={!canEdit || saving || !enabled} onClick={() => onAction(key, lot)} sx={btn("edit")}>{text}</Button>
         ))}
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
       </DialogActions>
     </Dialog>
   );

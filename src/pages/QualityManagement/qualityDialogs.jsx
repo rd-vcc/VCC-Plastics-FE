@@ -25,17 +25,22 @@ import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 
 import { resolveImageUrl } from "../../components/common/ImageUploadField";
-import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num, toInputDateTime } from "../ProductionManagement/ProductionPlanning/ui";
+import { DialogHeader, EMPTY, btn, ddmmhhmm, dialogPaperSx, num, person, toInputDateTime } from "../ProductionManagement/ProductionPlanning/ui";
+import { who } from "../shared/onePage";
 import { InfoRows } from "../MaintenanceManagement/maintUi";
 import { label, tx } from "./qualityLocales";
 import {
   API_BASE, ALERT_STATUS_COLORS, CAL_STATUS_COLORS, CalStatusPill, EquipStatePill, Events, NG_STATUS_COLORS, NgStatusPill, PLAN_STATUS_COLORS, PlanStatusPill,
   PriorityPill, QUALITY_API, ResultText, alertText, SeverityPill, AlertStatusPill, TypePill, dateText, dueText, pctText, specText, toBase64, whenText,
 } from "./qualityUi";
+import DateTimeField from "../../components/common/DateTimeField";
 
 const iso = (v) => (v ? (v.length === 16 ? `${v}:00` : v) : null);
 const nowLocal = (addMin = 0) => toInputDateTime(new Date(Date.now() + addMin * 60000 - new Date().getTimezoneOffset() * 60000).toISOString());
 const todayLocal = () => nowLocal().slice(0, 10);
+
+/** A person field shown as "Full name - code" (name from the API when attached, else parsed from "Full name (code)"). */
+const personOf = (row, field) => (row?.[`${field}_name`] ? person(row[`${field}_name`], row[`${field}_code`]) : who(row?.[field]));
 
 function Loading() {
   return <Box sx={{ height: 260, display: "grid", placeItems: "center" }}><CircularProgress /></Box>;
@@ -46,7 +51,7 @@ function PersonSelect({ lookups, value, onChange, labelText, required, disabled 
   return (
     <TextField select size="small" fullWidth required={required} disabled={disabled} label={labelText} value={value || ""} onChange={(e) => onChange(e.target.value)}>
       <MenuItem value="">—</MenuItem>
-      {(value && !list.includes(value) ? [value, ...list] : list).map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+      {(value && !list.includes(value) ? [value, ...list] : list).map((t) => <MenuItem key={t} value={t}>{who(t)}</MenuItem>)}
     </TextField>
   );
 }
@@ -62,8 +67,7 @@ export function NoteDialog({ title, required, labelText, confirmText, danger, on
       <DialogContent sx={{ pt: "16px !important" }}>
         <TextField autoFocus fullWidth multiline minRows={3} size="small" required={required} label={labelText || tx("Reason")} value={note} onChange={(e) => setNote(e.target.value)} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={run} disabled={busy || (required && !note.trim())} sx={btn(danger ? "delete" : "primary")}>{confirmText || tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -131,16 +135,15 @@ export function PlanCreateDialog({ lookups, preset, item, request, actor, notify
             <TextField size="small" type="number" fullWidth label={tx("Sample Size")} value={f.sample_size} onChange={ch("sample_size")} placeholder={tx("Auto")} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
           <Stack direction="row" spacing={1.5}>
-            <TextField size="small" type="datetime-local" fullWidth label={tx("Planned Time")} value={f.planned_at} onChange={ch("planned_at")} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField size="small" type="datetime-local" fullWidth label={tx("Due Time")} value={f.due_at} onChange={ch("due_at")} slotProps={{ inputLabel: { shrink: true } }} helperText={f.due_at ? "" : tx("Auto")} />
+            <DateTimeField size="small" fullWidth label={tx("Planned Time")} value={f.planned_at} onChange={ch("planned_at")} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateTimeField size="small" fullWidth label={tx("Due Time")} value={f.due_at} onChange={ch("due_at")} slotProps={{ inputLabel: { shrink: true } }} helperText={f.due_at ? "" : tx("Auto")} />
           </Stack>
           <PersonSelect lookups={lookups} labelText={tx("Inspector")} value={f.inspector} onChange={(v) => setF((o) => ({ ...o, inspector: v }))} />
           <TextField size="small" multiline minRows={2} label={tx("Remark")} value={f.remark} onChange={ch("remark")} />
           <Typography variant="caption" color="text.secondary">{tx("The inspection standard is taken from the active Quality Standard of the product.")}</Typography>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={save} disabled={saving || (iqc ? !f.material_lot_id : !f.work_order_id && !f.product_id)} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -186,7 +189,7 @@ function SampleForm({ detail, lookups, request, actor, notify, onSaved }) {
         {detail.control === "BLOCK" ? <Typography variant="caption" color="text.secondary">{tx("Invalid measuring equipment is blocked.")}</Typography> : null}
       </Stack>
       {chars.length ? (
-        <Table size="small" sx={{ "& td, & th": { fontSize: 12, px: 0.75, py: 0.4 } }}>
+        <Table size="small" sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4 } }}>
           <TableHead><TableRow><TableCell>{tx("Characteristic")}</TableCell><TableCell>{tx("Specification")}</TableCell><TableCell sx={{ width: 150 }}>{tx("Value")}</TableCell><TableCell>{tx("Measuring Equipment")}</TableCell></TableRow></TableHead>
           <TableBody>{chars.map((c) => {
             const attr = c.characteristic_type === "ATTRIBUTE";
@@ -223,13 +226,13 @@ function SampleForm({ detail, lookups, request, actor, notify, onSaved }) {
         </Stack>
       )}
       <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", rowGap: 1, alignItems: "center" }}>
-        <TextField select size="small" label={tx("Defect")} value={defect} onChange={(e) => setDefect(e.target.value)} sx={{ width: 200 }} required={isNg} error={isNg && !defect && !chars.some((c) => c.characteristic_type !== "ATTRIBUTE" && outOfSpec(c, vals[c.id]))}>
+        <TextField select size="small" label={tx("Defect")} value={defect} onChange={(e) => setDefect(e.target.value)} sx={{ width: 200 }} required={isNg} error={isNg && !defect}>
           <MenuItem value="">—</MenuItem>
           {(lookups?.defects || []).map((d) => <MenuItem key={d.id} value={d.id}>{d.reason_code} — {d.reason_name}</MenuItem>)}</TextField>
         <TextField size="small" label={tx("Sampling Position")} value={position} onChange={(e) => setPosition(e.target.value)} placeholder={`Sample ${plan.done_qty + 1}`} sx={{ width: 170 }} />
         <TextField size="small" label={tx("Remark")} value={remark} onChange={(e) => setRemark(e.target.value)} sx={{ flex: 1, minWidth: 160 }} />
         <FormControlLabel control={<Checkbox size="small" checked={reinspect} onChange={(e) => setReinspect(e.target.checked)} />} label={<Typography variant="caption">{tx("Re-inspection")}</Typography>} />
-        <Typography variant="caption" sx={{ fontWeight: 800, color: isNg ? "#F04438" : "#12B76A", minWidth: 40 }}>{isNg ? "NG" : "OK"}</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: isNg ? "#F04438" : "#12B76A", minWidth: 29 }}>{isNg ? "NG" : "OK"}</Typography>
         <Button startIcon={<SaveOutlinedIcon />} onClick={save} disabled={saving || missing} sx={btn("primary")}>{tx("Save sample")}</Button>
       </Stack>
     </Box>
@@ -270,7 +273,7 @@ export function InspectionDialog({ planId, lookups, request, actor, notify, canE
                 [tx("Frequency"), p.frequency_type === "TIME" ? `${tx("every")} ${p.frequency_value} ${tx("min")}` : label("frequency", p.frequency_type)],
                 [tx("Sample Size"), `${p.done_qty} / ${p.sample_size}`], [tx("Planned Time"), ddmmhhmm(p.planned_at)],
                 [tx("Due Time"), ddmmhhmm(p.due_at), p.display_status === "OVERDUE" ? "#F04438" : undefined], [tx("Shift"), p.shift_name],
-                [tx("Inspector"), p.inspector], [tx("Source"), label("planSource", p.source)], [tx("OK Rate"), pctText(p.ok_rate)], [tx("NG Rate"), pctText(p.ng_rate), p.ng_qty ? "#F04438" : undefined],
+                [tx("Inspector"), who(p.inspector)], [tx("Source"), label("planSource", p.source)], [tx("OK Rate"), pctText(p.ok_rate)], [tx("NG Rate"), pctText(p.ng_rate), p.ng_qty ? "#F04438" : undefined],
                 p.remark ? [tx("Remark"), p.remark] : null,
               ]} />
               {d.ng.length ? (
@@ -289,14 +292,14 @@ export function InspectionDialog({ planId, lookups, request, actor, notify, canE
               ) : null}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ minHeight: 36, mb: 1, "& .MuiTab-root": { minHeight: 36, textTransform: "none", fontWeight: 700 } }}>
+              <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ minHeight: 27, mb: 1, "& .MuiTab-root": { minHeight: 27, textTransform: "none", fontWeight: 700 } }}>
                 <Tab value="samples" label={`${tx("Samples")} (${d.records.length})`} /><Tab value="standard" label={`${tx("Standard")} (${d.characteristics.length})`} /><Tab value="history" label={tx("History")} />
               </Tabs>
               {tab === "samples" ? (
                 <Stack spacing={1.5}>
                   {canEdit && open && p.done_qty < p.sample_size ? <SampleForm detail={d} lookups={lookups} request={request} actor={actor} notify={notify} onSaved={changed} /> : null}
                   <Box sx={{ overflow: "auto", maxHeight: 360 }}>
-                    <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+                    <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                       <TableHead><TableRow><TableCell>#</TableCell><TableCell>{tx("Time")}</TableCell>
                         {d.characteristics.map((c) => <TableCell key={c.id} align="right">{c.characteristic_name}</TableCell>)}
                         <TableCell align="center">{tx("Result")}</TableCell><TableCell>{tx("Defect")}</TableCell><TableCell>{tx("Inspector")}</TableCell><TableCell>{tx("Remark")}</TableCell></TableRow></TableHead>
@@ -308,9 +311,9 @@ export function InspectionDialog({ planId, lookups, request, actor, notify, canE
                             {d.characteristics.map((c) => { const m = by[c.id]; return (
                               <TableCell key={c.id} align="right" sx={{ color: m?.result === "NG" ? "#F04438" : undefined, fontWeight: m?.result === "NG" ? 800 : 400 }}>
                                 {m ? (m.measured_value != null ? num(m.measured_value, 4) : m.attr_result) : EMPTY}
-                                {m?.gauge_code ? <Typography component="span" sx={{ fontSize: 9.5, color: "text.secondary", ml: 0.5 }}>{m.gauge_code}</Typography> : null}
+                                {m?.gauge_code ? <Typography component="span" sx={{ fontSize: 10, color: "text.secondary", ml: 0.5 }}>{m.gauge_code}</Typography> : null}
                               </TableCell>); })}
-                            <TableCell align="center"><ResultText value={r.result} /></TableCell><TableCell>{r.defect_name || EMPTY}</TableCell><TableCell>{r.inspector}</TableCell>
+                            <TableCell align="center"><ResultText value={r.result} /></TableCell><TableCell>{r.defect_name || EMPTY}</TableCell><TableCell>{personOf(r, "inspector")}</TableCell>
                             <TableCell sx={{ whiteSpace: "normal !important", maxWidth: 220 }}>{r.remark || EMPTY}</TableCell>
                           </TableRow>
                         );
@@ -321,7 +324,7 @@ export function InspectionDialog({ planId, lookups, request, actor, notify, canE
                 </Stack>
               ) : null}
               {tab === "standard" ? (
-                <Table size="small" sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4 } }}>
+                <Table size="small" sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4 } }}>
                   <TableHead><TableRow><TableCell>{tx("Characteristic")}</TableCell><TableCell>{tx("Nominal")}</TableCell><TableCell>{tx("Specification")}</TableCell><TableCell>{tx("Method")}</TableCell>
                     <TableCell>{tx("Equipment type")}</TableCell><TableCell>{tx("SPC")}</TableCell></TableRow></TableHead>
                   <TableBody>{d.characteristics.map((c) => (
@@ -396,22 +399,26 @@ export function NgCreateDialog({ lookups, preset, request, actor, notify, onClos
           <Stack direction="row" spacing={1.5}>
             <TextField select size="small" fullWidth required label={tx("Defect")} value={f.defect_code_id} onChange={ch("defect_code_id")}>
               {(lookups?.defects || []).map((d) => <MenuItem key={d.id} value={d.id}>{d.reason_code} — {d.reason_name}</MenuItem>)}</TextField>
-            <TextField size="small" type="number" required label={tx("NG Qty")} value={f.ng_qty} onChange={ch("ng_qty")} sx={{ width: 120 }} />
-            <TextField size="small" type="number" label={tx("Inspected Qty")} value={f.inspected_qty} onChange={ch("inspected_qty")} sx={{ width: 130 }} />
+            {/* two equal columns, aligned with the rows above */}
+            <Stack direction="row" spacing={1.5} sx={{ width: "100%" }}>
+              <TextField size="small" fullWidth type="number" required label={tx("NG Qty")} value={f.ng_qty} onChange={ch("ng_qty")} />
+              <TextField size="small" fullWidth type="number" label={tx("Inspected Qty")} value={f.inspected_qty} onChange={ch("inspected_qty")} />
+            </Stack>
           </Stack>
           <Stack direction="row" spacing={1.5}>
-            <TextField select size="small" fullWidth label={tx("Priority")} value={f.priority} onChange={ch("priority")} slotProps={sel}>
-              <MenuItem value="">{tx("Auto")}</MenuItem>{(lookups?.priorities || []).map((t) => <MenuItem key={t} value={t}>{label("priority", t)}</MenuItem>)}</TextField>
+            <Stack direction="row" spacing={1.5} sx={{ width: "100%" }}>
+              <TextField select size="small" fullWidth label={tx("Priority")} value={f.priority} onChange={ch("priority")} slotProps={sel}>
+                <MenuItem value="">{tx("Auto")}</MenuItem>{(lookups?.priorities || []).map((t) => <MenuItem key={t} value={t}>{label("priority", t)}</MenuItem>)}</TextField>
+              <DateTimeField size="small" fullWidth label={tx("Detected at")} value={f.detected_at} onChange={ch("detected_at")} slotProps={{ inputLabel: { shrink: true } }} />
+            </Stack>
             <PersonSelect lookups={lookups} labelText={tx("Owner")} value={f.owner} onChange={(v) => setF((o) => ({ ...o, owner: v }))} />
-            <TextField size="small" type="datetime-local" fullWidth label={tx("Detected at")} value={f.detected_at} onChange={ch("detected_at")} slotProps={{ inputLabel: { shrink: true } }} />
           </Stack>
           <TextField size="small" multiline minRows={2} label={tx("Description")} value={f.description} onChange={ch("description")} />
           {f.work_order_id ? <FormControlLabel control={<Checkbox size="small" checked={f.hold_wo} onChange={(e) => setF((o) => ({ ...o, hold_wo: e.target.checked }))} />}
             label={<Typography variant="caption">{tx("Hold the work order now (containment)")}</Typography>} /> : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={save} disabled={saving || !f.ng_qty || !f.defect_code_id || (!f.work_order_id && !f.product_id && !f.material_lot_id)} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -431,8 +438,8 @@ function NgSteps({ status, events }) {
           <Box key={s} sx={{ textAlign: "center", position: "relative" }}>
             {i > 0 ? <Box sx={{ position: "absolute", top: 8, left: 0, right: "50%", height: 2, bgcolor: i <= idx ? "#12B76A" : "#D0D5DD" }} /> : null}
             {i < 4 ? <Box sx={{ position: "absolute", top: 8, left: "50%", right: 0, height: 2, bgcolor: i < idx ? "#12B76A" : "#D0D5DD" }} /> : null}
-            <CheckCircleOutlineIcon sx={{ position: "relative", fontSize: 18, color, bgcolor: "background.paper", borderRadius: "50%" }} />
-            <Typography variant="caption" sx={{ display: "block", fontSize: 10.5, fontWeight: 700 }}>{label("ngStep", s)}</Typography>
+            <CheckCircleOutlineIcon sx={{ position: "relative", fontSize: 14.5, color, bgcolor: "background.paper", borderRadius: "50%" }} />
+            <Typography variant="caption" sx={{ display: "block", fontSize: 10, fontWeight: 700 }}>{label("ngStep", s)}</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>{ev ? ddmmhhmm(ev.event_at) : EMPTY}</Typography>
           </Box>
         );
@@ -505,7 +512,7 @@ export function NgDetailDialog({ ngId, lookups, request, actor, notify, canEdit,
                     onClick={() => navigate(`/quality-management/inspection-management?plan=${n.inspection_plan_id}`)}>{n.plan_no}</Typography> : EMPTY],
                   n.characteristic_name ? [tx("Characteristic"), n.characteristic_name] : null,
                   [tx("NG Qty"), num(n.ng_qty), "#F04438"], [tx("Inspected Qty"), n.inspected_qty != null ? num(n.inspected_qty) : EMPTY], [tx("NG Rate"), pctText(n.ng_rate)],
-                  [tx("Detected by"), n.detected_by], [tx("Due date"), dateText(n.due_date), n.overdue ? "#F04438" : undefined],
+                  [tx("Detected by"), who(n.detected_by)], [tx("Due date"), dateText(n.due_date), n.overdue ? "#F04438" : undefined],
                   [tx("Work order held"), n.wo_held ? tx("Yes") : tx("No"), n.wo_held ? "#F04438" : undefined],
                   n.repeat_of_no ? [tx("Repeat of"), <Typography key="r" component="span" variant="caption" fontWeight={800} sx={{ color: "#F04438", cursor: "pointer" }}
                     onClick={() => navigate(`/quality-management/ng-management?ng=${n.repeat_of_id}`)}>{n.repeat_of_no}</Typography>] : null,
@@ -515,7 +522,7 @@ export function NgDetailDialog({ ngId, lookups, request, actor, notify, canEdit,
                 ) : null}
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Tabs value={tab} onChange={(e, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 36, mb: 1.5, "& .MuiTab-root": { minHeight: 36, textTransform: "none", fontWeight: 700 } }}>
+                <Tabs value={tab} onChange={(e, v) => setTab(v)} variant="scrollable" sx={{ minHeight: 27, mb: 1.5, "& .MuiTab-root": { minHeight: 27, textTransform: "none", fontWeight: 700 } }}>
                   <Tab value="info" label={tx("Information")} /><Tab value="containment" label={tx("Containment & Disposition")} /><Tab value="rca" label={tx("Root Cause & Action")} />
                   <Tab value="verify" label={tx("Verification")} /><Tab value="history" label={tx("History")} /><Tab value="related" label={`${tx("Related NG")} (${d.related.length})`} />
                 </Tabs>
@@ -565,7 +572,7 @@ export function NgDetailDialog({ ngId, lookups, request, actor, notify, canEdit,
                 ) : null}
                 {tab === "history" ? <Events events={d.events} group="ngAction" /> : null}
                 {tab === "related" ? (
-                  <Table size="small" sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4 } }}>
+                  <Table size="small" sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4 } }}>
                     <TableHead><TableRow><TableCell>{tx("NG No.")}</TableCell><TableCell>{tx("Time")}</TableCell><TableCell>{tx("Defect")}</TableCell><TableCell align="right">{tx("Qty")}</TableCell><TableCell>{tx("Status")}</TableCell></TableRow></TableHead>
                     <TableBody>{d.related.map((r) => (
                       <TableRow key={r.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/quality-management/ng-management?ng=${r.id}`)}>
@@ -579,8 +586,7 @@ export function NgDetailDialog({ ngId, lookups, request, actor, notify, canEdit,
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: "wrap" }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, gap: 1, flexWrap: "wrap" }}>
         <Box sx={{ flex: 1 }} />
         {editable ? <Button startIcon={<SaveOutlinedIcon />} onClick={save} disabled={busy} sx={btn("edit")}>{tx("Save")}</Button> : null}
         {actions.map(([text, a, Icon, kind, needNote]) => (
@@ -632,7 +638,7 @@ export function EquipmentDialog({ equipmentId, lookups, request, actor, notify, 
               <InfoRows rows={[
                 [tx("Equipment ID"), e.equipment_code], [tx("Type"), e.type_name], [tx("Manufacturer"), e.manufacturer], [tx("Model"), e.model], [tx("Serial No."), e.serial_number],
                 [tx("Measurement range"), e.measurement_range], [tx("Resolution"), e.resolution], [tx("Accuracy"), e.accuracy], [tx("Required Cpk"), e.required_cpk ? `≥ ${e.required_cpk}` : EMPTY],
-                [tx("Usage location"), e.location], [tx("Owner"), e.owner_code], [tx("Calibration cycle"), `${e.calibration_cycle_days} ${tx("days")}`], [tx("Calibration lab"), e.calibration_lab],
+                [tx("Usage location"), e.location], [tx("Owner"), personOf(e, "owner_code")], [tx("Calibration cycle"), `${e.calibration_cycle_days} ${tx("days")}`], [tx("Calibration lab"), e.calibration_lab],
                 [tx("Last calibration"), dateText(e.last_calibration_date)], [tx("Next calibration"), dateText(e.next_calibration_date), ["OVERDUE"].includes(e.state) ? "#F04438" : e.state === "DUE_SOON" ? "#F79009" : undefined],
                 [tx("Remaining"), dueText(e.days_left)], [tx("Last used"), whenText(e.last_used_at)], e.lock_reason ? [tx("Lock reason"), e.lock_reason, "#F04438"] : null,
               ]} />
@@ -640,13 +646,13 @@ export function EquipmentDialog({ equipmentId, lookups, request, actor, notify, 
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>{tx("Technical data is maintained by the administrator in the Measuring Equipment Master.")}</Typography>
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Tabs value={tab} onChange={(ev, v) => setTab(v)} sx={{ minHeight: 36, mb: 1, "& .MuiTab-root": { minHeight: 36, textTransform: "none", fontWeight: 700 } }}>
+              <Tabs value={tab} onChange={(ev, v) => setTab(v)} sx={{ minHeight: 27, mb: 1, "& .MuiTab-root": { minHeight: 27, textTransform: "none", fontWeight: 700 } }}>
                 <Tab value="calibration" label={`${tx("Calibration History")} (${d.history.length})`} /><Tab value="plans" label={`${tx("Calibration Plans")} (${d.plans.length})`} />
                 <Tab value="usage" label={`${tx("Usage")} (${d.usage.length})`} /><Tab value="events" label={tx("History")} />
               </Tabs>
               <Box sx={{ maxHeight: 400, overflow: "auto" }}>
                 {tab === "calibration" ? (
-                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                     <TableHead><TableRow><TableCell>{tx("Calibration date")}</TableCell><TableCell>{tx("Next due")}</TableCell><TableCell>{tx("Result")}</TableCell><TableCell>{tx("Lab")}</TableCell>
                       <TableCell>{tx("Calibrated by")}</TableCell><TableCell>{tx("Certificate")}</TableCell></TableRow></TableHead>
                     <TableBody>{d.history.map((h) => (
@@ -658,7 +664,7 @@ export function EquipmentDialog({ equipmentId, lookups, request, actor, notify, 
                   </Table>
                 ) : null}
                 {tab === "plans" ? (
-                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                     <TableHead><TableRow><TableCell>{tx("Plan No.")}</TableCell><TableCell>{tx("Planned Date")}</TableCell><TableCell>{tx("Lab")}</TableCell><TableCell align="center">{tx("Status")}</TableCell><TableCell>{tx("Result")}</TableCell></TableRow></TableHead>
                     <TableBody>{d.plans.map((p) => (
                       <TableRow key={p.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/quality-management/calibration-management?plan=${p.id}`)}>
@@ -668,7 +674,7 @@ export function EquipmentDialog({ equipmentId, lookups, request, actor, notify, 
                   </Table>
                 ) : null}
                 {tab === "usage" ? (
-                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+                  <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                     <TableHead><TableRow><TableCell>{tx("Time")}</TableCell><TableCell>{tx("Plan No.")}</TableCell><TableCell>{tx("Work Order")}</TableCell><TableCell>{tx("Characteristic")}</TableCell>
                       <TableCell align="right">{tx("Value")}</TableCell><TableCell>{tx("Result")}</TableCell></TableRow></TableHead>
                     <TableBody>{d.usage.map((u, i) => (
@@ -683,8 +689,7 @@ export function EquipmentDialog({ equipmentId, lookups, request, actor, notify, 
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: "wrap" }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, gap: 1, flexWrap: "wrap" }}>
         <Box sx={{ flex: 1 }} />
         {buttons.map(([text, Icon, kind, fn, disabled]) => <Button key={text} startIcon={<Icon />} onClick={fn} disabled={disabled} sx={btn(kind)}>{text}</Button>)}
       </DialogActions>
@@ -707,8 +712,7 @@ function MoveDialog({ lookups, current, onClose, onConfirm }) {
           <TextField size="small" label={tx("Remark")} value={note} onChange={(e) => setNote(e.target.value)} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={() => onConfirm(loc, note)} disabled={!loc} sx={btn("primary")}>{tx("Confirm")}</Button>
       </DialogActions>
     </Dialog>
@@ -752,8 +756,7 @@ export function CalCreateDialog({ lookups, preset, item, request, actor, notify,
           <TextField size="small" multiline minRows={2} label={tx("Remark")} value={f.remark} onChange={ch("remark")} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Back")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={save} disabled={saving || !f.equipment_id} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -800,7 +803,7 @@ export function CalDetailDialog({ planId, lookups, request, actor, notify, canEd
                   onClick={() => navigate(`/quality-management/measuring-equipment?equipment=${p.equipment_id}`)}>{p.equipment_code}</Typography>],
                 [tx("Model"), p.model], [tx("Serial No."), p.serial_number], [tx("Usage location"), p.location], [tx("Calibration cycle"), `${p.calibration_cycle_days} ${tx("days")}`],
                 [tx("Last calibration"), dateText(p.last_calibration_date)], [tx("Planned Date"), dateText(p.planned_date), p.display_status === "OVERDUE" ? "#F04438" : undefined],
-                [tx("Remaining"), p.status === "COMPLETED" ? EMPTY : dueText(p.days_left)], [tx("Lab"), p.lab], [tx("Owner"), p.owner], [tx("Source"), label("calSource", p.source)],
+                [tx("Remaining"), p.status === "COMPLETED" ? EMPTY : dueText(p.days_left)], [tx("Lab"), p.lab], [tx("Owner"), who(p.owner)], [tx("Source"), label("calSource", p.source)],
                 p.sent_at ? [tx("Sent at"), ddmmhhmm(p.sent_at)] : null, p.calibration_date ? [tx("Calibration date"), dateText(p.calibration_date)] : null,
                 p.result ? [tx("Result"), <ResultText key="r" value={p.result} />] : null, p.certificate_no ? [tx("Certificate"), p.certificate_url
                   ? <Typography key="c" component="span" variant="caption" fontWeight={700} sx={{ color: "#1570EF", cursor: "pointer" }} onClick={() => window.open(resolveImageUrl(p.certificate_url), "_blank", "noopener")}>{p.certificate_no}</Typography>
@@ -843,7 +846,7 @@ export function CalDetailDialog({ planId, lookups, request, actor, notify, canEd
               ) : null}
               <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>{tx("Calibration History")}</Typography>
               <Box sx={{ maxHeight: 220, overflow: "auto", mb: 1.5 }}>
-                <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11.5, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
+                <Table size="small" stickyHeader sx={{ "& td, & th": { fontSize: 11, px: 0.75, py: 0.4, whiteSpace: "nowrap" }, "& th": { fontWeight: 800, bgcolor: "background.paper" } }}>
                   <TableHead><TableRow><TableCell>{tx("Calibration date")}</TableCell><TableCell>{tx("Next due")}</TableCell><TableCell>{tx("Result")}</TableCell><TableCell>{tx("Lab")}</TableCell><TableCell>{tx("Certificate")}</TableCell></TableRow></TableHead>
                   <TableBody>{d.history.map((h) => (
                     <TableRow key={h.id}><TableCell>{dateText(h.calibration_date)}</TableCell><TableCell>{dateText(h.next_due_date)}</TableCell><TableCell><ResultText value={h.result} /></TableCell>
@@ -858,8 +861,7 @@ export function CalDetailDialog({ planId, lookups, request, actor, notify, canEd
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: "wrap" }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, gap: 1, flexWrap: "wrap" }}>
         <Box sx={{ flex: 1 }} />
         {canEdit && open ? (
           <>
@@ -904,7 +906,7 @@ export function AlertDialog({ alert, lookups, request, actor, notify, canEdit, o
           <Typography variant="body2" fontWeight={700}>{alertText(alert)}</Typography>
           <Typography variant="caption" color="text.secondary">{alert.message}</Typography>
           <InfoRows rows={[[tx("Severity"), <SeverityPill key="s" value={alert.severity} />], [tx("Status"), <AlertStatusPill key="t" value={alert.status} />],
-            [tx("Object"), alert.ref_code], [tx("Owner"), alert.owner], alert.resolved_at ? [tx("Resolved at"), ddmmhhmm(alert.resolved_at)] : null]} />
+            [tx("Object"), alert.ref_code], [tx("Owner"), who(alert.owner)], alert.resolved_at ? [tx("Resolved at"), ddmmhhmm(alert.resolved_at)] : null]} />
           {canEdit && openState ? (
             <Stack direction="row" spacing={1}>
               <PersonSelect lookups={lookups} labelText={tx("Owner")} value={owner} onChange={setOwner} />
@@ -914,8 +916,7 @@ export function AlertDialog({ alert, lookups, request, actor, notify, canEdit, o
           <Typography variant="caption" color="text.secondary">{tx("System alerts are resolved automatically when the condition disappears.")}</Typography>
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: "wrap" }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25, gap: 1, flexWrap: "wrap" }}>
         {path ? <Button onClick={() => { onClose(); navigate(path); }} sx={btn("edit")}>{tx("Open detail")}</Button> : null}
         <Box sx={{ flex: 1 }} />
         {canEdit && alert.status === "NEW" ? <Button onClick={() => act("acknowledge")} disabled={busy} sx={btn("edit")}>{tx("Acknowledge")}</Button> : null}

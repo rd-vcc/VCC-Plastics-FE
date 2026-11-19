@@ -7,6 +7,7 @@ const lang = () => String(activeLanguage || "en").split("-")[0];
 
 const TEXT = {
   vi: {
+    "User Management": "Quản lý người dùng", "Role & Permission": "Vai trò & phân quyền", "Quick Actions": "Thao tác nhanh", "Filter": "Bộ lọc",
     "Audit Log": "Nhật ký hệ thống", "Export Log": "Xuất nhật ký", "Scheduled Reports": "Báo cáo tự động", "Audit Settings": "Cấu hình Audit", "Total Activities": "Tổng hoạt động",
     "Users": "Người dùng", "Modules": "Phân hệ", "Critical Events": "Sự kiện nghiêm trọng", "Failed Attempts": "Truy cập thất bại", "Data Changes": "Thay đổi dữ liệu",
     "vs previous period": "so với kỳ trước", "active users": "người dùng hoạt động", "modules accessed": "phân hệ có thao tác", "require attention": "cần chú ý",

@@ -15,7 +15,7 @@ export function UsagePill({ value }) {
   const color = USAGE_COLORS[value] || "#667085";
   return (
     <Box component="span" title={label("usageStatus", value)} sx={{ display: "inline-block", width: 104, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis",
-      whiteSpace: "nowrap", verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 11, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40` }}>
+      whiteSpace: "nowrap", verticalAlign: "middle", px: 0.5, py: 0.2, borderRadius: 1, fontSize: 10, fontWeight: 700, color, bgcolor: `${color}1A`, border: `1px solid ${color}40` }}>
       {label("usageStatus", value)}
     </Box>
   );
@@ -24,7 +24,7 @@ export function UsagePill({ value }) {
 export const signed = (v, digits = 3) => (v == null ? EMPTY : `${v > 0 ? "+" : ""}${num(v, digits)}`);
 export const diffColor = (v) => (v > 0 ? "#F04438" : v < 0 ? "#12B76A" : "inherit");
 
-const tableSx = { "& td, & th": { fontSize: 12, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
+const tableSx = { "& td, & th": { fontSize: 11, whiteSpace: "nowrap", px: 1 }, "& th": { color: "text.secondary", fontWeight: 800 } };
 
 export function WorkOrderUsageDialog({ api, request, workOrderId, canEdit, actor, notify, onClose, onChanged }) {
   const [wo, setWo] = useState(null);
@@ -183,7 +183,6 @@ export function WorkOrderUsageDialog({ api, request, workOrderId, canEdit, actor
           </Stack>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} disabled={busy} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }

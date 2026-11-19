@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert, Box, Button, Dialog, DialogActions, DialogContent, Divider, FormControl, IconButton,
-  InputLabel, MenuItem, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  InputLabel, LinearProgress, MenuItem, Select, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
@@ -20,6 +20,7 @@ import {
   Dot, DialogHeader, EMPTY, MATERIAL_COLORS, PriorityChip, SEVERITY_COLORS, btn, ddmmhhmm, dialogPaperSx,
   durationMinutes, fmtDuration, fromInputDateTime, num, toInputDateTime,
 } from "./ui";
+import DateTimeField from "../../../components/common/DateTimeField";
 
 const PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW"];
 const SOURCES = ["MANUAL", "SALES_ORDER", "FORECAST", "STOCK"];
@@ -148,7 +149,7 @@ export function WorkOrderForm({ item, initial, lookups, defaultWoNo, saving, onC
           <TextField required size="small" type="number" label={tx("Cavity")} value={f.cavity} onChange={ch("cavity")} inputProps={{ min: 1 }} />
           <TextField required size="small" type="number" label={tx("Cycle Time (s)")} value={f.cycle_time_sec} onChange={ch("cycle_time_sec")} inputProps={{ min: 0.1, step: 0.1 }} />
           <TextField size="small" type="number" label={tx("Setup (min)")} value={f.setup_minutes} onChange={ch("setup_minutes")} inputProps={{ min: 0 }} />
-          <TextField size="small" type="datetime-local" label={tx("Due Date")} value={f.due_date} onChange={ch("due_date")} InputLabelProps={{ shrink: true }} />
+          <DateTimeField size="small" label={tx("Due Date")} value={f.due_date} onChange={ch("due_date")} slotProps={{ inputLabel: { shrink: true } }} />
           <FormControl size="small">
             <InputLabel>{tx("Priority")}</InputLabel>
             <Select label={tx("Priority")} value={f.priority} onChange={ch("priority")}>
@@ -167,8 +168,7 @@ export function WorkOrderForm({ item, initial, lookups, defaultWoNo, saving, onC
         </Box>
         <Alert severity="info" sx={{ mt: 2, py: 0 }}>{tx("Estimated duration")}: <b>{valid ? fmtDuration(minutes) : EMPTY}</b> · {tx("Materials come from the product's active BOM (Product Master).")}</Alert>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button onClick={submit} disabled={saving || !valid} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -195,7 +195,7 @@ export function ScheduleDialog({ wo, machines, windowStart, initialMachineId, in
             <Select label={tx("Machine")} value={machineId} onChange={(e) => setMachineId(e.target.value)}>
               {machines.map((m) => (
                 <MenuItem key={m.id} value={m.id}>
-                  {m.equipment_code} — {m.equipment_name} · {m.group_name || EMPTY} · {label("machineStatus", m.operational_status)} · {num(m.planned_hours, 1)}h
+                  {m.equipment_code} — {m.equipment_name} · {m.group_name || EMPTY} · {tx("Status")}: {label("machineStatus", m.operational_status)} · {tx("Booked in this shift")} {num(m.planned_hours, 1)}h
                 </MenuItem>
               ))}
             </Select>
@@ -203,7 +203,7 @@ export function ScheduleDialog({ wo, machines, windowStart, initialMachineId, in
           {machine && BLOCKED.has(machine.operational_status) ? (
             <Alert severity="error" sx={{ py: 0 }}>{alertText({ code: "MACHINE_UNAVAILABLE", params: { wo: wo.wo_no, machine: machine.equipment_code, status: machine.operational_status } }).message}</Alert>
           ) : null}
-          <TextField size="small" type="datetime-local" label={tx("Planned Start")} value={start} onChange={(e) => setStart(e.target.value)} InputLabelProps={{ shrink: true }} />
+          <DateTimeField size="small" label={tx("Planned Start")} value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
           <InfoGrid items={[
             [tx("Estimated duration"), fmtDuration(minutes)],
             [tx("Planned End"), end ? ddmmhhmm(end) : EMPTY],
@@ -212,8 +212,7 @@ export function ScheduleDialog({ wo, machines, windowStart, initialMachineId, in
           ]} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || !machineId || !start} onClick={() => onSave({ machine_id: Number(machineId), planned_start: fromInputDateTime(start) })} sx={btn("primary")}>{tx("Schedule")}</Button>
       </DialogActions>
     </Dialog>
@@ -237,8 +236,7 @@ export function ProgressDialog({ wo, saving, onClose, onSave }) {
           <TextField size="small" type="number" label={tx("Reject Qty")} value={reject} onChange={(e) => setReject(e.target.value)} inputProps={{ min: 0 }} />
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} sx={btn("cancel")}>{tx("Cancel")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={saving || qty === "" || Number(qty) < 0 || Number(reject) < 0} onClick={() => onSave(Number(qty), Number(reject || 0))} sx={btn("primary")}>{tx("Save")}</Button>
       </DialogActions>
     </Dialog>
@@ -281,7 +279,7 @@ export function WorkOrderDetailDialog({ wo, alerts, canEdit, planEditable, savin
           </Box>
         ) : null}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, flexWrap: "wrap", gap: 1 }}>
+      <DialogActions sx={{ px: 2, py: 1.25, flexWrap: "wrap", gap: 1 }}>
         <Button onClick={() => onOpenDetail(wo)} sx={btn("cancel")}>{tx("Open Order Detail")}</Button>
         <Box sx={{ flex: 1 }} />
         {editable && wo.status !== "UNSCHEDULED" ? <Button disabled={saving} onClick={() => onUnschedule(wo)} sx={btn("cancel")}>{tx("Move to Backlog")}</Button> : null}
@@ -363,7 +361,7 @@ export function SimulationDialog({ planId, areaId, workOrders, backlog, machines
                   {machines.map((m) => <MenuItem key={m.id} value={m.id}>{m.equipment_code} · {label("machineStatus", m.operational_status)}</MenuItem>)}
                 </Select>
               </FormControl>
-              <TextField size="small" type="datetime-local" label={tx("Planned Start")} value={c.planned_start} onChange={(e) => update(index, "planned_start", e.target.value)} InputLabelProps={{ shrink: true }} />
+              <DateTimeField size="small" label={tx("Planned Start")} value={c.planned_start} onChange={(e) => update(index, "planned_start", e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="number" label={tx("Planned Qty")} value={c.planned_qty} onChange={(e) => update(index, "planned_qty", e.target.value)} />
               <IconButton size="small" color="error" disabled={changes.length === 1} onClick={() => setChanges((l) => l.filter((_, i) => i !== index))}><DeleteOutlineIcon fontSize="small" /></IconButton>
             </Box>
@@ -393,8 +391,7 @@ export function SimulationDialog({ planId, areaId, workOrders, backlog, machines
           ) : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button>
+      <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Button disabled={running || !changes.some((c) => c.id)} onClick={run} sx={btn("primary")}>{tx("Run Simulation")}</Button>
       </DialogActions>
     </Dialog>
@@ -406,54 +403,71 @@ export function SimulationDialog({ planId, areaId, workOrders, backlog, machines
 // =========================================================
 
 export function CapacityCheckDialog({ capacity, totals, machines, onGroupClick, onClose }) {
+  const headSx = { "& th": { fontWeight: 800, color: "text.secondary", bgcolor: "action.hover", whiteSpace: "nowrap" }, "& td, & th": { py: 0.75 } };
+  const usage = (value) => {
+    const color = value > 100 ? "#F04438" : value > 85 ? "#F79009" : "#12B76A";
+    return (
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end" }}>
+        <LinearProgress variant="determinate" value={Math.min(Number(value) || 0, 100)} sx={{ width: 70, height: 6, borderRadius: 3, bgcolor: "action.hover", "& .MuiLinearProgress-bar": { bgcolor: color } }} />
+        <Typography variant="caption" fontWeight={800} sx={{ color, width: 44, textAlign: "right" }}>{value}%</Typography>
+      </Stack>
+    );
+  };
+  const section = (text) => <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>{text}</Typography>;
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<PrecisionManufacturingOutlinedIcon />} title={tx("Capacity Check")} onClose={onClose} />
-      <DialogContent sx={{ pt: "16px !important" }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{tx("Machine Group")}</TableCell><TableCell align="right">{tx("Machines")}</TableCell>
-              <TableCell align="right">{tx("Available (h)")}</TableCell><TableCell align="right">{tx("Planned (h)")}</TableCell>
-              <TableCell align="right">{tx("Est. Capacity (PCS)")}</TableCell><TableCell align="right">{tx("Utilization")}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {capacity.map((c) => (
-              <TableRow key={c.group_code} hover sx={{ cursor: "pointer" }} onClick={() => onGroupClick(c)}>
-                <TableCell>{c.group_name}</TableCell>
-                <TableCell align="right">{c.available_machines}/{c.total_machines}</TableCell>
-                <TableCell align="right">{num(c.available_hours, 1)}</TableCell>
-                <TableCell align="right">{num(c.planned_hours, 1)}</TableCell>
-                <TableCell align="right">{num(c.capacity_qty)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, color: c.utilization > 100 ? "#F04438" : c.utilization > 85 ? "#F79009" : "#12B76A" }}>{c.utilization}%</TableCell>
+      <DialogContent sx={{ pt: "16px !important", pb: 2.5 }}>
+        {section(tx("By machine group"))}
+        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+          <Table size="small" sx={headSx}>
+            <TableHead>
+              <TableRow>
+                <TableCell>{tx("Machine Group")}</TableCell><TableCell align="right">{tx("Machines")}</TableCell>
+                <TableCell align="right">{tx("Available (h)")}</TableCell><TableCell align="right">{tx("Planned (h)")}</TableCell>
+                <TableCell align="right">{tx("Est. Capacity (PCS)")}</TableCell><TableCell align="right">{tx("Utilization")}</TableCell>
               </TableRow>
-            ))}
-            <TableRow>
-              <TableCell sx={{ fontWeight: 800 }}>{tx("Total")}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800 }}>{totals.available_machines}/{totals.total_machines}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800 }}>{num(totals.available_hours, 1)}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800 }}>{num(totals.planned_hours, 1)}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800 }}>{num(totals.capacity_qty)}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800 }}>{totals.utilization}%</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 2, mb: 0.5 }}>{tx("Machines")}</Typography>
-        <Table size="small">
-          <TableHead><TableRow><TableCell>{tx("Machine")}</TableCell><TableCell>{tx("Machine Group")}</TableCell><TableCell>{tx("Status")}</TableCell><TableCell align="right">{tx("Planned (h)")}</TableCell></TableRow></TableHead>
-          <TableBody>
-            {machines.map((m) => (
-              <TableRow key={m.id}>
-                <TableCell>{m.equipment_code} — {m.equipment_name}</TableCell><TableCell>{m.group_name || EMPTY}</TableCell>
-                <TableCell sx={{ color: m.available ? "inherit" : "#F04438", fontWeight: m.available ? 400 : 800 }}>{label("machineStatus", m.operational_status)}</TableCell>
-                <TableCell align="right">{num(m.planned_hours, 2)}</TableCell>
+            </TableHead>
+            <TableBody>
+              {capacity.map((c) => (
+                <TableRow key={c.group_code} hover sx={{ cursor: "pointer" }} onClick={() => onGroupClick(c)}>
+                  <TableCell sx={{ fontWeight: 700 }}>{c.group_name}</TableCell>
+                  <TableCell align="right">{c.available_machines}/{c.total_machines}</TableCell>
+                  <TableCell align="right">{num(c.available_hours, 1)}</TableCell>
+                  <TableCell align="right">{num(c.planned_hours, 1)}</TableCell>
+                  <TableCell align="right">{num(c.capacity_qty)}</TableCell>
+                  <TableCell align="right">{usage(c.utilization)}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow sx={{ "& td": { fontWeight: 800, borderBottom: 0 } }}>
+                <TableCell sx={{ color: "primary.main" }}>{tx("Total")}</TableCell>
+                <TableCell align="right">{totals.available_machines}/{totals.total_machines}</TableCell>
+                <TableCell align="right">{num(totals.available_hours, 1)}</TableCell>
+                <TableCell align="right">{num(totals.planned_hours, 1)}</TableCell>
+                <TableCell align="right">{num(totals.capacity_qty)}</TableCell>
+                <TableCell align="right">{usage(totals.utilization)}</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </Box>
+
+        <Box sx={{ mt: 2.5 }}>{section(tx("By machine"))}</Box>
+        <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+          <Table size="small" sx={headSx}>
+            <TableHead><TableRow><TableCell>{tx("Machine")}</TableCell><TableCell>{tx("Machine Group")}</TableCell><TableCell>{tx("Status")}</TableCell><TableCell align="right">{tx("Planned (h)")}</TableCell></TableRow></TableHead>
+            <TableBody>
+              {machines.map((m, i) => (
+                <TableRow key={m.id} sx={i === machines.length - 1 ? { "& td": { borderBottom: 0 } } : undefined}>
+                  <TableCell><b>{m.equipment_code}</b> — {m.equipment_name}</TableCell>
+                  <TableCell>{m.group_name || EMPTY}</TableCell>
+                  <TableCell><Dot color={m.available ? (m.operational_status === "RUNNING" ? "#12B76A" : "#667085") : "#F04438"} text={label("machineStatus", m.operational_status)} /></TableCell>
+                  <TableCell align="right">{num(m.planned_hours, 2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }
@@ -475,64 +489,78 @@ export function MaterialCheckDialog({ materials, api, request, canEdit, actor, o
       setEdit(null); await load(); onChanged(tx("Stock updated."));
     } catch (e) { setError(e.message); }
   };
+  const headSx = { "& th": { fontWeight: 800, color: "text.secondary", bgcolor: "action.hover", whiteSpace: "nowrap" }, "& td, & th": { py: 0.75 }, "& tbody tr:last-of-type td": { borderBottom: 0 } };
+  const boxSx = { border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" };
+  const noStock = <Typography component="span" variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>{tx("No stock record")}</Typography>;
+  const qty = (value, unit) => (value == null ? noStock : `${num(value, 2)} ${unit || ""}`);
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogHeader icon={<Inventory2OutlinedIcon />} title={tx("Material Check")} onClose={onClose} />
-      <DialogContent sx={{ pt: "16px !important" }}>
-        {error ? <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert> : null}
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>{tx("Material")}</TableCell><TableCell align="right">{tx("Required")}</TableCell><TableCell align="right">{tx("Available")}</TableCell>
-              <TableCell align="right">{tx("Safety Stock")}</TableCell><TableCell>{tx("Availability")}</TableCell><TableCell>{tx("Used by")}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {materials.length === 0 ? <TableRow><TableCell colSpan={6}>{tx("No data.")}</TableCell></TableRow> : materials.map((m) => (
-              <TableRow key={m.material_id} hover sx={{ cursor: "pointer" }} onClick={() => onMaterialClick(m)}>
-                <TableCell>{m.material_code}<Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{m.material_name}</Typography></TableCell>
-                <TableCell align="right">{num(m.required_qty, 2)} {m.unit}</TableCell>
-                <TableCell align="right">{m.has_stock_record ? `${num(m.available_qty, 2)} ${m.unit}` : tx("No stock record")}</TableCell>
-                <TableCell align="right">{num(m.safety_stock_qty, 2)}</TableCell>
-                <TableCell><Dot color={MATERIAL_COLORS[m.status]} text={label("material", m.status)} /></TableCell>
-                <TableCell><Typography variant="caption">{m.wo_nos.join(", ")}</Typography></TableCell>
+      <DialogContent sx={{ pt: "16px !important", pb: 2.5 }}>
+        {error ? <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert> : null}
+        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>{tx("Required for this plan")}</Typography>
+        <Box sx={boxSx}>
+          <Table size="small" sx={headSx}>
+            <TableHead>
+              <TableRow>
+                <TableCell>{tx("Material")}</TableCell><TableCell align="right">{tx("Required")}</TableCell><TableCell align="right">{tx("Available")}</TableCell>
+                <TableCell align="right">{tx("Safety Stock")}</TableCell><TableCell>{tx("Availability")}</TableCell><TableCell>{tx("Used by")}</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 2.5 }}>{tx("Material Stock")}</Typography>
-        <Typography variant="caption" color="text.secondary">{tx("Stock is maintained here until the Material Management module is available.")}</Typography>
-        <Box sx={{ maxHeight: 280, overflow: "auto", mt: 0.5 }}>
-          <Table size="small" stickyHeader>
-            <TableHead><TableRow><TableCell>{tx("Material")}</TableCell><TableCell align="right">{tx("Available")}</TableCell><TableCell align="right">{tx("Safety Stock")}</TableCell><TableCell align="right" /></TableRow></TableHead>
+            </TableHead>
             <TableBody>
-              {[...stock].sort((a, b) => Number(needed.has(b.material_id)) - Number(needed.has(a.material_id))).map((s) => (
-                <TableRow key={s.material_id}>
-                  <TableCell sx={{ fontWeight: needed.has(s.material_id) ? 800 : 400 }}>{s.material_code} — {s.material_name}</TableCell>
-                  {edit?.material_id === s.material_id ? (
-                    <>
-                      <TableCell align="right">{s.available_qty == null ? tx("No stock record") : `${num(s.available_qty, 2)} ${s.unit || ""}`}</TableCell>
-                      <TableCell align="right"><TextField size="small" type="number" value={edit.safety_stock_qty} onChange={(e) => setEdit({ ...edit, safety_stock_qty: e.target.value })} sx={{ width: 110 }} /></TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                        <Button size="small" onClick={() => setEdit(null)}>{tx("Cancel")}</Button>
-                        <Button size="small" variant="contained" onClick={save}>{tx("Save")}</Button>
-                      </TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell align="right">{s.available_qty == null ? tx("No stock record") : `${num(s.available_qty, 2)} ${s.unit || ""}`}</TableCell>
-                      <TableCell align="right">{num(s.safety_stock_qty, 2)}</TableCell>
-                      <TableCell align="right"><Button size="small" disabled={!canEdit} onClick={() => setEdit({ material_id: s.material_id, safety_stock_qty: s.safety_stock_qty ?? 0 })}>{tx("Safety Stock")}</Button></TableCell>
-                    </>
-                  )}
+              {materials.length === 0 ? (
+                <TableRow><TableCell colSpan={6}><Typography variant="caption" color="text.secondary">{tx("No data.")}</Typography></TableCell></TableRow>
+              ) : materials.map((m) => (
+                <TableRow key={m.material_id} hover sx={{ cursor: "pointer" }} onClick={() => onMaterialClick(m)}>
+                  <TableCell><b>{m.material_code}</b><Typography sx={{ display: "block" }} variant="caption" color="text.secondary">{m.material_name}</Typography></TableCell>
+                  <TableCell align="right">{num(m.required_qty, 2)} {m.unit}</TableCell>
+                  <TableCell align="right">{m.has_stock_record ? `${num(m.available_qty, 2)} ${m.unit}` : noStock}</TableCell>
+                  <TableCell align="right">{num(m.safety_stock_qty, 2)}</TableCell>
+                  <TableCell><Dot color={MATERIAL_COLORS[m.status]} text={label("material", m.status)} /></TableCell>
+                  <TableCell><Typography variant="caption">{m.wo_nos.join(", ")}</Typography></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Box>
+
+        <Stack direction="row" sx={{ mt: 2.5, mb: 1, alignItems: "baseline", gap: 1, flexWrap: "wrap" }}>
+          <Typography variant="subtitle2" fontWeight={800}>{tx("Material Stock")}</Typography>
+          <Typography variant="caption" color="text.secondary">{tx("Stock is maintained here until the Material Management module is available.")}</Typography>
+        </Stack>
+        <Box sx={{ ...boxSx, maxHeight: 300, overflow: "auto" }}>
+          <Table size="small" stickyHeader sx={headSx}>
+            <TableHead><TableRow><TableCell>{tx("Material")}</TableCell><TableCell align="right">{tx("Available")}</TableCell><TableCell align="right">{tx("Safety Stock")}</TableCell><TableCell align="right" sx={{ width: 170 }} /></TableRow></TableHead>
+            <TableBody>
+              {[...stock].sort((a, b) => Number(needed.has(b.material_id)) - Number(needed.has(a.material_id))).map((s) => {
+                const editing = edit?.material_id === s.material_id;
+                return (
+                  <TableRow key={s.material_id} hover>
+                    <TableCell><b>{s.material_code}</b> — {s.material_name}</TableCell>
+                    <TableCell align="right">{qty(s.available_qty, s.unit)}</TableCell>
+                    <TableCell align="right">
+                      {editing
+                        ? <TextField size="small" type="number" autoFocus value={edit.safety_stock_qty} onChange={(e) => setEdit({ ...edit, safety_stock_qty: e.target.value })} sx={{ width: 100, "& .MuiInputBase-root": { height: 27 } }} />
+                        : num(s.safety_stock_qty, 2)}
+                    </TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      {editing ? (
+                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: "flex-end" }}>
+                          <Button size="small" onClick={() => setEdit(null)} sx={btn("cancel", { height: 26, minWidth: 0, px: 1 })}>{tx("Cancel")}</Button>
+                          <Button size="small" onClick={save} sx={btn("primary", { height: 26, minWidth: 0, px: 1.25 })}>{tx("Save")}</Button>
+                        </Stack>
+                      ) : (
+                        <Button size="small" disabled={!canEdit} onClick={() => setEdit({ material_id: s.material_id, safety_stock_qty: s.safety_stock_qty ?? 0 })}
+                          sx={btn("cancel", { height: 26, minWidth: 0, px: 1.25 })}>{tx("Edit safety stock")}</Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }
@@ -548,7 +576,6 @@ export function AlertsDialog({ alerts, title, message, onAlertClick, onClose }) 
       <DialogContent sx={{ pt: "12px !important", maxHeight: 520 }}>
         <AlertList alerts={alerts} onAlertClick={onAlertClick} />
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}><Button onClick={onClose} sx={btn("cancel")}>{tx("Close")}</Button></DialogActions>
     </Dialog>
   );
 }

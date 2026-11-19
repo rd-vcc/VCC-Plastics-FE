@@ -39,6 +39,11 @@ import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
+import VpnKeyOutlinedIcon from "@mui/icons-material/VpnKeyOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import PageMeta from "../../../components/common/PageMeta";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import AgGridTable from "../../../components/tables/BasicTables/BasicTableOne";
@@ -52,7 +57,7 @@ import { useTranslation } from "react-i18next";
 
 const API_BASE = API_CONFIG.VCC_PLASTICS_API.replace(/\/$/, "");
 const PANEL_HEADER_HEIGHT = 30;
-const MAIN_TABLE_PANEL_HEIGHT = 520;
+const MAIN_TABLE_PANEL_HEIGHT = "max(520px, calc(var(--app-vh, 100vh) - 340px))";
 
 const cardSx = {
   border: "1px solid",
@@ -96,6 +101,100 @@ function SectionHeader({ icon, title, action = null }) {
     </Box>
   );
 }
+
+// Header of the small account dialogs: icon, title, subtitle and the X close button (no Cancel button).
+function AccountDialogTitle({ icon, title, subtitle, onClose, disabled, closeLabel }) {
+  return (
+    <DialogTitle
+      sx={{
+        position: "relative",
+        pl: 2.5,
+        pr: 7,
+        py: 2,
+        bgcolor: (theme) => (theme.palette.mode === "dark" ? "#182235" : "#EEF4FF"),
+        borderBottom: 1,
+        borderColor: "divider",
+      }}
+    >
+      <Stack direction="row" spacing={1.25} alignItems="center">
+        <Box sx={{ width: 29, height: 29, borderRadius: 1.5, bgcolor: "primary.main", color: "common.white", display: "grid", placeItems: "center" }}>
+          {icon}
+        </Box>
+        <Box minWidth={0}>
+          <Typography variant="h5" fontWeight={800}>{title}</Typography>
+          <Typography variant="body2" color="text.secondary">{subtitle}</Typography>
+        </Box>
+      </Stack>
+      <Tooltip title={closeLabel}>
+        <span style={{ position: "absolute", top: 12, right: 12 }}>
+          <IconButton size="small" disabled={disabled} onClick={onClose} sx={buttonSx("cancel", { width: 29, height: 29, p: 0.25 })}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+    </DialogTitle>
+  );
+}
+
+// Section caption inside a dialog (same style as the master-data dialogs).
+function FormSection({ title, children }) {
+  return (
+    <Stack spacing={1.25}>
+      <Typography
+        variant="caption"
+        sx={{ fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "text.secondary", fontSize: "0.68rem" }}
+      >
+        {title}
+      </Typography>
+      {children}
+    </Stack>
+  );
+}
+
+// Password input with a show / hide eye button.
+function PasswordField({ label, value, onChange, error, helperText, autoFocus, showLabel, hideLabel }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <TextField
+      fullWidth
+      required
+      size="small"
+      autoFocus={autoFocus}
+      type={visible ? "text" : "password"}
+      autoComplete="new-password"
+      label={label}
+      value={value}
+      onChange={onChange}
+      error={error}
+      helperText={helperText}
+      slotProps={{
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <Tooltip title={visible ? hideLabel : showLabel}>
+                <IconButton size="small" edge="end" tabIndex={-1} onClick={() => setVisible((v) => !v)}>
+                  {visible ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
+  );
+}
+
+const dialogFooterSx = {
+  px: 2.5,
+  py: 1.25,
+  borderTop: 1,
+  borderColor: "divider",
+  bgcolor: (theme) => (theme.palette.mode === "dark" ? "#0F172A" : "#F8FAFC"),
+  justifyContent: "space-between",
+  gap: 1.5,
+};
+
+const EMPTY_ACCOUNT = { employee_code: "", full_name: "", department: "", position: "", external_user_id: null };
 
 function buttonSx(type, overrides = {}) {
   const styles = buttonSystem[type];
@@ -211,11 +310,14 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [employeeToAdd, setEmployeeToAdd] = useState(null);
-  const [rolesToAdd, setRolesToAdd] = useState([]);
-  const [newAccessEnabled, setNewAccessEnabled] = useState(true);
-  const [adding, setAdding] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newAccount, setNewAccount] = useState(EMPTY_ACCOUNT);
+  const [newAccountRoles, setNewAccountRoles] = useState([]);
+  const [newAccountActive, setNewAccountActive] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ password: "", confirm: "" });
+  const [savingPassword, setSavingPassword] = useState(false);
   const [message, setMessage] = useState({
     open: false,
     type: "success",
@@ -506,39 +608,80 @@ export default function UserManagement() {
     }
   };
 
-  const handleOpenAdd = () => {
+  const setAccountField = (field) => (event) =>
+    setNewAccount((current) => ({ ...current, [field]: event.target.value }));
+  // picking someone from the VCC Group directory fills the form (still editable)
+  const pickDirectoryEmployee = (employee) =>
+    setNewAccount(
+      employee
+        ? {
+            employee_code: employee.employee_code || "",
+            full_name: employee.full_name || "",
+            department: getDepartment(employee, ""),
+            position: employee.position || "",
+            external_user_id: employee.external_user_id ?? null,
+          }
+        : EMPTY_ACCOUNT,
+    );
+  const passwordMismatch = Boolean(passwordForm.confirm) && passwordForm.password !== passwordForm.confirm;
+
+  const handleOpenCreate = () => {
     if (!canEdit) return;
-    setEmployeeToAdd(null);
-    setRolesToAdd([]);
-    setNewAccessEnabled(true);
-    setAddOpen(true);
+    setNewAccount(EMPTY_ACCOUNT);
+    setNewAccountRoles([]);
+    setNewAccountActive(true);
+    setCreateOpen(true);
   };
 
-  const handleAddEmployee = async () => {
-    if (!canEdit || !employeeToAdd) return;
-    setAdding(true);
+  const handleCreateAccount = async () => {
+    if (!canEdit || creating) return;
+    setCreating(true);
     try {
-      const result = await requestJson(
-        `${API_BASE}/api/user-management/employees/${encodeURIComponent(
-          employeeToAdd.employee_code,
-        )}/roles`,
-        {
-          method: "PUT",
-          body: JSON.stringify({
-            role_ids: rolesToAdd.map((role) => role.id),
-            is_active: newAccessEnabled,
-            updated_by: actor,
-          }),
-        },
-      );
-      setSelectedEmployee(employeeToAdd);
+      const result = await requestJson(`${API_BASE}/api/user-management/accounts`, {
+        method: "POST",
+        body: JSON.stringify({
+          employee_code: newAccount.employee_code.trim(),
+          full_name: newAccount.full_name.trim(),
+          department: newAccount.department.trim() || null,
+          position: newAccount.position.trim() || null,
+          external_user_id: newAccount.external_user_id,
+          role_ids: newAccountRoles.map((role) => role.id),
+          is_active: newAccountActive,
+          created_by: actor,
+        }),
+      });
+      setSelectedEmployee({ employee_code: newAccount.employee_code.trim() });
       await loadData();
-      setAddOpen(false);
+      setCreateOpen(false);
       showMessage("success", result.message || t("userManagement.addSuccess"));
     } catch (error) {
       showMessage("error", error.message || t("userManagement.addError"));
     } finally {
-      setAdding(false);
+      setCreating(false);
+    }
+  };
+
+  const handleOpenPassword = () => {
+    if (!canEdit || !selectedEmployee) return;
+    setPasswordForm({ password: "", confirm: "" });
+    setPasswordOpen(true);
+  };
+
+  const handleSavePassword = async () => {
+    if (!canEdit || !selectedEmployee || savingPassword) return;
+    setSavingPassword(true);
+    try {
+      const result = await requestJson(
+        `${API_BASE}/api/user-management/accounts/${encodeURIComponent(selectedEmployee.employee_code)}/password`,
+        { method: "PUT", body: JSON.stringify({ password: passwordForm.password, updated_by: actor }) },
+      );
+      setPasswordOpen(false);
+      showMessage("success", result.message || t("userManagement.passwordSaved"));
+      await loadData();
+    } catch (error) {
+      showMessage("error", error.message || t("userManagement.passwordError"));
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -575,7 +718,7 @@ export default function UserManagement() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={handleOpenAdd}
+              onClick={handleOpenCreate}
               disabled={!canEdit}
               sx={buttonSx("primary", { flexShrink: 0 })}
             >
@@ -886,6 +1029,16 @@ export default function UserManagement() {
                         )}
                       </Typography>
                     </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("userManagement.accountType")}
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        {selectedEmployee.has_password
+                          ? t("userManagement.localAccount")
+                          : t("userManagement.vccAccount")}
+                      </Typography>
+                    </Box>
 
                     <Divider />
 
@@ -948,7 +1101,7 @@ export default function UserManagement() {
                           {t("userManagement.allowAccess")}
                         </Typography>
                       </Box>
-                      <Switch
+                      <Switch sx={{ ml: "auto" }}
                         disabled={!canEdit}
                         checked={accessEnabled}
                         onChange={(event) =>
@@ -975,6 +1128,18 @@ export default function UserManagement() {
                         ? t("common.saving")
                         : t("userManagement.savePermissions")}
                     </Button>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      startIcon={<VpnKeyOutlinedIcon />}
+                      disabled={!canEdit || !selectedEmployee.mes_user_id}
+                      onClick={handleOpenPassword}
+                      sx={buttonSx("edit")}
+                    >
+                      {selectedEmployee.has_password
+                        ? t("userManagement.changePassword")
+                        : t("userManagement.setPassword")}
+                    </Button>
                   </Stack>
                 ) : (
                   <Stack
@@ -996,147 +1161,232 @@ export default function UserManagement() {
           </Box>
 
           <Dialog
-            open={addOpen}
-            onClose={() => !adding && setAddOpen(false)}
+            open={createOpen}
+            onClose={() => !creating && setCreateOpen(false)}
             fullWidth
             maxWidth="sm"
             PaperProps={{ sx: { borderRadius: 2.5, overflow: "hidden" } }}
           >
-            <DialogTitle
-              sx={{
-                position: "relative",
-                pl: 2.5,
-                pr: 7,
-                py: 2,
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark" ? "#182235" : "#EEF4FF",
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
-            >
-              <Stack direction="row" spacing={1.25} alignItems="center">
-                <Box
-                  sx={{
-                    width: 29,
-                    height: 29,
-                    borderRadius: 1.5,
-                    bgcolor: "primary.main",
-                    color: "common.white",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <AssignmentIndOutlinedIcon fontSize="small" />
-                </Box>
-                <Box>
-                  <Typography variant="h5" fontWeight={800}>
-                    {t("userManagement.addEmployee")}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("userManagement.addDescription")}
-                  </Typography>
-                </Box>
-              </Stack>
-              <Tooltip title={t("userManagement.close")}>
-                <span style={{ position: "absolute", top: 12, right: 12 }}>
-                  <IconButton
-                    size="small"
-                    disabled={adding}
-                    onClick={() => setAddOpen(false)}
-                    sx={buttonSx("cancel", { width: 29, height: 29, p: 0.25 })}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </DialogTitle>
-            <DialogContent>
-              <Stack spacing={2} sx={{ pt: 2 }}>
-                <Autocomplete
-                  disabled={!canEdit}
-                  options={availableEmployees}
-                  value={employeeToAdd}
-                  onChange={(_, value) => setEmployeeToAdd(value)}
-                  getOptionLabel={(option) =>
-                    `${option.employee_code || "—"} - ${option.full_name || t("userManagement.nameUnavailable")}`
-                  }
-                  isOptionEqualToValue={(option, value) =>
-                    option.employee_code === value.employee_code
-                  }
-                  noOptionsText={t("userManagement.noEmployees")}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label={t("userManagement.employee")}
-                      placeholder={t("userManagement.searchEmployee")}
+            <AccountDialogTitle
+              icon={<PersonAddAltOutlinedIcon fontSize="small" />}
+              title={t("userManagement.addEmployee")}
+              subtitle={t("userManagement.addEmployeeDescription")}
+              onClose={() => setCreateOpen(false)}
+              disabled={creating}
+              closeLabel={t("userManagement.close")}
+            />
+            <DialogContent sx={{ px: 2.5, py: 2.25, "&&": { pt: 2.25 } }}>
+              <Stack spacing={2.25} sx={{ pt: 0.5 }}>
+                <FormSection title={t("userManagement.sectionProfile")}>
+                  {availableEmployees.length ? (
+                    <Autocomplete
+                      size="small"
+                      options={availableEmployees}
+                      onChange={(_, value) => pickDirectoryEmployee(value)}
+                      getOptionLabel={(option) =>
+                        `${option.employee_code || "—"} - ${option.full_name || t("userManagement.nameUnavailable")}`
+                      }
+                      isOptionEqualToValue={(option, value) => option.employee_code === value.employee_code}
+                      noOptionsText={t("userManagement.noEmployees")}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label={t("userManagement.pickFromDirectory")}
+                          placeholder={t("userManagement.searchEmployee")}
+                        />
+                      )}
                     />
-                  )}
-                />
-
-                <Autocomplete
-                  disabled={!canEdit}
-                  multiple
-                  options={roles}
-                  value={rolesToAdd}
-                  onChange={(_, value) => setRolesToAdd(value)}
-                  getOptionLabel={(option) =>
-                    option.role_name || option.role_code
-                  }
-                  isOptionEqualToValue={(option, value) =>
-                    option.id === value.id
-                  }
-                  renderInput={(params) => (
+                  ) : null}
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5 }}>
                     <TextField
-                      {...params}
+                      fullWidth
                       required
-                      label={t("userManagement.roles")}
-                      placeholder={t("userManagement.selectAtLeastOneRole")}
+                      size="small"
+                      autoFocus
+                      label={t("userManagement.employeeCode")}
+                      placeholder={t("userManagement.codePlaceholder")}
+                      value={newAccount.employee_code}
+                      onChange={setAccountField("employee_code")}
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <BadgeOutlinedIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
                     />
-                  )}
-                />
-
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {t("userManagement.systemAccess")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t("userManagement.allowEmployeeAccess")}
-                    </Typography>
+                    <TextField
+                      fullWidth
+                      required
+                      size="small"
+                      label={t("userManagement.fullName")}
+                      placeholder={t("userManagement.namePlaceholder")}
+                      value={newAccount.full_name}
+                      onChange={setAccountField("full_name")}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label={t("userManagement.department")}
+                      placeholder={t("userManagement.departmentPlaceholder")}
+                      value={newAccount.department}
+                      onChange={setAccountField("department")}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label={t("userManagement.jobTitle")}
+                      placeholder={t("userManagement.positionPlaceholder")}
+                      value={newAccount.position}
+                      onChange={setAccountField("position")}
+                    />
                   </Box>
-                  <Switch
-                    disabled={!canEdit}
-                    checked={newAccessEnabled}
-                    onChange={(event) =>
-                      setNewAccessEnabled(event.target.checked)
+                </FormSection>
+
+                <FormSection title={t("userManagement.sectionLogin")}>
+                  <Stack
+                    direction="row"
+                    spacing={1.25}
+                    alignItems="center"
+                    sx={{
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: 1.5,
+                      border: 1,
+                      borderColor: (theme) => (theme.palette.mode === "dark" ? "#1E3A5F" : "#C7DBF5"),
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "#0F2238" : "#F3F8FF"),
+                    }}
+                  >
+                    <VpnKeyOutlinedIcon fontSize="small" sx={{ color: "primary.main" }} />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {t("userManagement.defaultPasswordTitle", { code: newAccount.employee_code.trim() || "…" })}{" "}
+                        <Box component="span" sx={{ px: 0.75, py: 0.1, borderRadius: 1, bgcolor: "background.paper", border: 1, borderColor: "divider", fontFamily: "monospace" }}>
+                          1
+                        </Box>
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("userManagement.defaultPasswordHint")}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </FormSection>
+
+                <FormSection title={t("userManagement.sectionAccess")}>
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={roles}
+                    value={newAccountRoles}
+                    onChange={(_, value) => setNewAccountRoles(value)}
+                    getOptionLabel={(option) => option.role_name || option.role_code}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        required
+                        label={t("userManagement.roles")}
+                        placeholder={newAccountRoles.length ? "" : t("userManagement.selectAtLeastOneRole")}
+                      />
+                    )}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          {...getTagProps({ index })}
+                          key={option.id}
+                          label={option.role_name}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      ))
                     }
                   />
-                </Stack>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ px: 1.5, py: 1, border: 1, borderColor: "divider", borderRadius: 1.5 }}
+                  >
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>{t("userManagement.systemAccess")}</Typography>
+                      <Typography variant="caption" color="text.secondary">{t("userManagement.allowEmployeeAccess")}</Typography>
+                    </Box>
+                    <Switch sx={{ ml: "auto" }} checked={newAccountActive} onChange={(event) => setNewAccountActive(event.target.checked)} />
+                  </Stack>
+                </FormSection>
               </Stack>
             </DialogContent>
-            <DialogActions sx={{ px: 3, py: 1.5 }}>
+            <DialogActions sx={{ ...dialogFooterSx, justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
-                startIcon={
-                  adding ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <SaveIcon />
-                  )
-                }
+                startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
                 disabled={
-                  !canEdit || !employeeToAdd || !rolesToAdd.length || adding
+                  !canEdit || creating || !newAccount.employee_code.trim() || !newAccount.full_name.trim() ||
+                  !newAccountRoles.length
                 }
-                onClick={handleAddEmployee}
+                onClick={handleCreateAccount}
+                sx={buttonSx("primary", { flexShrink: 0 })}
+              >
+                {creating ? t("userManagement.adding") : t("userManagement.addEmployee")}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={passwordOpen}
+            onClose={() => !savingPassword && setPasswordOpen(false)}
+            fullWidth
+            maxWidth="xs"
+            PaperProps={{ sx: { borderRadius: 2.5, overflow: "hidden" } }}
+          >
+            <AccountDialogTitle
+              icon={<VpnKeyOutlinedIcon fontSize="small" />}
+              title={selectedEmployee?.has_password ? t("userManagement.changePassword") : t("userManagement.setPassword")}
+              subtitle={t("userManagement.setPasswordDescription", {
+                name: `${selectedEmployee?.full_name || ""} - ${selectedEmployee?.employee_code || ""}`,
+              })}
+              onClose={() => setPasswordOpen(false)}
+              disabled={savingPassword}
+              closeLabel={t("userManagement.close")}
+            />
+            <DialogContent sx={{ px: 2.5, py: 2.25, "&&": { pt: 2.25 } }}>
+              <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+                <PasswordField
+                  autoFocus
+                  label={t("userManagement.newPassword")}
+                  value={passwordForm.password}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                  showLabel={t("userManagement.showPassword")}
+                  hideLabel={t("userManagement.hidePassword")}
+                />
+                <PasswordField
+                  label={t("userManagement.confirmPassword")}
+                  value={passwordForm.confirm}
+                  onChange={(event) => setPasswordForm((current) => ({ ...current, confirm: event.target.value }))}
+                  error={passwordMismatch}
+                  helperText={passwordMismatch ? t("userManagement.passwordMismatch") : null}
+                  showLabel={t("userManagement.showPassword")}
+                  hideLabel={t("userManagement.hidePassword")}
+                />
+                {!selectedEmployee?.has_password ? (
+                  <Alert severity="info" variant="outlined" sx={{ py: 0, fontSize: 11 }}>
+                    {t("userManagement.passwordSwitchHint")}
+                  </Alert>
+                ) : null}
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ ...dialogFooterSx, justifyContent: "flex-end" }}>
+              <Button
+                variant="contained"
+                startIcon={savingPassword ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                disabled={!canEdit || savingPassword || !passwordForm.password || passwordForm.password !== passwordForm.confirm}
+                onClick={handleSavePassword}
                 sx={buttonSx("primary")}
               >
-                {adding
-                  ? t("userManagement.adding")
-                  : t("userManagement.addEmployee")}
+                {savingPassword ? t("common.saving") : t("userManagement.savePassword")}
               </Button>
             </DialogActions>
           </Dialog>
